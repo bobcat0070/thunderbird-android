@@ -8,6 +8,7 @@ enum class PreferenceScope {
     DISPLAY_MISC,
     DISPLAY_VISUAL,
     DISPLAY_VISUAL_MESSAGE_LIST,
+    GRAVATAR,
     INTERACTION,
     NETWORK,
     NOTIFICATION,

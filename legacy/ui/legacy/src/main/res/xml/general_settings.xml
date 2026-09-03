@@ -317,6 +317,20 @@
                 />
 
             <CheckBoxPreference
+                android:dependency="messagelist_show_contact_picture"
+                android:key="gravatar_enabled"
+                android:summary="@string/global_settings_gravatar_summary"
+                android:title="@string/global_settings_gravatar_label"
+                />
+
+            <EditTextPreference
+                android:dependency="gravatar_enabled"
+                android:key="gravatar_api_key"
+                android:summary="@string/global_settings_gravatar_api_key_summary"
+                android:title="@string/global_settings_gravatar_api_key_label"
+                />
+
+            <CheckBoxPreference
                 android:key="messagelist_background_as_unread_indicator"
                 android:summary="@string/global_settings_background_as_unread_indicator_summary"
                 android:title="@string/global_settings_background_as_unread_indicator_label"

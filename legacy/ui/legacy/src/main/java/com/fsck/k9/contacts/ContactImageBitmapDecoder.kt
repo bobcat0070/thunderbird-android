@@ -10,17 +10,21 @@ import kotlin.math.max
 
 /**
  * [ResourceDecoder] implementation that takes a [ContactImage] and fetches the corresponding contact photo using
- * [ContactPhotoLoader] or generates a fallback image using [ContactLetterBitmapCreator].
+ * [ContactPhotoLoader], falls back to [GravatarLoader], and finally generates an image using
+ * [ContactLetterBitmapCreator].
  */
 internal class ContactImageBitmapDecoder(
     private val contactPhotoLoader: ContactPhotoLoader,
+    private val gravatarLoader: GravatarLoader,
     private val bitmapPool: BitmapPool,
 ) : ResourceDecoder<ContactImage, Bitmap> {
 
     override fun decode(contactImage: ContactImage, width: Int, height: Int, options: Options): Resource<Bitmap>? {
         val size = max(width, height)
 
-        val bitmap = loadContactPhoto(contactImage) ?: createContactLetterBitmap(contactImage, size)
+        val bitmap = loadContactPhoto(contactImage)
+            ?: loadGravatar(contactImage, size)
+            ?: createContactLetterBitmap(contactImage, size)
 
         return BitmapResource.obtain(bitmap, bitmapPool)
     }
@@ -31,6 +35,16 @@ internal class ContactImageBitmapDecoder(
         return contactPhotoLoader.loadContactPhoto(contactImage.address.address)
     }
 
+    /**
+     * Asked only after the device's own contacts, so a picture the user already has for someone always wins
+     * over one fetched from the internet.
+     */
+    private fun loadGravatar(contactImage: ContactImage, size: Int): Bitmap? {
+        if (contactImage.contactLetterOnly) return null
+
+        return gravatarLoader.loadGravatar(contactImage.address.address, size)
+    }
+
     private fun createContactLetterBitmap(contactImage: ContactImage, size: Int): Bitmap {
         val bitmap = bitmapPool.getDirty(size, size, Bitmap.Config.ARGB_8888)
         return contactImage.contactLetterBitmapCreator.drawBitmap(bitmap, size, contactImage.address)
@@ -39,8 +53,11 @@ internal class ContactImageBitmapDecoder(
     override fun handles(source: ContactImage, options: Options) = true
 }
 
-internal class ContactImageBitmapDecoderFactory(private val contactPhotoLoader: ContactPhotoLoader) {
+internal class ContactImageBitmapDecoderFactory(
+    private val contactPhotoLoader: ContactPhotoLoader,
+    private val gravatarLoader: GravatarLoader,
+) {
     fun create(bitmapPool: BitmapPool): ContactImageBitmapDecoder {
-        return ContactImageBitmapDecoder(contactPhotoLoader, bitmapPool)
+        return ContactImageBitmapDecoder(contactPhotoLoader, gravatarLoader, bitmapPool)
     }
 }

@@ -41,6 +41,7 @@ import net.thunderbird.core.preference.display.DisplaySettings;
 import net.thunderbird.core.preference.interaction.InteractionSettings;
 import net.thunderbird.core.preference.network.NetworkSettings;
 import net.thunderbird.core.preference.notification.NotificationPreference;
+import net.thunderbird.core.preference.gravatar.GravatarSettings;
 import net.thunderbird.core.preference.privacy.PrivacySettings;
 import org.jetbrains.annotations.NotNull;
 import org.junit.Before;
@@ -220,6 +221,7 @@ public class MessageBuilderTest extends RobolectricTest {
                 new NotificationPreference(),
                 new DisplaySettings(),
                 new PrivacySettings(),
+                new GravatarSettings(),
                 new DebuggingSettings(true,false,false),
                 new InteractionSettings()
             );

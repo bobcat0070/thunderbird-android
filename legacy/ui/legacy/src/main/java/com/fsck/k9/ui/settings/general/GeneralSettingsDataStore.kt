@@ -52,6 +52,7 @@ class GeneralSettingsDataStore(
             "messagelist_change_contact_name_color" -> messageListSettings.isChangeContactNameColor
             "messagelist_show_contact_picture" -> messageListSettings.isShowContactPicture
             "messagelist_colorize_missing_contact_pictures" -> messageListSettings.isColorizeMissingContactPictures
+            "gravatar_enabled" -> config.gravatar.isEnabled
             "messagelist_background_as_unread_indicator" -> messageListSettings.isUseBackgroundAsUnreadIndicator
             "show_compose_button" -> inboxSettings.isShowComposeButtonOnMessageList
             "threaded_view" -> inboxSettings.isThreadedViewEnabled
@@ -89,6 +90,7 @@ class GeneralSettingsDataStore(
             "messagelist_show_contact_name" -> setIsShowContactName(isShowContactName = value)
             "messagelist_change_contact_name_color" -> setIsChangeContactNameColor(isChangeContactNameColor = value)
             "messagelist_show_contact_picture" -> setIsShowContactPicture(isShowContactPicture = value)
+            "gravatar_enabled" -> setGravatarEnabled(value)
             "messagelist_colorize_missing_contact_pictures" -> setIsColorizeMissingContactPictures(
                 isColorizeMissingContactPictures = value,
             )
@@ -157,6 +159,7 @@ class GeneralSettingsDataStore(
             "animations" -> animationPreferenceToString(visualSettings.animationPreference)
             "message_compose_theme" -> subThemeToString(coreSettings.messageComposeTheme)
             "messageViewTheme" -> subThemeToString(coreSettings.messageViewTheme)
+            "gravatar_api_key" -> config.gravatar.apiKey
             "messagelist_preview_lines" -> messageListSettings.previewLines.toString()
             "message_list_date_time_format" -> messageListSettings.dateTimeFormat.toString()
             "splitview_mode" -> coreSettings.splitViewMode.name
@@ -198,6 +201,7 @@ class GeneralSettingsDataStore(
             "animations" -> setAnimationPreference(stringToAnimationPreference(value))
             "message_compose_theme" -> setMessageComposeTheme(value)
             "messageViewTheme" -> setMessageViewTheme(value)
+            "gravatar_api_key" -> setGravatarApiKey(value)
             "messagelist_preview_lines" -> setMessageListPreviewLines(value.toInt())
             "message_list_date_time_format" -> updateMessageListDateTimeFormat(value)
             "splitview_mode" -> setSplitViewModel(SplitViewMode.valueOf(value.uppercase()))
@@ -501,6 +505,20 @@ class GeneralSettingsDataStore(
                     ),
                 ),
             )
+        }
+    }
+
+    private fun setGravatarEnabled(isEnabled: Boolean) {
+        skipSaveSettings = true
+        generalSettingsManager.update { settings ->
+            settings.copy(gravatar = settings.gravatar.copy(isEnabled = isEnabled))
+        }
+    }
+
+    private fun setGravatarApiKey(apiKey: String) {
+        skipSaveSettings = true
+        generalSettingsManager.update { settings ->
+            settings.copy(gravatar = settings.gravatar.copy(apiKey = apiKey.trim()))
         }
     }
 

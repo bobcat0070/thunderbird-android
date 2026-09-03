@@ -29,6 +29,7 @@ import net.thunderbird.core.preference.display.visualSettings.message.list.Messa
 import net.thunderbird.core.preference.interaction.InteractionSettingsPreferenceManager
 import net.thunderbird.core.preference.network.NetworkSettingsPreferenceManager
 import net.thunderbird.core.preference.notification.NotificationPreferenceManager
+import net.thunderbird.core.preference.gravatar.GravatarSettingsPreferenceManager
 import net.thunderbird.core.preference.privacy.PrivacySettingsPreferenceManager
 import net.thunderbird.core.preference.storage.Storage
 
@@ -57,6 +58,7 @@ internal class DefaultGeneralSettingsManager(
     private val networkSettingsPreferenceManager: NetworkSettingsPreferenceManager,
     private val debuggingSettingsPreferenceManager: DebuggingSettingsPreferenceManager,
     private val interactionSettingsPreferenceManager: InteractionSettingsPreferenceManager,
+    private val gravatarSettingsPreferenceManager: GravatarSettingsPreferenceManager,
     private val debugLogConfigurator: DebugLogConfigurator,
     private val backgroundDispatcher: CoroutineDispatcher = Dispatchers.IO,
     private val platformConfigProvider: PlatformConfigProvider,
@@ -128,6 +130,9 @@ internal class DefaultGeneralSettingsManager(
         .combine(interactionSettingsPreferenceManager.getConfigFlow()) { generalSettings, interactionSettings ->
             generalSettings.copy(interaction = interactionSettings)
         }
+        .combine(gravatarSettingsPreferenceManager.getConfigFlow()) { generalSettings, gravatarSettings ->
+            generalSettings.copy(gravatar = gravatarSettings)
+        }
         .stateIn(
             scope = coroutineScope,
             started = SharingStarted.WhileSubscribed(),
@@ -182,6 +187,7 @@ internal class DefaultGeneralSettingsManager(
                 networkSettingsPreferenceManager.save(config.network)
                 debuggingSettingsPreferenceManager.save(config.debugging)
                 interactionSettingsPreferenceManager.save(config.interaction)
+                gravatarSettingsPreferenceManager.save(config.gravatar)
             }
         }
     }

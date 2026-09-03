@@ -3,6 +3,7 @@ package net.thunderbird.core.preference
 import net.thunderbird.core.common.appConfig.PlatformConfigProvider
 import net.thunderbird.core.preference.debugging.DebuggingSettings
 import net.thunderbird.core.preference.display.DisplaySettings
+import net.thunderbird.core.preference.gravatar.GravatarSettings
 import net.thunderbird.core.preference.interaction.InteractionSettings
 import net.thunderbird.core.preference.network.NetworkSettings
 import net.thunderbird.core.preference.notification.NotificationPreference
@@ -22,6 +23,7 @@ data class GeneralSettings(
     val notification: NotificationPreference = NotificationPreference(),
     val display: DisplaySettings = DisplaySettings(),
     val privacy: PrivacySettings = PrivacySettings(),
+    val gravatar: GravatarSettings = GravatarSettings(),
     val debugging: DebuggingSettings = DebuggingSettings(isDebugLoggingEnabled = platformConfigProvider.isDebug),
     val interaction: InteractionSettings = InteractionSettings(),
 )
