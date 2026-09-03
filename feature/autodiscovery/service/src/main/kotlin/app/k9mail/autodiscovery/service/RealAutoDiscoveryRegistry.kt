@@ -4,6 +4,7 @@ import app.k9mail.autodiscovery.api.AutoDiscovery
 import app.k9mail.autodiscovery.api.AutoDiscoveryRegistry
 import app.k9mail.autodiscovery.autoconfig.AutoconfigUrlConfig
 import app.k9mail.autodiscovery.autoconfig.createIspDbAutoconfigDiscovery
+import app.k9mail.autodiscovery.autoconfig.createMicrosoftGraphDiscovery
 import app.k9mail.autodiscovery.autoconfig.createMxLookupAutoconfigDiscovery
 import app.k9mail.autodiscovery.autoconfig.createProviderAutoconfigDiscovery
 import okhttp3.OkHttpClient
@@ -25,6 +26,9 @@ class RealAutoDiscoveryRegistry(
             autoconfigUrlConfig: AutoconfigUrlConfig = defaultAutoconfigUrlConfig,
         ): List<AutoDiscovery> {
             return listOf(
+                // Runs first: Microsoft 365 domains frequently have IMAP and SMTP AUTH disabled, so a Graph
+                // configuration is preferred over whatever Autoconfig reports for them.
+                createMicrosoftGraphDiscovery(),
                 createProviderAutoconfigDiscovery(
                     okHttpClient = okHttpClient,
                     config = autoconfigUrlConfig,
