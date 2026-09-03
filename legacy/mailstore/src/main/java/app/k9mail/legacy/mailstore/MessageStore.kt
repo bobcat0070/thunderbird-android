@@ -1,5 +1,7 @@
 package app.k9mail.legacy.mailstore
 
+import net.thunderbird.feature.mail.message.classification.api.MessageClass
+import net.thunderbird.feature.mail.message.classification.api.RuleScope
 import com.fsck.k9.mail.FolderType
 import com.fsck.k9.mail.Header
 import java.util.Date
@@ -90,6 +92,22 @@ interface MessageStore {
      * Clear the new message state for all messages.
      */
     fun clearNewMessageState()
+
+    /**
+     * Re-classify every stored message sent by [pattern].
+     *
+     * Used when the user corrects a classification and teaches the correction: the messages already in the
+     * mailbox have to move too, or the correction only appears to work on mail that has not arrived yet.
+     *
+     * @return how many messages were re-classified.
+     */
+    fun setClassificationForSender(
+        scope: RuleScope,
+        pattern: String,
+        messageClass: MessageClass,
+        signal: String,
+        classifierVersion: Int,
+    ): Int
 
     /**
      * Retrieve the server ID for a given message.

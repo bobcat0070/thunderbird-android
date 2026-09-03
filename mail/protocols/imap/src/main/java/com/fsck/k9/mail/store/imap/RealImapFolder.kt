@@ -593,6 +593,10 @@ internal class RealImapFolder(
             fetchFields.add(
                 "BODY.PEEK[HEADER.FIELDS (date subject from content-type to cc bcc " +
                     "reply-to message-id references in-reply-to list-post list-unsubscribe sender " +
+                    // Classification inputs. Fetched with the envelope because classifying a message on
+                    // arrival is what makes the message list useful; fetching them later would mean a
+                    // second round trip per message.
+                    "list-id precedence auto-submitted x-auto-response-suppress " +
                     K9MailLib.IDENTITY_HEADER + " " + K9MailLib.CHAT_HEADER + ")]",
             )
         }

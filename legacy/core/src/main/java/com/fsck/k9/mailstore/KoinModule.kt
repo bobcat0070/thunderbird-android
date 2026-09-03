@@ -47,6 +47,14 @@ val mailStoreModule = module {
             messagePreviewCreator = get(),
             messageFulltextCreator = get(),
             attachmentCounter = get(),
+            messageClassifier = get(),
+        )
+    }
+    single {
+        MessageClassificationTeacher(
+            overrideStore = get(),
+            accountManager = get(),
+            messageStoreManager = get(),
         )
     }
     single<MessageListRepository> { DefaultMessageListRepository(messageStoreManager = get()) }

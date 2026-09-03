@@ -50,6 +50,11 @@ internal data class GraphMessage(
      * preview so unread mail shows the first lines without downloading the whole message.
      */
     val bodyPreview: String? = null,
+
+    /**
+     * RFC 5322 headers. Graph only returns these when they are explicitly selected.
+     */
+    val internetMessageHeaders: List<GraphInternetMessageHeader> = emptyList(),
     val flag: GraphFollowupFlag? = null,
 
     /**
@@ -64,6 +69,12 @@ internal data class GraphMessage(
 @Serializable
 internal data class GraphRemoved(
     val reason: String? = null,
+)
+
+@Serializable
+internal data class GraphInternetMessageHeader(
+    val name: String? = null,
+    val value: String? = null,
 )
 
 @Serializable

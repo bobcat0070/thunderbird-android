@@ -34,6 +34,8 @@ internal fun GraphMessage.toEnvelopeMessage(): MimeMessage {
 
     sentDate()?.let { message.setSentDate(it, false) }
 
+    applyInternetHeaders(message)
+
     bodyPreview?.takeIf { it.isNotBlank() }?.let { preview ->
         MimeMessageHelper.setBody(message, TextBody(preview))
     }
@@ -43,6 +45,40 @@ internal fun GraphMessage.toEnvelopeMessage(): MimeMessage {
     }
 
     return message
+}
+
+/**
+ * Headers worth carrying from Graph onto the stored message.
+ *
+ * Graph returns the full RFC 5322 header block, most of which is routing history that would bloat every row.
+ * Only headers the app reads are kept: the ones that say whether a message is bulk, automated or from a mailing
+ * list. IMAP already fetches the equivalent subset during envelope sync.
+ */
+private val RETAINED_HEADERS = setOf(
+    "list-unsubscribe",
+    "list-unsubscribe-post",
+    "list-id",
+    "list-post",
+    "precedence",
+    "auto-submitted",
+    "x-auto-response-suppress",
+    "return-path",
+)
+
+/**
+ * Copies the retained headers onto the message, so classification sees the same evidence on every backend.
+ *
+ * Headers may legitimately repeat, so they are added rather than set.
+ */
+private fun GraphMessage.applyInternetHeaders(message: MimeMessage) {
+    internetMessageHeaders
+        .mapNotNull { header ->
+            val name = header.name?.takeIf { it.lowercase() in RETAINED_HEADERS } ?: return@mapNotNull null
+            val value = header.value?.takeIf { it.isNotBlank() } ?: return@mapNotNull null
+
+            name to value
+        }
+        .forEach { (name, value) -> message.addHeader(name, value) }
 }
 
 /**

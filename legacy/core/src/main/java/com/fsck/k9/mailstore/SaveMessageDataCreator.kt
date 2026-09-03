@@ -7,12 +7,14 @@ import com.fsck.k9.mail.MessageDownloadState
 import com.fsck.k9.message.extractors.AttachmentCounter
 import com.fsck.k9.message.extractors.MessageFulltextCreator
 import com.fsck.k9.message.extractors.MessagePreviewCreator
+import net.thunderbird.feature.mail.message.classification.api.MessageClassifier
 
 class SaveMessageDataCreator(
     private val encryptionExtractor: EncryptionExtractor,
     private val messagePreviewCreator: MessagePreviewCreator,
     private val messageFulltextCreator: MessageFulltextCreator,
     private val attachmentCounter: AttachmentCounter,
+    private val messageClassifier: MessageClassifier,
 ) {
     fun createSaveMessageData(
         message: Message,
@@ -23,6 +25,10 @@ class SaveMessageDataCreator(
         val date = message.sentDate?.time ?: now
         val internalDate = message.internalDate?.time ?: now
         val displaySubject = subject ?: message.subject
+
+        // Classified here because this is the only point where the headers are in hand; the store keeps only
+        // a subset of them, and re-deriving later would mean re-parsing the message.
+        val classification = messageClassifier.classify(message.toClassificationEvidence())
 
         val encryptionResult = encryptionExtractor.extractEncryption(message)
         return if (encryptionResult != null) {
@@ -36,6 +42,7 @@ class SaveMessageDataCreator(
                 previewResult = encryptionResult.previewResult,
                 textForSearchIndex = encryptionResult.textForSearchIndex,
                 encryptionType = encryptionResult.encryptionType,
+                classification = classification,
             )
         } else {
             SaveMessageData(
@@ -48,6 +55,7 @@ class SaveMessageDataCreator(
                 previewResult = messagePreviewCreator.createPreview(message),
                 textForSearchIndex = messageFulltextCreator.createFulltext(message),
                 encryptionType = null,
+                classification = classification,
             )
         }
     }

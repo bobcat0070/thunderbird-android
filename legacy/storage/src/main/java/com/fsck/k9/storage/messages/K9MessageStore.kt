@@ -1,5 +1,7 @@
 package com.fsck.k9.storage.messages
 
+import net.thunderbird.feature.mail.message.classification.api.MessageClass
+import net.thunderbird.feature.mail.message.classification.api.RuleScope
 import app.k9mail.legacy.mailstore.CreateFolderInfo
 import app.k9mail.legacy.mailstore.FolderMapper
 import app.k9mail.legacy.mailstore.MessageMapper
@@ -94,6 +96,22 @@ class K9MessageStore(
 
     override fun clearNewMessageState() {
         updateMessageOperations.clearNewMessageState()
+    }
+
+    override fun setClassificationForSender(
+        scope: RuleScope,
+        pattern: String,
+        messageClass: MessageClass,
+        signal: String,
+        classifierVersion: Int,
+    ): Int {
+        return updateMessageOperations.setClassificationForSender(
+            scope = scope,
+            pattern = pattern,
+            messageClass = messageClass,
+            signal = signal,
+            classifierVersion = classifierVersion,
+        )
     }
 
     override fun getMessageServerId(messageId: Long): String? {

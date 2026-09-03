@@ -130,6 +130,8 @@ fun SQLiteDatabase.readMessages(): List<MessageEntry> {
                 encryptionType = cursor.getStringOrNull("encryption_type"),
                 newMessage = cursor.getIntOrNull("new_message"),
                 accountId = cursor.getStringOrNull("account_id"),
+                classification = cursor.getStringOrNull("classification"),
+                classificationSignal = cursor.getStringOrNull("classification_signal"),
             )
         }
     }
@@ -164,6 +166,8 @@ data class MessageEntry(
     val encryptionType: String?,
     val newMessage: Int?,
     val accountId: String? = null,
+    val classification: String? = null,
+    val classificationSignal: String? = null,
 )
 
 fun SQLiteDatabase.createMessagePart(

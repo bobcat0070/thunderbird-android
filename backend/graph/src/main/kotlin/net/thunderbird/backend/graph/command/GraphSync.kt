@@ -47,9 +47,10 @@ internal const val FOLDER_EXTRA_SYNC_FORMAT = "graphSyncFormat"
  *
  * Incremental rounds only report changes, so a folder synchronized by an older version keeps whatever was stored
  * then. Raising this forces one full round, which is how an improvement to what is stored per message reaches mail
- * that was already synchronized. Version 2 added the message list preview text.
+ * that was already synchronized. Version 2 added the message list preview text, version 3 the headers
+ * used to classify a message.
  */
-internal const val SYNC_FORMAT_VERSION = 2
+internal const val SYNC_FORMAT_VERSION = 3
 
 /**
  * Synchronizes a single folder with Microsoft Graph.
@@ -83,7 +84,10 @@ internal class GraphSync(
             // again instead of resumed.
             val syncedLimit = backendFolder.getFolderExtraString(FOLDER_EXTRA_SYNC_WINDOW_LIMIT)?.toIntOrNull() ?: 0
             val syncedFormat = backendFolder.getFolderExtraString(FOLDER_EXTRA_SYNC_FORMAT)?.toIntOrNull() ?: 0
-            val canResume = visibleLimit <= syncedLimit && syncedFormat >= SYNC_FORMAT_VERSION
+            // An older storage format means the stored messages are missing something this version keeps, so
+            // the round re-saves what it finds rather than only what is new.
+            val isFormatUpgrade = syncedFormat < SYNC_FORMAT_VERSION
+            val canResume = visibleLimit <= syncedLimit && !isFormatUpgrade
             val storedDeltaLink = backendFolder.getFolderExtraString(FOLDER_EXTRA_DELTA_LINK)?.takeIf { canResume }
             val isIncremental = storedDeltaLink != null
             val round = runRound(folderServerId, storedDeltaLink, syncConfig, visibleLimit)
@@ -91,7 +95,13 @@ internal class GraphSync(
             listener.syncAuthenticationSuccess()
 
             val messagesToSave = selectMessagesToSave(backendFolder, round.messages, visibleLimit, isIncremental)
-            val newMessageCount = saveMessages(folderServerId, backendFolder, messagesToSave, listener)
+            val newMessageCount = saveMessages(
+                folderServerId = folderServerId,
+                backendFolder = backendFolder,
+                messages = messagesToSave,
+                listener = listener,
+                refreshStoredMessages = isFormatUpgrade,
+            )
 
             listener.syncHeadersFinished(
                 folderServerId = folderServerId,
@@ -199,6 +209,8 @@ internal class GraphSync(
     /**
      * Stores envelopes for messages that are not held locally yet.
      *
+     * @param refreshStoredMessages re-save messages that are already held locally, so an improvement to what
+     *   is stored per message reaches mail that was synchronized by an earlier version.
      * @return the number of messages that were added.
      */
     private fun saveMessages(
@@ -206,20 +218,29 @@ internal class GraphSync(
         backendFolder: BackendFolder,
         messages: List<GraphMessage>,
         listener: SyncListener,
+        refreshStoredMessages: Boolean,
     ): Int {
         val localMessageServerIds = backendFolder.getMessageServerIds()
         val newMessages = messages.filter { it.id !in localMessageServerIds }
 
-        // Messages stored before preview text was requested have headers but no body, so the list shows no preview
-        // for them. Storing the envelope again backfills it without downloading the whole message.
-        val messagesMissingPreview = messages.filter { graphMessage ->
+        // A stored message is refreshed on a format upgrade, and otherwise only when it is missing the preview
+        // text the message list needs. Re-saving is cheap here because the envelope is already in hand.
+        val messagesToRefresh = messages.filter { graphMessage ->
             graphMessage.id in localMessageServerIds &&
-                graphMessage.hasBodyPreview() &&
-                backendFolder.isEnvelopeOnly(graphMessage.id)
+                (
+                    refreshStoredMessages ||
+                        (graphMessage.hasBodyPreview() && backendFolder.isEnvelopeOnly(graphMessage.id))
+                    )
         }
 
-        messagesMissingPreview.forEach { graphMessage ->
-            backendFolder.saveMessage(graphMessage.toEnvelopeMessage(), MessageDownloadState.PARTIAL)
+        messagesToRefresh.forEach { graphMessage ->
+            val downloadState = if (graphMessage.hasBodyPreview()) {
+                MessageDownloadState.PARTIAL
+            } else {
+                MessageDownloadState.ENVELOPE
+            }
+
+            backendFolder.saveMessage(graphMessage.toEnvelopeMessage(), downloadState)
         }
 
         newMessages.forEachIndexed { index, graphMessage ->
