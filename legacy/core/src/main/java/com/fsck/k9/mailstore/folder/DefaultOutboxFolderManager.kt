@@ -9,8 +9,13 @@ import com.fsck.k9.mailstore.toDatabaseFolderType
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 import kotlin.time.ExperimentalTime
+import java.util.Collections
+import java.util.concurrent.ConcurrentHashMap
 import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
 import net.thunderbird.core.android.account.LegacyAccountManager
@@ -26,26 +31,65 @@ private const val TAG = "DefaultOutboxFolderManager"
 private const val OUTBOX_FOLDER_NAME = "Outbox"
 private const val VISIBLE_LIMIT = 100
 
+/**
+ * Returned when the outbox folder is not known yet. Callers already treat this as "not the outbox".
+ */
+private const val UNKNOWN_FOLDER_ID = -1L
+
 class DefaultOutboxFolderManager(
     private val logger: Logger,
     private val accountManager: LegacyAccountManager,
     private val localStoreProvider: LocalStoreProvider,
     private val outboxFolderIdCache: TimeLimitedCache<AccountId, Long>,
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
+    private val coroutineScope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.IO),
 ) : OutboxFolderManager {
+
+    /**
+     * Accounts whose id is currently being resolved, so a screen asking repeatedly starts one lookup.
+     */
+    private val resolving = Collections.newSetFromMap(ConcurrentHashMap<AccountId, Boolean>())
+
+    /**
+     * Answers from the cache without ever blocking, and never from the main thread's point of view does more
+     * than read a map.
+     *
+     * The blocking version of this call was being made from the message list on every update - by way of "is
+     * this the outbox?", which decides whether to offer pull-to-refresh - and a cache miss there meant a
+     * database query and a burst of logging on the main thread. On a large folder that was enough to hang the
+     * app outright.
+     *
+     * A miss returns -1 and starts a lookup in the background, so the answer is right by the next update. A
+     * transiently wrong answer costs a refresh gesture that briefly is or is not offered; blocking costs the
+     * whole app.
+     */
+    override fun getOutboxFolderIdSync(accountId: AccountId, createIfMissing: Boolean): Long {
+        outboxFolderIdCache[accountId]?.let { return it.value }
+
+        if (resolving.add(accountId)) {
+            coroutineScope.launch {
+                try {
+                    getOutboxFolderId(accountId, createIfMissing)
+                } catch (e: MessagingException) {
+                    logger.warn(TAG, e) { "Could not resolve the Outbox folder in the background." }
+                } finally {
+                    resolving.remove(accountId)
+                }
+            }
+        }
+
+        return UNKNOWN_FOLDER_ID
+    }
     @OptIn(ExperimentalTime::class)
     override suspend fun getOutboxFolderId(
         accountId: AccountId,
         createIfMissing: Boolean,
     ): Long {
+        // Deliberately unlogged: this is the hot path, called for every message list update, and the
+        // logging was itself a large part of what made the blocking version hang the app.
+        outboxFolderIdCache[accountId]?.let { entry -> return entry.value }
+
         logger.verbose(TAG) { "getOutboxFolderId() called with: uuid = $accountId" }
-        outboxFolderIdCache[accountId]?.let { entry ->
-            logger.debug(TAG) {
-                "getOutboxFolderId: Found Outbox folder with id = ${entry.value} in cache. " +
-                    "Cache expires on ${entry.expiresAt}"
-            }
-            return entry.value
-        }
 
         return withContext(ioDispatcher) {
             val localStore = createLocalStore(accountId)
