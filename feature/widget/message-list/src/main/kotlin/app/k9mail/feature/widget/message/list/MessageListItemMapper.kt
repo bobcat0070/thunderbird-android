@@ -50,6 +50,7 @@ internal class MessageListItemMapper(
             accountColor = account.profile.color,
             messageReference = MessageReference(account.uuid, message.folderId, message.messageServerId),
             uniqueId = uniqueId,
+            classification = message.classification,
             sortSubject = message.subject,
             sortMessageDate = message.messageDate,
             sortInternalDate = message.internalDate,

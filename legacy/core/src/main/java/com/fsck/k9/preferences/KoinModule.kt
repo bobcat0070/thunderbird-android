@@ -32,6 +32,8 @@ import net.thunderbird.core.preference.notification.NotificationPreferenceManage
 import net.thunderbird.core.preference.gravatar.DefaultGravatarSettingsPreferenceManager
 import net.thunderbird.core.preference.gravatar.GravatarSettingsPreferenceManager
 import net.thunderbird.core.preference.privacy.DefaultPrivacySettingsPreferenceManager
+import net.thunderbird.core.preference.widget.DefaultWidgetSettingsPreferenceManager
+import net.thunderbird.core.preference.widget.WidgetSettingsPreferenceManager
 import net.thunderbird.core.preference.privacy.PrivacySettingsPreferenceManager
 import org.koin.core.qualifier.named
 import org.koin.dsl.bind
@@ -53,6 +55,14 @@ val preferencesModule = module {
     factory<LegacyAccountDtoManager> { get<Preferences>() }
     single<GravatarSettingsPreferenceManager> {
         DefaultGravatarSettingsPreferenceManager(
+            logger = get(),
+            storagePersister = get(),
+            storageEditor = get<Preferences>().createStorageEditor(),
+            preferenceChangeBroker = get(),
+        )
+    }
+    single<WidgetSettingsPreferenceManager> {
+        DefaultWidgetSettingsPreferenceManager(
             logger = get(),
             storagePersister = get(),
             storageEditor = get<Preferences>().createStorageEditor(),
@@ -178,6 +188,7 @@ val preferencesModule = module {
             debuggingSettingsPreferenceManager = get(),
             interactionSettingsPreferenceManager = get(),
             gravatarSettingsPreferenceManager = get(),
+            widgetSettingsPreferenceManager = get(),
             debugLogConfigurator = get(),
             platformConfigProvider = get(),
             logger = get(),

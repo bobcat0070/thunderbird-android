@@ -8,6 +8,7 @@ import net.thunderbird.core.preference.interaction.InteractionSettings
 import net.thunderbird.core.preference.network.NetworkSettings
 import net.thunderbird.core.preference.notification.NotificationPreference
 import net.thunderbird.core.preference.privacy.PrivacySettings
+import net.thunderbird.core.preference.widget.WidgetSettings
 
 /**
  * Stores a snapshot of the app's general settings.
@@ -24,6 +25,7 @@ data class GeneralSettings(
     val display: DisplaySettings = DisplaySettings(),
     val privacy: PrivacySettings = PrivacySettings(),
     val gravatar: GravatarSettings = GravatarSettings(),
+    val widget: WidgetSettings = WidgetSettings(),
     val debugging: DebuggingSettings = DebuggingSettings(isDebugLoggingEnabled = platformConfigProvider.isDebug),
     val interaction: InteractionSettings = InteractionSettings(),
 )

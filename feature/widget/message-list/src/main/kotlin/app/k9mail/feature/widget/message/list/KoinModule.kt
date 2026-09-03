@@ -1,9 +1,18 @@
 package app.k9mail.feature.widget.message.list
 
+import org.koin.core.qualifier.named
 import org.koin.dsl.module
 
 val messageListWidgetModule = module {
-    single { MessageListWidgetManager(context = get(), messageListRepository = get(), config = get()) }
+    single {
+        MessageListWidgetManager(
+            context = get(),
+            messageListRepository = get(),
+            config = get(),
+            widgetSettingsPreferenceManager = get(),
+            coroutineScope = get(named("AppCoroutineScope")),
+        )
+    }
     factory {
         MessageListLoader(
             accountManager = get(),
@@ -11,6 +20,7 @@ val messageListWidgetModule = module {
             messageHelper = get(),
             messageListPreferencesManager = get(),
             outboxFolderManager = get(),
+            generalSettingsManager = get(),
         )
     }
 }

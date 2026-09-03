@@ -13,4 +13,5 @@ enum class PreferenceScope {
     NETWORK,
     NOTIFICATION,
     PRIVACY,
+    WIDGET,
 }

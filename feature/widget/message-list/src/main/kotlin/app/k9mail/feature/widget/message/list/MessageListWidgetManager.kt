@@ -7,12 +7,19 @@ import android.content.Intent
 import app.k9mail.legacy.mailstore.MessageListChangedListener
 import app.k9mail.legacy.mailstore.MessageListRepository
 import com.fsck.k9.core.BuildConfig
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.drop
+import kotlinx.coroutines.launch
+import net.thunderbird.core.preference.widget.WidgetSettingsPreferenceManager
 import net.thunderbird.legacy.logging.Log
 
 class MessageListWidgetManager(
     private val context: Context,
     private val messageListRepository: MessageListRepository,
     private val config: MessageListWidgetConfig,
+    private val widgetSettingsPreferenceManager: WidgetSettingsPreferenceManager,
+    private val coroutineScope: CoroutineScope,
 ) {
     private var appWidgetManager: AppWidgetManager? = null
 
@@ -30,6 +37,23 @@ class MessageListWidgetManager(
         if (isAtLeastOneMessageListWidgetAdded()) {
             resetMessageListWidget()
             registerMessageListChangedListener()
+        }
+
+        observeWidgetSettings()
+    }
+
+    /**
+     * Redraws the widget when the categories it shows are changed.
+     *
+     * Without this the widget only reloads when mail changes, so narrowing the categories would appear to do
+     * nothing until the next message arrived.
+     */
+    private fun observeWidgetSettings() {
+        coroutineScope.launch {
+            widgetSettingsPreferenceManager.getConfigFlow()
+                .distinctUntilChanged()
+                .drop(1)
+                .collect { onMessageListChanged() }
         }
     }
 

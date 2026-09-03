@@ -95,6 +95,11 @@
     <string name="message_list_bundle_newsletters">Newsletters</string>
     <string name="message_list_bundle_title">%1$s %2$d</string>
     <string name="message_list_bundle_title_unread">%1$s %2$d</string>
+    <string name="global_settings_widget_category">Home screen widget</string>
+    <string name="global_settings_widget_show_personal_label">Show personal mail</string>
+    <string name="global_settings_widget_show_personal_summary">Includes mail that could not be categorised</string>
+    <string name="global_settings_widget_show_notifications_label">Show notifications</string>
+    <string name="global_settings_widget_show_newsletters_label">Show newsletters</string>
     <string name="global_settings_gravatar_label">Use Gravatar for sender pictures</string>
     <string name="global_settings_gravatar_summary">When a sender has no picture on this device, look one up on gravatar.com. This tells Gravatar which senders you have mail from.</string>
     <string name="global_settings_gravatar_api_key_label">Gravatar API key</string>

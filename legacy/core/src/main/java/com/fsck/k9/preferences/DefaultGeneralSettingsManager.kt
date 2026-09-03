@@ -30,6 +30,7 @@ import net.thunderbird.core.preference.interaction.InteractionSettingsPreference
 import net.thunderbird.core.preference.network.NetworkSettingsPreferenceManager
 import net.thunderbird.core.preference.notification.NotificationPreferenceManager
 import net.thunderbird.core.preference.gravatar.GravatarSettingsPreferenceManager
+import net.thunderbird.core.preference.widget.WidgetSettingsPreferenceManager
 import net.thunderbird.core.preference.privacy.PrivacySettingsPreferenceManager
 import net.thunderbird.core.preference.storage.Storage
 
@@ -59,6 +60,7 @@ internal class DefaultGeneralSettingsManager(
     private val debuggingSettingsPreferenceManager: DebuggingSettingsPreferenceManager,
     private val interactionSettingsPreferenceManager: InteractionSettingsPreferenceManager,
     private val gravatarSettingsPreferenceManager: GravatarSettingsPreferenceManager,
+    private val widgetSettingsPreferenceManager: WidgetSettingsPreferenceManager,
     private val debugLogConfigurator: DebugLogConfigurator,
     private val backgroundDispatcher: CoroutineDispatcher = Dispatchers.IO,
     private val platformConfigProvider: PlatformConfigProvider,
@@ -133,6 +135,9 @@ internal class DefaultGeneralSettingsManager(
         .combine(gravatarSettingsPreferenceManager.getConfigFlow()) { generalSettings, gravatarSettings ->
             generalSettings.copy(gravatar = gravatarSettings)
         }
+        .combine(widgetSettingsPreferenceManager.getConfigFlow()) { generalSettings, widgetSettings ->
+            generalSettings.copy(widget = widgetSettings)
+        }
         .stateIn(
             scope = coroutineScope,
             started = SharingStarted.WhileSubscribed(),
@@ -188,6 +193,7 @@ internal class DefaultGeneralSettingsManager(
                 debuggingSettingsPreferenceManager.save(config.debugging)
                 interactionSettingsPreferenceManager.save(config.interaction)
                 gravatarSettingsPreferenceManager.save(config.gravatar)
+                widgetSettingsPreferenceManager.save(config.widget)
             }
         }
     }

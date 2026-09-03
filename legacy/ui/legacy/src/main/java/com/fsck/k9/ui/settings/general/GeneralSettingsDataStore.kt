@@ -19,6 +19,7 @@ import net.thunderbird.core.preference.display.visualSettings.message.list.Messa
 import net.thunderbird.core.preference.display.visualSettings.message.list.UiDensity
 import net.thunderbird.core.preference.interaction.PostMarkAsUnreadNavigation
 import net.thunderbird.core.preference.update
+import net.thunderbird.core.preference.widget.WidgetSettings
 
 @Suppress("LargeClass")
 class GeneralSettingsDataStore(
@@ -53,6 +54,9 @@ class GeneralSettingsDataStore(
             "messagelist_show_contact_picture" -> messageListSettings.isShowContactPicture
             "messagelist_colorize_missing_contact_pictures" -> messageListSettings.isColorizeMissingContactPictures
             "gravatar_enabled" -> config.gravatar.isEnabled
+            "widget_show_personal" -> config.widget.showPersonal
+            "widget_show_notifications" -> config.widget.showNotifications
+            "widget_show_newsletters" -> config.widget.showNewsletters
             "messagelist_background_as_unread_indicator" -> messageListSettings.isUseBackgroundAsUnreadIndicator
             "show_compose_button" -> inboxSettings.isShowComposeButtonOnMessageList
             "threaded_view" -> inboxSettings.isThreadedViewEnabled
@@ -91,6 +95,9 @@ class GeneralSettingsDataStore(
             "messagelist_change_contact_name_color" -> setIsChangeContactNameColor(isChangeContactNameColor = value)
             "messagelist_show_contact_picture" -> setIsShowContactPicture(isShowContactPicture = value)
             "gravatar_enabled" -> setGravatarEnabled(value)
+            "widget_show_personal" -> updateWidgetSettings { it.copy(showPersonal = value) }
+            "widget_show_notifications" -> updateWidgetSettings { it.copy(showNotifications = value) }
+            "widget_show_newsletters" -> updateWidgetSettings { it.copy(showNewsletters = value) }
             "messagelist_colorize_missing_contact_pictures" -> setIsColorizeMissingContactPictures(
                 isColorizeMissingContactPictures = value,
             )
@@ -505,6 +512,13 @@ class GeneralSettingsDataStore(
                     ),
                 ),
             )
+        }
+    }
+
+    private fun updateWidgetSettings(transform: (WidgetSettings) -> WidgetSettings) {
+        skipSaveSettings = true
+        generalSettingsManager.update { settings ->
+            settings.copy(widget = transform(settings.widget))
         }
     }
 

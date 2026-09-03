@@ -330,6 +330,28 @@
                 android:title="@string/global_settings_gravatar_api_key_label"
                 />
 
+            <PreferenceCategory
+                android:key="widget_categories"
+                android:title="@string/global_settings_widget_category"
+                >
+
+                <CheckBoxPreference
+                    android:key="widget_show_personal"
+                    android:summary="@string/global_settings_widget_show_personal_summary"
+                    android:title="@string/global_settings_widget_show_personal_label"
+                    />
+
+                <CheckBoxPreference
+                    android:key="widget_show_notifications"
+                    android:title="@string/global_settings_widget_show_notifications_label"
+                    />
+
+                <CheckBoxPreference
+                    android:key="widget_show_newsletters"
+                    android:title="@string/global_settings_widget_show_newsletters_label"
+                    />
+            </PreferenceCategory>
+
             <CheckBoxPreference
                 android:key="messagelist_background_as_unread_indicator"
                 android:summary="@string/global_settings_background_as_unread_indicator_summary"
