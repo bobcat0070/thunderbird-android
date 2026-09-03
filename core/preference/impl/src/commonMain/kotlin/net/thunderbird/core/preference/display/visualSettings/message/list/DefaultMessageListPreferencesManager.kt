@@ -44,6 +44,10 @@ class DefaultMessageListPreferencesManager(
             DisplayMessageListSettingKey.UseBackgroundAsUnreadIndicator.value,
             MESSAGE_LIST_SETTINGS_DEFAULT_IS_USE_BACKGROUND_AS_INDICATOR,
         ),
+        isCategoryGroupingEnabled = storage.getBoolean(
+            DisplayMessageListSettingKey.CategoryGroupingEnabled.value,
+            MESSAGE_LIST_SETTINGS_DEFAULT_IS_CATEGORY_GROUPING_ENABLED,
+        ),
         isShowCorrespondentNames = storage.getBoolean(
             DisplayMessageListSettingKey.ShowCorrespondentNames.value,
             MESSAGE_LIST_SETTINGS_DEFAULT_IS_SHOW_CORRESPONDENT_NAMES,
@@ -90,6 +94,10 @@ class DefaultMessageListPreferencesManager(
         storageEditor.putBoolean(
             DisplayMessageListSettingKey.UseBackgroundAsUnreadIndicator.value,
             preferences.isUseBackgroundAsUnreadIndicator,
+        )
+        storageEditor.putBoolean(
+            DisplayMessageListSettingKey.CategoryGroupingEnabled.value,
+            preferences.isCategoryGroupingEnabled,
         )
         storageEditor.putBoolean(DisplayMessageListSettingKey.ShowContactName.value, preferences.isShowContactName)
         storageEditor.putBoolean(

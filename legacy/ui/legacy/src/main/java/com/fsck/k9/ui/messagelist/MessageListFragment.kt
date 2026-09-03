@@ -700,6 +700,11 @@ class MessageListFragment :
      */
     override fun onBundleClicked(messageClass: MessageClass) = Unit
 
+    /**
+     * Unreachable here for the same reason: this list renders with Compose and never emits the toggle row.
+     */
+    override fun onGroupingToggled(isEnabled: Boolean) = Unit
+
     override fun onFooterClicked() {
         val account = this.account ?: return
         val currentFolder = this.currentFolder ?: return

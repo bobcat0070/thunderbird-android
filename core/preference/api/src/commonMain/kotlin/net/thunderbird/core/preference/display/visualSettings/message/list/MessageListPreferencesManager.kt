@@ -14,6 +14,7 @@ enum class DisplayMessageListSettingKey(val value: String) {
     MessageListDensity("messageListDensity"),
     RegisteredNameColor("registeredNameColor"),
     MessageListDateTimeFormat("messageListDateTimeFormat"),
+    CategoryGroupingEnabled("categoryGroupingEnabled"),
 }
 
 interface MessageListPreferencesManager : PreferenceManager<DisplayMessageListSettings>

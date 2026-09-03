@@ -100,6 +100,7 @@ import net.thunderbird.core.featureflag.keys.GeneratedFeatureFlagKey
 import net.thunderbird.core.logging.Logger
 import net.thunderbird.core.outcome.Outcome
 import net.thunderbird.core.preference.GeneralSettingsManager
+import net.thunderbird.core.preference.display.visualSettings.message.list.MessageListPreferencesManager
 import net.thunderbird.core.preference.display.visualSettings.message.list.DisplayMessageListSettings
 import net.thunderbird.core.preference.interaction.InteractionSettings
 import net.thunderbird.core.ui.theme.api.FeatureThemeProvider
@@ -162,6 +163,7 @@ class LegacyMessageListFragment :
 
     private val generalSettingsManager: GeneralSettingsManager by inject()
     private val sortTypeToastProvider: SortTypeToastProvider by inject()
+    private val messageListPreferencesManager: MessageListPreferencesManager by inject()
     private val folderNameFormatter: FolderNameFormatter by inject { parametersOf(requireContext()) }
     private val messagingController: MessagingControllerWrapper by inject()
     private val messagingControllerRegistry: MessagingControllerRegistry by inject()
@@ -245,7 +247,6 @@ class LegacyMessageListFragment :
      * Kept in the fragment rather than in the adapter so a reload - new mail arriving, a flag changing - does
      * not silently collapse a group the user is reading.
      */
-    private var expandedBundles = emptySet<MessageClass>()
 
     /**
      * The last list the loader produced, so toggling a bundle can rebuild the rows without a reload.
@@ -815,13 +816,16 @@ class LegacyMessageListFragment :
             ?.let { condition -> MessageClass.entries.firstOrNull { it.name == condition.value } }
 
     /**
-     * Grouping is for a mailbox being read, not for a result set the user asked a question of.
+     * Whether this list is a mailbox being read rather than a result set the user asked a question of.
      *
-     * A search, a thread, or an already-opened bundle is a specific answer, and lifting part of it out of the
-     * list would hide the very messages that were asked for.
+     * A search, a thread, or an already-opened category is a specific answer, and lifting part of it out of
+     * the list would hide the very messages that were asked for.
      */
-    private val isGroupingEnabled: Boolean
+    private val isCategoryListEligible: Boolean
         get() = !isThreadDisplay && !localSearch.isManualSearch && displayedClassification == null
+
+    private val isGroupingEnabled: Boolean
+        get() = messageListPreferencesManager.getConfig().isCategoryGroupingEnabled
 
     private fun updateViewItems(messageListItems: List<MessageListItem>) {
         adapter.viewItems = buildList {
@@ -829,12 +833,25 @@ class LegacyMessageListFragment :
                 add(MessageListViewItem.InAppNotificationBannerList)
             }
 
-            if (isGroupingEnabled) {
-                addAll(messageListItems.groupByClassification())
+            if (isCategoryListEligible) {
+                addAll(
+                    messageListItems.toViewItems(
+                        isGroupingEnabled = isGroupingEnabled,
+                        showDayHeaders = true,
+                    ),
+                )
             } else {
                 addAll(messageListItems.map { MessageListViewItem.Message(it) })
             }
         }
+    }
+
+    override fun onGroupingToggled(isEnabled: Boolean) {
+        messageListPreferencesManager.save(
+            messageListPreferencesManager.getConfig().copy(isCategoryGroupingEnabled = isEnabled),
+        )
+
+        currentMessageListItems?.let { updateViewItems(it) }
     }
 
     /**
@@ -2100,6 +2117,7 @@ class LegacyMessageListFragment :
             }
         }
 
+        currentMessageListItems = messageListItems
         updateViewItems(messageListItems)
 
         rememberedSelected?.let {

@@ -16,6 +16,8 @@ import app.k9mail.legacy.message.controller.MessageReference
 import com.fsck.k9.contacts.ContactPictureLoader
 import com.fsck.k9.ui.messagelist.item.BannerInlineListInAppNotificationViewHolder
 import com.fsck.k9.ui.messagelist.item.BundleViewHolder
+import com.fsck.k9.ui.messagelist.item.DayHeaderViewHolder
+import com.fsck.k9.ui.messagelist.item.GroupingToggleViewHolder
 import com.fsck.k9.ui.messagelist.item.ComposableMessageViewHolder
 import com.fsck.k9.ui.messagelist.item.FooterViewHolder
 import com.fsck.k9.ui.messagelist.item.MessageListViewHolder
@@ -31,12 +33,25 @@ import net.thunderbird.feature.notification.api.content.InAppNotification
 import net.thunderbird.feature.notification.api.ui.action.NotificationAction
 
 private const val FOOTER_ID = 1L
+private const val GROUPING_TOGGLE_ID = -2L
+
+/**
+ * Day header ids start well clear of the handful of fixed rows.
+ */
+private const val DAY_HEADER_ID_BASE = 1000L
+
+/**
+ * Category row ids sit between the fixed rows and the day headers.
+ */
+private const val BUNDLE_ID_BASE = 10L
 private const val IN_APP_NOTIFICATION_BANNER_INLINE_LIST_ID = -1L
 
 private const val TYPE_MESSAGE = 0
 private const val TYPE_FOOTER = 1
 private const val TYPE_IN_APP_NOTIFICATION_BANNER_INLINE_LIST = 2
 private const val TYPE_BUNDLE = 3
+private const val TYPE_DAY_HEADER = 4
+private const val TYPE_GROUPING_TOGGLE = 5
 
 @Suppress("LongParameterList")
 class MessageListAdapter internal constructor(
@@ -229,6 +244,11 @@ class MessageListAdapter internal constructor(
 
             TYPE_BUNDLE -> BundleViewHolder.create(layoutInflater, parent, listItemListener::onBundleClicked)
 
+            TYPE_DAY_HEADER -> DayHeaderViewHolder.create(layoutInflater, parent)
+
+            TYPE_GROUPING_TOGGLE ->
+                GroupingToggleViewHolder.create(layoutInflater, parent, listItemListener::onGroupingToggled)
+
             TYPE_IN_APP_NOTIFICATION_BANNER_INLINE_LIST if isInAppNotificationEnabled ->
                 BannerInlineListInAppNotificationViewHolder(
                     view = ComposeView(context = parent.context),
@@ -303,6 +323,15 @@ class MessageListAdapter internal constructor(
             TYPE_BUNDLE -> {
                 val bundleViewHolder = holder as BundleViewHolder
                 bundleViewHolder.bind(viewItems[position] as MessageListViewItem.Bundle)
+            }
+
+            TYPE_DAY_HEADER -> {
+                (holder as DayHeaderViewHolder).bind(viewItems[position] as MessageListViewItem.DayHeader)
+            }
+
+            TYPE_GROUPING_TOGGLE -> {
+                val toggle = viewItems[position] as MessageListViewItem.GroupingToggle
+                (holder as GroupingToggleViewHolder).bind(toggle)
             }
 
             else -> {
@@ -429,6 +458,7 @@ interface MessageListItemActionListener {
     fun onToggleMessageFlag(item: MessageListItem)
     fun onFooterClicked()
     fun onBundleClicked(messageClass: MessageClass)
+    fun onGroupingToggled(isEnabled: Boolean)
     fun filterInAppNotificationEvents(notification: InAppNotification): Boolean
     fun onNotificationActionClicked(action: NotificationAction)
 }
@@ -453,6 +483,28 @@ sealed interface MessageListViewItem {
     }
 
     /**
+     * The control at the very top for turning categories on and off.
+     */
+    data class GroupingToggle(val isEnabled: Boolean) : MessageListViewItem {
+        override val viewId: Long = GROUPING_TOGGLE_ID
+        override val viewType: Int = TYPE_GROUPING_TOGGLE
+    }
+
+    /**
+     * Names the day the messages below it arrived.
+     */
+    data class DayHeader(
+        val timestamp: Long,
+        val dayOrdinal: Int,
+        val relativeDay: RelativeDay,
+    ) : MessageListViewItem {
+        // Negative and derived from the day, so it is stable across updates and cannot collide with a
+        // message's id or with a category row.
+        override val viewId: Long get() = -(DAY_HEADER_ID_BASE + dayOrdinal)
+        override val viewType: Int = TYPE_DAY_HEADER
+    }
+
+    /**
      * A row standing in for every message of one class, and the way into them.
      */
     data class Bundle(
@@ -462,7 +514,7 @@ sealed interface MessageListViewItem {
         val senderNames: List<String>,
     ) : MessageListViewItem {
         // Negative so it cannot collide with a message's unique id, which is derived from a row id.
-        override val viewId: Long get() = -(messageClass.ordinal + 2L)
+        override val viewId: Long get() = -(messageClass.ordinal + BUNDLE_ID_BASE)
         override val viewType: Int = TYPE_BUNDLE
     }
 }
