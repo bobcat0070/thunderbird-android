@@ -104,6 +104,74 @@ class RuleBasedMessageClassifierTest {
     }
 
     @Test
+    fun `a sender the user has written to should be human`() {
+        val result = testSubject.classify(evidenceOf(from = "sam@example.com", hasCorresponded = true))
+
+        assertThat(result.messageClass).isEqualTo(MessageClass.HUMAN)
+        assertThat(result.signal).isEqualTo(ClassificationSignal.PRIOR_CORRESPONDENCE)
+    }
+
+    @Test
+    fun `a sender in the address book should be human`() {
+        val result = testSubject.classify(evidenceOf(from = "sam@example.com", isKnownContact = true))
+
+        assertThat(result.messageClass).isEqualTo(MessageClass.HUMAN)
+        assertThat(result.signal).isEqualTo(ClassificationSignal.KNOWN_CONTACT)
+    }
+
+    @Test
+    fun `correspondence should outrank the address book`() {
+        // Having written to someone is a stronger statement than having their card.
+        val result = testSubject.classify(
+            evidenceOf(from = "sam@example.com", isKnownContact = true, hasCorresponded = true),
+        )
+
+        assertThat(result.signal).isEqualTo(ClassificationSignal.PRIOR_CORRESPONDENCE)
+    }
+
+    @Test
+    fun `a known correspondent should outrank bulk headers`() {
+        // The case this signal exists for: a colleague whose employer staples List-Unsubscribe onto
+        // everything leaving the building.
+        val result = testSubject.classify(
+            evidenceOf(
+                "list-unsubscribe" to "<https://example.com/u/1>",
+                from = "sam@example.com",
+                hasCorresponded = true,
+            ),
+        )
+
+        assertThat(result.messageClass).isEqualTo(MessageClass.HUMAN)
+    }
+
+    @Test
+    fun `a known correspondent should outrank a no-reply address`() {
+        val result = testSubject.classify(evidenceOf(from = "noreply@example.com", hasCorresponded = true))
+
+        assertThat(result.messageClass).isEqualTo(MessageClass.HUMAN)
+    }
+
+    @Test
+    fun `an automated message from a known correspondent should stay a notification`() {
+        // A receipt from a shop the user emails is still a receipt, and the machine saying so outright is
+        // better evidence than the address being familiar.
+        val result = testSubject.classify(
+            evidenceOf("auto-submitted" to "auto-generated", from = "orders@shop.com", hasCorresponded = true),
+        )
+
+        assertThat(result.messageClass).isEqualTo(MessageClass.NOTIFICATION)
+    }
+
+    @Test
+    fun `a mailing list should stay a newsletter even for a known correspondent`() {
+        val result = testSubject.classify(
+            evidenceOf("list-id" to "<dev.example.org>", from = "sam@example.com", hasCorresponded = true),
+        )
+
+        assertThat(result.messageClass).isEqualTo(MessageClass.NEWSLETTER)
+    }
+
+    @Test
     fun `no-reply sender should mean notification`() {
         val result = testSubject.classify(evidenceOf(from = "no-reply@example.com"))
 
@@ -182,9 +250,16 @@ class RuleBasedMessageClassifierTest {
         assertThat(result.messageClass).isEqualTo(MessageClass.UNKNOWN)
     }
 
-    private fun evidenceOf(vararg headers: Pair<String, String>, from: String? = null) = MessageEvidence(
+    private fun evidenceOf(
+        vararg headers: Pair<String, String>,
+        from: String? = null,
+        isKnownContact: Boolean = false,
+        hasCorresponded: Boolean = false,
+    ) = MessageEvidence(
         headers = headers.groupBy({ it.first }, { it.second }),
         fromAddress = from,
         recipientCount = 1,
+        isKnownContact = isKnownContact,
+        hasCorresponded = hasCorresponded,
     )
 }

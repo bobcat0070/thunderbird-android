@@ -49,6 +49,7 @@ class RuleBasedMessageClassifier : MessageClassifier {
     override fun classify(evidence: MessageEvidence): MessageClassification {
         return mailingList(evidence)
             ?: automated(evidence)
+            ?: knownCorrespondent(evidence)
             ?: bulk(evidence)
             ?: noReplySender(evidence)
             ?: MessageClassification.UNKNOWN
@@ -84,6 +85,28 @@ class RuleBasedMessageClassifier : MessageClassifier {
         }
 
         return null
+    }
+
+    /**
+     * Someone the user knows, checked before the bulk headers.
+     *
+     * A colleague whose employer staples List-Unsubscribe onto outgoing mail is still a colleague, and this
+     * is the evidence that says so. It is also the only evidence here the sender cannot set: an address book
+     * entry and a record of having written to someone are both facts about the user, not claims in a header.
+     *
+     * It runs after the automated rules on purpose. A receipt from a shop the user has emailed is still a
+     * receipt, and a machine saying so outright is better evidence than the address being familiar.
+     */
+    private fun knownCorrespondent(evidence: MessageEvidence): MessageClassification? {
+        return when {
+            evidence.hasCorresponded ->
+                MessageClassification(MessageClass.HUMAN, ClassificationSignal.PRIOR_CORRESPONDENCE)
+
+            evidence.isKnownContact ->
+                MessageClassification(MessageClass.HUMAN, ClassificationSignal.KNOWN_CONTACT)
+
+            else -> null
+        }
     }
 
     private fun bulk(evidence: MessageEvidence): MessageClassification? {

@@ -48,6 +48,14 @@ val mailStoreModule = module {
             messageFulltextCreator = get(),
             attachmentCounter = get(),
             messageClassifier = get(),
+            contactRepository = get(),
+            knownCorrespondents = get(),
+        )
+    }
+    single {
+        KnownCorrespondents(
+            accountManager = get(),
+            messageListRepository = get(),
         )
     }
     single {

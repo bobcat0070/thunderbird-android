@@ -9,11 +9,15 @@ package net.thunderbird.feature.mail.message.classification.api
  * @param headers header values by lower-case name. A header may legitimately appear more than once.
  * @param fromAddress the bare sender address, without display name, lower-cased.
  * @param recipientCount how many addresses the message was visibly addressed to, across To and Cc.
+ * @param isKnownContact the sender is in the user's address book.
+ * @param hasCorresponded the user has sent mail to this address.
  */
 data class MessageEvidence(
     val headers: Map<String, List<String>>,
     val fromAddress: String? = null,
     val recipientCount: Int = 0,
+    val isKnownContact: Boolean = false,
+    val hasCorresponded: Boolean = false,
 ) {
     /**
      * @return the first value of [name], or `null` when the header is absent or empty.

@@ -1,21 +1,39 @@
 package com.fsck.k9.mailstore
 
 import app.k9mail.legacy.mailstore.SaveMessageData
+import app.k9mail.core.android.common.contact.ContactRepository
 import com.fsck.k9.crypto.EncryptionExtractor
 import com.fsck.k9.mail.Message
 import com.fsck.k9.mail.MessageDownloadState
 import com.fsck.k9.message.extractors.AttachmentCounter
 import com.fsck.k9.message.extractors.MessageFulltextCreator
 import com.fsck.k9.message.extractors.MessagePreviewCreator
+import net.thunderbird.core.common.mail.toEmailAddressOrNull
 import net.thunderbird.feature.mail.message.classification.api.MessageClassifier
 
+@Suppress("LongParameterList")
 class SaveMessageDataCreator(
     private val encryptionExtractor: EncryptionExtractor,
     private val messagePreviewCreator: MessagePreviewCreator,
     private val messageFulltextCreator: MessageFulltextCreator,
     private val attachmentCounter: AttachmentCounter,
     private val messageClassifier: MessageClassifier,
+    private val contactRepository: ContactRepository,
+    private val knownCorrespondents: KnownCorrespondents,
 ) {
+    /**
+     * Contact lookups go through the address book, which can be unavailable or permission-gated; a failure
+     * only means one fewer signal, never a failed save.
+     */
+    @Suppress("SwallowedException", "TooGenericExceptionCaught")
+    private fun isKnownContact(address: String): Boolean {
+        return try {
+            address.toEmailAddressOrNull()?.let { contactRepository.hasContactFor(it) } == true
+        } catch (e: Exception) {
+            false
+        }
+    }
+
     fun createSaveMessageData(
         message: Message,
         downloadState: MessageDownloadState,
@@ -28,7 +46,13 @@ class SaveMessageDataCreator(
 
         // Classified here because this is the only point where the headers are in hand; the store keeps only
         // a subset of them, and re-deriving later would mean re-parsing the message.
-        val classification = messageClassifier.classify(message.toClassificationEvidence())
+        val senderAddress = message.from?.firstOrNull()?.address?.lowercase()
+        val classification = messageClassifier.classify(
+            message.toClassificationEvidence(
+                isKnownContact = senderAddress?.let { isKnownContact(it) } == true,
+                hasCorresponded = senderAddress?.let { knownCorrespondents.isKnown(it) } == true,
+            ),
+        )
         val isSenderAuthenticated = hasDmarcPass(
             message.getHeader(authenticationResultsHeaderName()).orEmpty().toList(),
         )

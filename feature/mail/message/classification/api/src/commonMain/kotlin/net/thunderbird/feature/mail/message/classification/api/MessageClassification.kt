@@ -55,6 +55,12 @@ enum class ClassificationSignal {
     /** The sender address is one of the conventional do-not-reply forms. */
     NO_REPLY_SENDER,
 
+    /** The sender is in the user's address book. */
+    KNOWN_CONTACT,
+
+    /** The user has sent mail to this address. */
+    PRIOR_CORRESPONDENCE,
+
     /**
      * A rule the user taught, by correcting a message from this sender or domain.
      *
@@ -80,6 +86,7 @@ data class MessageClassification(
  * The version of the rules that produced a classification.
  *
  * Stored with each verdict so a later improvement can tell which messages predate it. Version 2 recognises a
- * do-not-reply marker anywhere in the sender's local part, not only at the start.
+ * do-not-reply marker anywhere in the sender's local part, not only at the start; version 3 takes the user's
+ * own contacts and correspondence into account.
  */
-const val CLASSIFIER_VERSION: Int = 2
+const val CLASSIFIER_VERSION: Int = 3

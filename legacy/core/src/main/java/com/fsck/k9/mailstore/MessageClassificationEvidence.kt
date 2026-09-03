@@ -21,7 +21,10 @@ private val CLASSIFICATION_HEADERS = listOf(
 /**
  * Reduces a parsed message to the facts the classifier is allowed to see.
  */
-internal fun Message.toClassificationEvidence(): MessageEvidence {
+internal fun Message.toClassificationEvidence(
+    isKnownContact: Boolean = false,
+    hasCorresponded: Boolean = false,
+): MessageEvidence {
     val headers = CLASSIFICATION_HEADERS.associate { name ->
         name.lowercase() to getHeader(name).orEmpty().toList()
     }
@@ -30,6 +33,8 @@ internal fun Message.toClassificationEvidence(): MessageEvidence {
         headers = headers,
         fromAddress = from?.firstOrNull()?.address?.lowercase(),
         recipientCount = recipientCount(),
+        isKnownContact = isKnownContact,
+        hasCorresponded = hasCorresponded,
     )
 }
 
