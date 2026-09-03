@@ -41,15 +41,31 @@ the 'message view theme' setting).
                 tools:visibility="visible"
                 >
 
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/show_pictures"
-                    style="?attr/materialButtonOutlinedStyle"
+                <LinearLayout
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_gravity="center_horizontal"
-                    android:text="@string/message_view_show_remote_images_action"
-                    app:icon="@drawable/ic_image"
-                    />
+                    android:orientation="horizontal"
+                    >
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/show_pictures"
+                        style="?attr/materialButtonOutlinedStyle"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/message_view_show_remote_images_action"
+                        app:icon="@drawable/ic_image"
+                        />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/always_show_pictures"
+                        style="?attr/materialButtonOutlinedStyle"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="8dp"
+                        android:text="@string/message_view_always_show_remote_images_action"
+                        />
+                </LinearLayout>
 
             </FrameLayout>
 

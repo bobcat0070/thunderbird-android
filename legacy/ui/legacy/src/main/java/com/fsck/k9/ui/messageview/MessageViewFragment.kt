@@ -162,6 +162,7 @@ class MessageViewFragment :
 
     private val messageExporter: MessageExporter by inject()
     private val messageClassificationTeacher: MessageClassificationTeacher by inject()
+    private val remoteImageSenderStore: RemoteImageSenderStore by inject()
 
     private val fileNameSuggester: MessageFileNameSuggester by inject()
 
@@ -230,6 +231,7 @@ class MessageViewFragment :
 
         setFragmentResultListener(MessageDetailsFragment.FRAGMENT_RESULT_KEY, ::onMessageDetailsResult)
         setFragmentResultListener(ClassifyMessageDialogFragment.FRAGMENT_RESULT_KEY, ::onClassifyResult)
+        setFragmentResultListener(AlwaysShowImagesDialogFragment.FRAGMENT_RESULT_KEY, ::onAlwaysShowImagesResult)
     }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
@@ -247,6 +249,11 @@ class MessageViewFragment :
 
     private fun initializeMessageTopView(messageTopView: MessageTopView) {
         messageTopView.setShowAccountIndicator(showAccountIndicator)
+
+        messageTopView.onAlwaysShowPictures = { senderAddress ->
+            AlwaysShowImagesDialogFragment.create(senderAddress)
+                .show(parentFragmentManager, "always_show_images")
+        }
 
         val sizeFormatter = SizeFormatter(resources)
         val composeView = messageTopView.findViewById<ComposeView>(R.id.bottom_sheet_compose_view)
@@ -532,6 +539,31 @@ class MessageViewFragment :
             appName = appNameProvider.appName,
             noSubjectText = getString(R.string.general_no_subject),
         ).print(messageViewInfo)
+    }
+
+    /**
+     * Records the user's answer and re-renders, so the images they just allowed appear without a second tap.
+     */
+    private fun onAlwaysShowImagesResult(requestKey: String, result: Bundle) {
+        val scope = result.getString(AlwaysShowImagesDialogFragment.RESULT_SCOPE)
+            ?.let { name -> RemoteImageScope.entries.firstOrNull { it.name == name } }
+            ?: return
+        val senderAddress = senderAddress() ?: return
+
+        remoteImageSenderStore.trust(senderAddress, scope)
+
+        val trusted = if (scope == RemoteImageScope.DOMAIN) {
+            senderAddress.emailDomainOrNull() ?: senderAddress
+        } else {
+            senderAddress
+        }
+        Toast.makeText(
+            requireContext(),
+            getString(R.string.message_view_always_show_remote_images_done, trusted),
+            Toast.LENGTH_SHORT,
+        ).show()
+
+        mMessageViewInfo?.let { showMessage(it) }
     }
 
     private fun onClassify() {

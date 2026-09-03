@@ -47,6 +47,7 @@ class MessageTopView(
     private val contactRepository: ContactRepository by inject()
     private val visualSettingsPrefManager: DisplayVisualSettingsPreferenceManager by inject()
     private val animationManager: AnimationManager by inject()
+    private val remoteImageSenderStore: RemoteImageSenderStore by inject()
 
     private lateinit var layoutInflater: LayoutInflater
 
@@ -62,6 +63,12 @@ class MessageTopView(
     private lateinit var messageReaderViewModel: MessageReaderViewContract.ViewModel<Part>
     private lateinit var extraHeaderContainer: View
     private lateinit var showPicturesButton: MaterialButton
+    private lateinit var alwaysShowPicturesButton: MaterialButton
+
+    /**
+     * The sender of the message currently on screen, so the "Always" button knows who it is trusting.
+     */
+    private var currentSenderAddress: String? = null
 
     private var isShowingProgress = false
     private var showPicturesButtonClicked = false
@@ -90,6 +97,7 @@ class MessageTopView(
 
         extraHeaderContainer = findViewById(R.id.extra_header_container)
         showPicturesButton = findViewById(R.id.show_pictures)
+        alwaysShowPicturesButton = findViewById(R.id.always_show_pictures)
         setShowPicturesButtonListener()
 
         containerView = findViewById(R.id.message_container)
@@ -108,7 +116,17 @@ class MessageTopView(
             showPicturesInAllContainerViews()
             showPicturesButtonClicked = true
         }
+
+        alwaysShowPicturesButton.setOnClickListener {
+            currentSenderAddress?.let { senderAddress -> onAlwaysShowPictures?.invoke(senderAddress) }
+        }
     }
+
+    /**
+     * Called when the user asks for this sender's images to load from now on. Set by the fragment, which owns
+     * the dialog and the store.
+     */
+    var onAlwaysShowPictures: ((String) -> Unit)? = null
 
     private fun showPicturesInAllContainerViews() {
         val messageContainerViewCandidate = containerView.getChildAt(0)
@@ -127,6 +145,7 @@ class MessageTopView(
     fun showMessage(account: LegacyAccountDto, messageViewInfo: MessageViewInfo) {
         resetAndPrepareMessageView(messageViewInfo)
 
+        currentSenderAddress = getSenderEmailAddress(messageViewInfo.message)?.address
         val showPicturesSetting = account.showPictures
         val loadPictures = shouldAutomaticallyLoadPictures(showPicturesSetting, messageViewInfo.message) ||
             showPicturesButtonClicked
@@ -154,6 +173,8 @@ class MessageTopView(
         )
 
         if (view.hasHiddenExternalImages && !showPicturesButtonClicked) {
+            // Nothing to remember for a message with no readable sender.
+            alwaysShowPicturesButton.visibility = if (currentSenderAddress == null) GONE else VISIBLE
             showShowPicturesButton()
         } else {
             hideShowPicturesButton()
@@ -322,7 +343,19 @@ class MessageTopView(
     }
 
     private fun shouldAutomaticallyLoadPictures(showPicturesSetting: ShowPictures, message: Message): Boolean {
-        return showPicturesSetting === ShowPictures.ALWAYS || shouldShowPicturesFromSender(showPicturesSetting, message)
+        return showPicturesSetting === ShowPictures.ALWAYS ||
+            isTrustedSender(message) ||
+            shouldShowPicturesFromSender(showPicturesSetting, message)
+    }
+
+    /**
+     * Checked regardless of the account's setting: the user naming this sender is a more specific decision
+     * than the blanket policy, so it stands even when that policy is "never".
+     */
+    private fun isTrustedSender(message: Message): Boolean {
+        val senderAddress = getSenderEmailAddress(message)?.address ?: return false
+
+        return remoteImageSenderStore.isTrusted(senderAddress)
     }
 
     private fun shouldShowPicturesFromSender(showPicturesSetting: ShowPictures, message: Message): Boolean {

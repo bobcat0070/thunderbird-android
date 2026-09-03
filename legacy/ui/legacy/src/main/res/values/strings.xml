@@ -95,6 +95,12 @@
     <string name="message_list_bundle_newsletters">Newsletters</string>
     <string name="message_list_bundle_title">%1$s %2$d</string>
     <string name="message_list_bundle_title_unread">%1$s %2$d</string>
+    <string name="message_view_always_show_remote_images_action">Always</string>
+    <string name="message_view_always_show_remote_images_title">Always show images</string>
+    <string name="message_view_always_show_remote_images_description">Images will load without asking. Loading them tells the sender when the message was opened.</string>
+    <string name="message_view_always_show_remote_images_sender">From %1$s</string>
+    <string name="message_view_always_show_remote_images_domain">From anyone at %1$s</string>
+    <string name="message_view_always_show_remote_images_done">Images from %1$s will now load automatically</string>
     <string name="global_settings_widget_category">Home screen widget</string>
     <string name="global_settings_widget_show_personal_label">Show personal mail</string>
     <string name="global_settings_widget_show_personal_summary">Includes mail that could not be categorised</string>
