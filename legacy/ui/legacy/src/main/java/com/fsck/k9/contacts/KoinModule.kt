@@ -1,9 +1,13 @@
 package com.fsck.k9.contacts
 
 import com.fsck.k9.contacts.bimi.BimiLogoLoader
+import net.thunderbird.core.logging.Logger
 import com.fsck.k9.contacts.bimi.PlatformDnsTxtLookup
+import com.fsck.k9.contacts.bimi.VmcValidator
+import com.fsck.k9.contacts.bimi.loadMvaRoots
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
+import org.koin.android.ext.koin.androidContext
 import org.koin.core.qualifier.named
 import okhttp3.OkHttpClient
 import org.koin.dsl.module
@@ -38,6 +42,10 @@ val contactsModule = module {
             generalSettingsManager = get(),
             dnsTxtLookup = PlatformDnsTxtLookup(executor = Executors.newCachedThreadPool()),
             httpClient = get(named("gravatarHttpClient")),
+            vmcValidator = VmcValidator(
+                trustAnchors = loadMvaRoots(androidContext()),
+                onRejected = { reason -> get<Logger>().debug("VmcValidator") { reason } },
+            ),
             logger = get(),
         )
     }

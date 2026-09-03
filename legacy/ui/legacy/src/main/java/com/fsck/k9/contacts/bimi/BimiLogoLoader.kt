@@ -19,10 +19,10 @@ private const val TAG = "BimiLogoLoader"
 private const val MISS_CACHE_SIZE = 512
 
 /**
- * BIMI logos are small by specification. The cap is what stops a hostile or broken host from streaming an
- * unbounded body into a list row's decode.
+ * Certificates are small. The cap is what stops a hostile or broken host from streaming an unbounded body
+ * into a list row's decode.
  */
-private const val MAX_LOGO_BYTES = 256L * 1024L
+private const val MAX_CERTIFICATE_BYTES = 256L * 1024L
 
 private const val USER_AGENT = "Thunderbird-Android"
 
@@ -33,14 +33,21 @@ private const val USER_AGENT = "Thunderbird-Android"
  * for showing the logo: DMARC is what ties the From domain to a sender the domain authorised, and without it
  * a brand indicator is an assurance about nothing — worse than no logo, because it looks like verification.
  *
- * The Verified Mark Certificate a domain may publish is deliberately not treated as adding anything here: it
- * is recorded but not validated, so this shows "the domain that passed DMARC publishes this logo" and not
- * "a certificate authority vouched for this mark".
+ * What a logo is worth depends entirely on who vouched for it, so the three cases are kept apart rather than
+ * flattened into one picture:
+ *
+ * A Verified Mark Certificate means an authority checked that this organisation owns this registered
+ * trademark, and the mark drawn is the one inside the certificate, so what appears is exactly what was
+ * attested. A Common Mark Certificate means an authority checked something weaker. A domain that publishes a
+ * logo with no certificate has only its own say-so, which passing DMARC does not strengthen: DMARC shows a
+ * domain authorised its own mail and says nothing about whether it may use the mark. That last case is shown
+ * too, but badged, because a lookalike domain passes its own DMARC just as easily as a bank does.
  */
 class BimiLogoLoader(
     private val generalSettingsManager: GeneralSettingsManager,
     private val dnsTxtLookup: DnsTxtLookup,
     private val httpClient: OkHttpClient,
+    private val vmcValidator: VmcValidator,
     private val logger: Logger,
 ) {
 
@@ -69,6 +76,7 @@ class BimiLogoLoader(
         }
     }
 
+    @Suppress("ReturnCount")
     private fun fetchLogo(domain: String, size: Int, selector: String): Bitmap? {
         val record = findRecord(domain, selector)
         if (record == null) {
@@ -76,19 +84,29 @@ class BimiLogoLoader(
             return null
         }
 
-        return downloadLogo(record.logoUrl, size)
+        // A certificate that fails to validate leaves exactly what a missing one leaves: the domain's own
+        // claim. It is badged the same way rather than being trusted or discarded.
+        val mark = record.authorityUrl?.let { downloadVerifiedMark(it, domain) }
+        val svg = mark?.svg ?: downloadLogo(record.logoUrl)
+        if (svg == null) {
+            domainsWithoutLogo[domain] = Unit
+            return null
+        }
+
+        return renderSvg(svg, size).withMarkBadge(mark.trust())
+    }
+
+    private fun VerifiedMark?.trust(): MarkTrust = when (this?.assurance) {
+        MarkAssurance.VERIFIED -> MarkTrust.VERIFIED
+        MarkAssurance.COMMON -> MarkTrust.COMMON
+        null -> MarkTrust.SELF_ASSERTED
     }
 
     /**
-     * A domain may publish several TXT records at the name; only one is a BIMI record.
+     * Fetches the logo a domain publishes directly, for when no certificate vouches for it.
      */
-    private fun findRecord(domain: String, selector: String): BimiRecord? {
-        return dnsTxtLookup.txtRecords(bimiRecordName(domain, selector))
-            .firstNotNullOfOrNull { text -> parseBimiRecord(text) }
-    }
-
     @Suppress("ReturnCount")
-    private fun downloadLogo(logoUrl: String, size: Int): Bitmap? {
+    private fun downloadLogo(logoUrl: String): ByteArray? {
         val request = Request.Builder()
             .url(logoUrl)
             .header("User-Agent", USER_AGENT)
@@ -101,13 +119,42 @@ class BimiLogoLoader(
                 return null
             }
 
-            val body = response.body
-            if (body.contentLength() > MAX_LOGO_BYTES) return null
+            if (response.body.contentLength() > MAX_CERTIFICATE_BYTES) return null
 
-            val bytes = body.byteStream().readAtMost(MAX_LOGO_BYTES.toInt()) ?: return null
-
-            renderSvg(bytes, size)
+            response.body.byteStream().readAtMost(MAX_CERTIFICATE_BYTES.toInt())
         }
+    }
+
+    /**
+     * Fetches the certificate chain and checks it vouches for this domain.
+     */
+    @Suppress("ReturnCount")
+    private fun downloadVerifiedMark(certificateUrl: String, domain: String): VerifiedMark? {
+        val request = Request.Builder()
+            .url(certificateUrl)
+            .header("User-Agent", USER_AGENT)
+            .build()
+
+        return httpClient.newCall(request).execute().use { response ->
+            if (!response.isSuccessful) {
+                logger.debug(TAG) { "Mark certificate host responded ${response.code}" }
+                return null
+            }
+
+            if (response.body.contentLength() > MAX_CERTIFICATE_BYTES) return null
+
+            val bytes = response.body.byteStream().readAtMost(MAX_CERTIFICATE_BYTES.toInt()) ?: return null
+
+            vmcValidator.validate(bytes.inputStream(), domain)
+        }
+    }
+
+    /**
+     * A domain may publish several TXT records at the name; only one is a BIMI record.
+     */
+    private fun findRecord(domain: String, selector: String): BimiRecord? {
+        return dnsTxtLookup.txtRecords(bimiRecordName(domain, selector))
+            .firstNotNullOfOrNull { text -> parseBimiRecord(text) }
     }
 
     /**
