@@ -13,6 +13,15 @@ import net.thunderbird.core.android.account.LegacyAccountDtoManager
 private const val CACHE_LIFETIME_MILLIS = 30L * 60L * 1000L
 
 /**
+ * How long an empty result is reused.
+ *
+ * Much shorter, because empty usually means the sent folder has not been synchronised yet rather than that
+ * the user has never written to anyone. Holding that answer for half an hour would ignore the signal for the
+ * first half hour of a new account, which is exactly when a mailbox is being filled and classified.
+ */
+private const val EMPTY_CACHE_LIFETIME_MILLIS = 60L * 1000L
+
+/**
  * The addresses the user has written to.
  *
  * Someone the user has actually sent mail to is a correspondent, and mail from them is worth reading even
@@ -44,7 +53,8 @@ class KnownCorrespondents(
 
     private fun currentAddresses(): Set<String> {
         synchronized(lock) {
-            if (currentTimeMillis() - loadedAt > CACHE_LIFETIME_MILLIS) {
+            val lifetime = if (addresses.isEmpty()) EMPTY_CACHE_LIFETIME_MILLIS else CACHE_LIFETIME_MILLIS
+            if (currentTimeMillis() - loadedAt > lifetime) {
                 addresses = loadAddresses()
                 loadedAt = currentTimeMillis()
             }
