@@ -15,6 +15,7 @@ import app.k9mail.core.android.common.contact.ContactRepository
 import app.k9mail.legacy.message.controller.MessageReference
 import com.fsck.k9.contacts.ContactPictureLoader
 import com.fsck.k9.ui.messagelist.item.BannerInlineListInAppNotificationViewHolder
+import com.fsck.k9.ui.messagelist.item.BundleViewHolder
 import com.fsck.k9.ui.messagelist.item.ComposableMessageViewHolder
 import com.fsck.k9.ui.messagelist.item.FooterViewHolder
 import com.fsck.k9.ui.messagelist.item.MessageListViewHolder
@@ -25,6 +26,7 @@ import net.thunderbird.core.featureflag.FeatureFlagResult
 import net.thunderbird.core.featureflag.keys.GeneratedFeatureFlagKey
 import net.thunderbird.core.ui.theme.api.FeatureThemeProvider
 import net.thunderbird.feature.account.avatar.AvatarMonogramCreator
+import net.thunderbird.feature.mail.message.classification.api.MessageClass
 import net.thunderbird.feature.notification.api.content.InAppNotification
 import net.thunderbird.feature.notification.api.ui.action.NotificationAction
 
@@ -34,6 +36,7 @@ private const val IN_APP_NOTIFICATION_BANNER_INLINE_LIST_ID = -1L
 private const val TYPE_MESSAGE = 0
 private const val TYPE_FOOTER = 1
 private const val TYPE_IN_APP_NOTIFICATION_BANNER_INLINE_LIST = 2
+private const val TYPE_BUNDLE = 3
 
 @Suppress("LongParameterList")
 class MessageListAdapter internal constructor(
@@ -141,6 +144,8 @@ class MessageListAdapter internal constructor(
         listItemListener.onFooterClicked()
     }
 
+
+
     private val starClickListener = OnClickListener { view: View ->
         val parentView = view.parent as View
         val messageListItem = getItemFromView(parentView) ?: return@OnClickListener
@@ -222,6 +227,8 @@ class MessageListAdapter internal constructor(
 
             TYPE_FOOTER -> FooterViewHolder.create(layoutInflater, parent, footerClickListener)
 
+            TYPE_BUNDLE -> BundleViewHolder.create(layoutInflater, parent, listItemListener::onBundleClicked)
+
             TYPE_IN_APP_NOTIFICATION_BANNER_INLINE_LIST if isInAppNotificationEnabled ->
                 BannerInlineListInAppNotificationViewHolder(
                     view = ComposeView(context = parent.context),
@@ -291,6 +298,11 @@ class MessageListAdapter internal constructor(
                 val footerViewHolder = holder as FooterViewHolder
                 val footer = viewItems[position] as MessageListViewItem.Footer
                 footerViewHolder.bind(footer.text)
+            }
+
+            TYPE_BUNDLE -> {
+                val bundleViewHolder = holder as BundleViewHolder
+                bundleViewHolder.bind(viewItems[position] as MessageListViewItem.Bundle)
             }
 
             else -> {
@@ -416,6 +428,7 @@ interface MessageListItemActionListener {
     fun onToggleMessageSelection(item: MessageListItem)
     fun onToggleMessageFlag(item: MessageListItem)
     fun onFooterClicked()
+    fun onBundleClicked(messageClass: MessageClass)
     fun filterInAppNotificationEvents(notification: InAppNotification): Boolean
     fun onNotificationActionClicked(action: NotificationAction)
 }
@@ -437,5 +450,20 @@ sealed interface MessageListViewItem {
     data class Footer(val text: String) : MessageListViewItem {
         override val viewId: Long = FOOTER_ID
         override val viewType: Int = TYPE_FOOTER
+    }
+
+    /**
+     * A collapsed group of bulk mail, standing in for every message of one class.
+     */
+    data class Bundle(
+        val messageClass: MessageClass,
+        val messageCount: Int,
+        val unreadCount: Int,
+        val senderNames: List<String>,
+        val isExpanded: Boolean,
+    ) : MessageListViewItem {
+        // Negative so it cannot collide with a message's unique id, which is derived from a row id.
+        override val viewId: Long get() = -(messageClass.ordinal + 2L)
+        override val viewType: Int = TYPE_BUNDLE
     }
 }

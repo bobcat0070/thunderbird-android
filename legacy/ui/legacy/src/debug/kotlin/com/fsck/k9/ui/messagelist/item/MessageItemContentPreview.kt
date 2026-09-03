@@ -23,6 +23,7 @@ import net.thunderbird.feature.account.avatar.AvatarMonogramCreator
 import net.thunderbird.feature.account.storage.profile.AvatarDto
 import net.thunderbird.feature.account.storage.profile.AvatarTypeDto
 import net.thunderbird.feature.account.storage.profile.ProfileDto
+import net.thunderbird.feature.mail.message.classification.api.MessageClass
 
 @Composable
 @PreviewLightDark
@@ -95,6 +96,7 @@ private val fakeMessageListItem = MessageListItem(
     databaseId = 1L,
     threadRoot = 1L,
     contactColor = Color.Magenta.toArgb(),
+    classification = MessageClass.HUMAN,
 )
 
 private val fakeMessageListAppearance = MessageListAppearance(

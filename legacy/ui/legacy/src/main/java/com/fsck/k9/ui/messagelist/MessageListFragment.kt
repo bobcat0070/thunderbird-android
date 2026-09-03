@@ -1,5 +1,6 @@
 package com.fsck.k9.ui.messagelist
 
+import net.thunderbird.feature.mail.message.classification.api.MessageClass
 import android.annotation.SuppressLint
 import android.app.SearchManager
 import android.content.Context
@@ -691,6 +692,13 @@ class MessageListFragment :
     override fun progress(progress: Boolean) {
         fragmentListener.setMessageListProgressEnabled(progress)
     }
+
+    /**
+     * Unreachable here: this list renders with Compose and never emits a bundle row. Classification grouping
+     * is implemented for the RecyclerView list in [LegacyMessageListFragment]; when this fragment replaces
+     * it, the grouping has to be ported rather than this callback filled in.
+     */
+    override fun onBundleClicked(messageClass: MessageClass) = Unit
 
     override fun onFooterClicked() {
         val account = this.account ?: return

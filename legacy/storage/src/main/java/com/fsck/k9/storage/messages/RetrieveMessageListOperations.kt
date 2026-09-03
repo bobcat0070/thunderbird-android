@@ -1,12 +1,14 @@
 package com.fsck.k9.storage.messages
 
 import android.database.Cursor
+import androidx.core.database.getStringOrNull
 import app.k9mail.legacy.mailstore.MessageDetailsAccessor
 import app.k9mail.legacy.mailstore.MessageMapper
 import app.k9mail.legacy.message.extractors.PreviewResult
 import com.fsck.k9.mail.Address
 import com.fsck.k9.mailstore.DatabasePreviewType
 import com.fsck.k9.mailstore.LockableDatabase
+import net.thunderbird.feature.mail.message.classification.api.MessageClass
 import net.thunderbird.feature.search.legacy.sql.SqlWhereClause
 
 internal class RetrieveMessageListOperations(private val lockableDatabase: LockableDatabase) {
@@ -37,7 +39,8 @@ SELECT
   answered, 
   forwarded, 
   attachment_count, 
-  root
+  root,
+  classification
 FROM messages
 JOIN threads ON (threads.message_id = messages.id)
 LEFT JOIN FOLDERS ON (folders.id = messages.folder_id)
@@ -94,7 +97,8 @@ SELECT
   aggregated.forwarded AS forwarded, 
   aggregated.attachment_count AS attachment_count, 
   root, 
-  aggregated.thread_count AS thread_count
+  aggregated.thread_count AS thread_count,
+  classification
 FROM (
   SELECT 
     threads.root AS thread_root,
@@ -166,7 +170,8 @@ SELECT
   answered, 
   forwarded, 
   attachment_count, 
-  root
+  root,
+  classification
 FROM threads 
 JOIN messages ON (messages.id = threads.message_id)
 LEFT JOIN FOLDERS ON (folders.id = messages.folder_id)
@@ -233,6 +238,20 @@ private class CursorMessageAccessor(val cursor: Cursor, val includesThreadCount:
         get() = cursor.getLong(16)
     override val threadCount: Int
         get() = if (includesThreadCount) cursor.getInt(17) else 0
+
+    /**
+     * Read by name rather than by index: the threaded query carries an extra column, so the position of
+     * anything appended after it differs between the two queries.
+     */
+    override val classification: MessageClass
+        get() {
+            val columnIndex = cursor.getColumnIndex("classification")
+            if (columnIndex < 0) return MessageClass.UNKNOWN
+
+            val name = cursor.getStringOrNull(columnIndex) ?: return MessageClass.UNKNOWN
+
+            return MessageClass.entries.firstOrNull { it.name == name } ?: MessageClass.UNKNOWN
+        }
 }
 
 private val AGGREGATED_MESSAGES_COLUMNS = arrayOf(

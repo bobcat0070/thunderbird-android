@@ -1,5 +1,6 @@
 package com.fsck.k9.ui.messagelist
 
+import net.thunderbird.feature.mail.message.classification.api.MessageClass
 import android.app.SearchManager
 import android.content.Context
 import android.content.Intent
@@ -236,6 +237,19 @@ class LegacyMessageListFragment :
     private var activeMessages: List<MessageReference>? = null
     private var showingThreadedList = false
     private var isThreadDisplay = false
+
+    /**
+     * Bundles the user has opened.
+     *
+     * Kept in the fragment rather than in the adapter so a reload - new mail arriving, a flag changing - does
+     * not silently collapse a group the user is reading.
+     */
+    private var expandedBundles = emptySet<MessageClass>()
+
+    /**
+     * The last list the loader produced, so toggling a bundle can rebuild the rows without a reload.
+     */
+    private var currentMessageListItems: List<MessageListItem>? = null
     private var activeMessage: MessageReference? = null
     private var rememberedSelected: Set<Long>? = null
     private var lastMessageClick = 0L
@@ -779,6 +793,39 @@ class LegacyMessageListFragment :
         }
 
         fragmentListener.setMessageListProgressEnabled(progress)
+    }
+
+    /**
+     * Grouping is for a mailbox being read, not for a result set the user asked a question of.
+     *
+     * A search or a thread is already a specific answer, and collapsing part of it would hide the very
+     * messages that were asked for.
+     */
+    private val isGroupingEnabled: Boolean
+        get() = !isThreadDisplay && !localSearch.isManualSearch
+
+    private fun updateViewItems(messageListItems: List<MessageListItem>) {
+        adapter.viewItems = buildList {
+            if (featureFlagProvider.provide(GeneratedFeatureFlagKey.DISPLAY_IN_APP_NOTIFICATIONS).isEnabled()) {
+                add(MessageListViewItem.InAppNotificationBannerList)
+            }
+
+            if (isGroupingEnabled) {
+                addAll(messageListItems.groupByClassification(expandedBundles))
+            } else {
+                addAll(messageListItems.map { MessageListViewItem.Message(it) })
+            }
+        }
+    }
+
+    override fun onBundleClicked(messageClass: MessageClass) {
+        expandedBundles = if (messageClass in expandedBundles) {
+            expandedBundles - messageClass
+        } else {
+            expandedBundles + messageClass
+        }
+
+        currentMessageListItems?.let { updateViewItems(it) }
     }
 
     override fun onFooterClicked() {
@@ -2033,12 +2080,8 @@ class LegacyMessageListFragment :
             }
         }
 
-        adapter.viewItems = buildList {
-            if (featureFlagProvider.provide(GeneratedFeatureFlagKey.DISPLAY_IN_APP_NOTIFICATIONS).isEnabled()) {
-                add(MessageListViewItem.InAppNotificationBannerList)
-            }
-            addAll(messageListItems.map { MessageListViewItem.Message(it) })
-        }
+        currentMessageListItems = messageListItems
+        updateViewItems(messageListItems)
 
         rememberedSelected?.let {
             rememberedSelected = null
