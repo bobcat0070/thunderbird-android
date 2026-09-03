@@ -22,6 +22,15 @@ private const val CACHE_LIFETIME_MILLIS = 30L * 60L * 1000L
 private const val EMPTY_CACHE_LIFETIME_MILLIS = 60L * 1000L
 
 /**
+ * How many messages must have been sent to an address before it counts as correspondence.
+ *
+ * One is not enough. Replying once to a marketing address is common, and a single reply would otherwise
+ * promote everything that sender ever sends above its own bulk headers. Measured against a real mailbox, this
+ * is exactly the line between a support thread someone actually had and a one-off reply to a mailshot.
+ */
+private const val MINIMUM_MESSAGES_SENT = 2
+
+/**
  * The addresses the user has written to.
  *
  * Someone the user has actually sent mail to is a correspondent, and mail from them is worth reading even
@@ -63,19 +72,30 @@ class KnownCorrespondents(
         }
     }
 
-    @Suppress("TooGenericExceptionCaught")
     private fun loadAddresses(): Set<String> {
-        return buildSet {
-            for (account in accountManager.getAccounts()) {
-                val sentFolderId = account.sentFolderId ?: continue
+        val counts = mutableMapOf<String, Int>()
 
-                // One unreadable account must not empty the set for the others; the worst case is that this
-                // signal is missing, which only ever means a message is classified with less evidence.
-                runCatching { addAll(recipientsOf(account.uuid, sentFolderId)) }
+        for (account in accountManager.getAccounts()) {
+            val sentFolderId = account.sentFolderId ?: continue
+
+            // One unreadable account must not empty the set for the others; the worst case is that this
+            // signal is missing, which only ever means a message is classified with less evidence.
+            runCatching {
+                for (address in recipientsOf(account.uuid, sentFolderId)) {
+                    counts[address] = (counts[address] ?: 0) + 1
+                }
             }
         }
+
+        // Counted across accounts rather than per account: writing to someone from either address is still
+        // corresponding with them.
+        return counts.filterValues { it >= MINIMUM_MESSAGES_SENT }.keys
     }
 
+    /**
+     * @return one entry per message sent to an address, so repeats can be counted. An address named twice in
+     *   the same message counts once: that is one message, not two.
+     */
     private fun recipientsOf(accountUuid: String, folderId: Long): List<String> {
         return messageListRepository.getMessages(
             accountUuid = accountUuid,
@@ -83,7 +103,9 @@ class KnownCorrespondents(
             selectionArgs = arrayOf(folderId.toString()),
             sortOrder = "date DESC",
             messageMapper = { message ->
-                (message.toAddresses + message.ccAddresses).mapNotNull { it.address?.lowercase() }
+                (message.toAddresses + message.ccAddresses)
+                    .mapNotNull { it.address?.lowercase() }
+                    .distinct()
             },
         ).flatten()
     }
