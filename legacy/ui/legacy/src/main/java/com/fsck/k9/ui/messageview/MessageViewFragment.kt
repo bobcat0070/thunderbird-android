@@ -57,6 +57,8 @@ import com.fsck.k9.mail.Part
 import com.fsck.k9.mailstore.AttachmentViewInfo
 import com.fsck.k9.mailstore.LocalMessage
 import com.fsck.k9.mailstore.MessageClassificationTeacher
+import com.fsck.k9.mailstore.authenticationResultsHeaderName
+import com.fsck.k9.mailstore.hasDmarcPass
 import com.fsck.k9.mailstore.MessageViewInfo
 import com.fsck.k9.provider.RawMessageProvider
 import com.fsck.k9.ui.R
@@ -598,6 +600,15 @@ class MessageViewFragment :
         }
     }
 
+    /**
+     * Whether the receiving server reported that this message passed DMARC, read from the message in hand.
+     */
+    private fun isSenderAuthenticated(): Boolean {
+        val message = this.message ?: return false
+
+        return hasDmarcPass(message.getHeader(authenticationResultsHeaderName()).orEmpty().toList())
+    }
+
     private fun senderAddress(): String? = message?.from?.firstOrNull()?.address?.takeIf { it.isNotBlank() }
 
     private fun onShowHeaders() {
@@ -661,7 +672,10 @@ class MessageViewFragment :
 
     private val messageHeaderClickListener = object : MessageHeaderClickListener {
         override fun onParticipantsContainerClick() {
-            val messageDetailsFragment = MessageDetailsFragment.create(messageReference)
+            val messageDetailsFragment = MessageDetailsFragment.create(
+                messageReference,
+                isSenderAuthenticated = isSenderAuthenticated(),
+            )
             messageDetailsFragment.cryptoResult = messageCryptoPresenter.cryptoResultAnnotation
             messageDetailsFragment.show(parentFragmentManager, "message_details")
         }
