@@ -10,6 +10,8 @@ import android.view.View;
 import android.view.View.OnClickListener;
 import android.view.View.OnLongClickListener;
 import android.widget.ImageView;
+
+import java.util.Arrays;
 import android.widget.LinearLayout;
 import android.widget.Toast;
 
@@ -23,6 +25,7 @@ import com.fsck.k9.FontSizes;
 import com.fsck.k9.K9;
 import com.fsck.k9.activity.misc.ContactPicture;
 import com.fsck.k9.contacts.ContactPictureLoader;
+import com.fsck.k9.mailstore.SenderAuthenticationKt;
 import com.fsck.k9.helper.ClipboardManager;
 import com.fsck.k9.helper.MessageHelper;
 import com.fsck.k9.mail.Address;
@@ -201,6 +204,22 @@ public class MessageHeader extends LinearLayout implements OnClickListener, OnLo
         Toast.makeText(getContext(), createMessageForSubject(), Toast.LENGTH_LONG).show();
     }
 
+    /**
+     * Whether the receiving server reported that this message passed DMARC.
+     *
+     * Read from the message in hand rather than from the stored row, because the message view is the one
+     * place that already holds the headers. It gates the brand indicator for the same reason it does in the
+     * message list: without it a lookalike domain gets a bank's logo drawn beside its mail.
+     */
+    private boolean isSenderAuthenticated(Message message) {
+        String[] headers = message.getHeader(SenderAuthenticationKt.authenticationResultsHeaderName());
+        if (headers == null) {
+            return false;
+        }
+
+        return SenderAuthenticationKt.hasDmarcPass(Arrays.asList(headers));
+    }
+
     public String createMessageForSubject() {
         return getResources().getString(R.string.copy_subject_to_clipboard);
     }
@@ -229,7 +248,8 @@ public class MessageHeader extends LinearLayout implements OnClickListener, OnLo
             contactPictureView.setVisibility(View.VISIBLE);
             if (fromAddress != null) {
                 ContactPictureLoader contactsPictureLoader = ContactPicture.getContactPictureLoader();
-                contactsPictureLoader.setContactPicture(contactPictureView, fromAddress);
+                contactsPictureLoader.setContactPicture(
+                        contactPictureView, fromAddress, isSenderAuthenticated(message));
             } else {
                 contactPictureView.setImageResource(Icons.Outlined.AccountCircle);
             }
