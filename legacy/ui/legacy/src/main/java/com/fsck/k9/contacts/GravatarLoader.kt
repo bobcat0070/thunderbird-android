@@ -10,10 +10,14 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 
 /**
- * Gravatar serves the image straight off this host; `d=404` is what makes a miss a miss instead of a
- * generated placeholder, which the app draws itself and rather better.
+ * The host WordPress itself embeds avatars from, and the one to use from an app.
+ *
+ * `gravatar.com` refuses this client outright with a bare nginx 403 — not a bad request, since the identical
+ * URL succeeds from a browser on the same device and from curl on the same network. `secure.gravatar.com`
+ * serves it. `d=404` is what makes a miss a miss rather than a generated placeholder, which the app draws
+ * itself and rather better.
  */
-const val GRAVATAR_AVATAR_BASE_URL = "https://gravatar.com/avatar/"
+const val GRAVATAR_AVATAR_BASE_URL = "https://secure.gravatar.com/avatar/"
 
 /**
  * How many addresses to remember as having no Gravatar.
@@ -29,6 +33,16 @@ private const val TAG = "GravatarLoader"
  * Gravatar answers a request for an address it does not know with this, because of `d=404`.
  */
 private const val HTTP_NOT_FOUND = 404
+
+/**
+ * Identifies the app rather than the HTTP library, which is what a well-behaved client does.
+ */
+private const val USER_AGENT = "Thunderbird-Android"
+
+/**
+ * The endpoint returns an image; OkHttp sends no Accept header of its own.
+ */
+private const val ACCEPT = "image/*"
 
 /**
  * Fetches sender pictures from Gravatar.
@@ -77,8 +91,11 @@ class GravatarLoader(
     }
 
     private fun fetch(address: String, size: Int, apiKey: String): Bitmap? {
+        val url = "$baseUrl${address.sha256()}?s=$size&d=404"
         val request = Request.Builder()
-            .url("$baseUrl${address.sha256()}?s=$size&d=404")
+            .url(url)
+            .header("User-Agent", USER_AGENT)
+            .header("Accept", ACCEPT)
             .apply {
                 // Optional: the avatar endpoint serves anonymous requests too, and a key only raises the
                 // rate limit.
@@ -95,7 +112,8 @@ class GravatarLoader(
 
                 !response.isSuccessful -> {
                     // Not remembered as a miss: a rate limit or an outage says nothing about this address.
-                    logger.debug(TAG) { "Gravatar responded ${response.code}" }
+                    // The URL is safe to log: it carries the hash, never the address.
+                    logger.debug(TAG) { "Gravatar responded ${response.code} for $url" }
                     null
                 }
 
