@@ -32,13 +32,6 @@ private const val HEX_PER_BYTE = 2
 private const val DER_HEADER_BYTES = 2
 
 /**
- * DER tag for an OCTET STRING, and the masks for reading the length byte that follows it.
- */
-private const val DER_TAG_OCTET_STRING = 0x04
-private const val DER_BYTE_MASK = 0xFF
-private const val DER_LENGTH_LONG_FORM = 0x80
-
-/**
  * Certificate policy asserting a Verified Mark Certificate, which attests a registered trademark.
  */
 private const val VMC_POLICY_OID = "1.3.6.1.4.1.53087.1.1"
@@ -102,6 +95,11 @@ class VmcValidator(
      * publishes no mark, which makes a misconfiguration impossible to tell from correct behaviour.
      */
     private val onRejected: (String) -> Unit = {},
+    /**
+     * Consulted after the path validates. Absent means revocation is not checked at all, which is only ever
+     * the right answer in a test.
+     */
+    private val revocationChecker: CertificateRevocationChecker? = null,
 ) {
 
     @Suppress("ReturnCount")
@@ -115,6 +113,7 @@ class VmcValidator(
         chainValidationFailure(chain)?.let { return reject("chain does not validate: $it") }
         if (!hasBimiExtendedKeyUsage(leaf)) return reject("certificate lacks the BIMI extended key usage")
         if (!coversDomain(leaf, senderDomain)) return reject("certificate does not name $senderDomain")
+        if (isRevoked(leaf)) return reject("certificate has been revoked")
 
         val svg = leaf.getExtensionValue(LOGOTYPE_EXTENSION_OID)
             ?.let { unwrapOctetString(it) }
@@ -195,6 +194,16 @@ class VmcValidator(
         return runCatching { decodeDerString(hex) }.getOrDefault("")
     }
 
+    /**
+     * A mark that has been withdrawn must stop being shown, so a certificate the list names is refused.
+     *
+     * An unanswered check is not treated as revocation: a device that cannot reach the list would otherwise
+     * lose every brand indicator the moment it went offline, which punishes the user for a network problem
+     * rather than protecting them from anything.
+     */
+    private fun isRevoked(leaf: X509Certificate): Boolean =
+        revocationChecker?.statusOf(leaf) == RevocationStatus.REVOKED
+
     private fun hasBimiExtendedKeyUsage(leaf: X509Certificate): Boolean =
         runCatching { leaf.extendedKeyUsage }.getOrNull()?.contains(BIMI_EXTENDED_KEY_USAGE) == true
 
@@ -213,22 +222,6 @@ class VmcValidator(
         }
     }
 
-    /**
-     * `getExtensionValue` hands back the extension wrapped in a DER OCTET STRING, which has to come off
-     * before the contents can be read.
-     */
-    private fun unwrapOctetString(value: ByteArray): ByteArray? {
-        if (value.size < DER_HEADER_BYTES || value[0].toInt() != DER_TAG_OCTET_STRING) return null
-
-        val first = value[1].toInt() and DER_BYTE_MASK
-        val start = if (first and DER_LENGTH_LONG_FORM == 0) {
-            DER_HEADER_BYTES
-        } else {
-            DER_HEADER_BYTES + (first and (DER_LENGTH_LONG_FORM - 1))
-        }
-
-        return if (start >= value.size) null else value.copyOfRange(start, value.size)
-    }
 }
 
 /**

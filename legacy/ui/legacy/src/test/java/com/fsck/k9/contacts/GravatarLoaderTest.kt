@@ -1,5 +1,6 @@
 package com.fsck.k9.contacts
 
+import androidx.test.core.app.ApplicationProvider
 import assertk.assertThat
 import assertk.assertions.isEqualTo
 import assertk.assertions.isNotNull
@@ -132,6 +133,7 @@ class GravatarLoaderTest : RobolectricTest() {
         return GravatarLoader(
             generalSettingsManager = generalSettingsManager,
             httpClient = OkHttpClient(),
+            cache = AvatarCache(ApplicationProvider.getApplicationContext()),
             logger = TestLogger(),
             baseUrl = server.url("/avatar/").toString(),
         )

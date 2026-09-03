@@ -91,6 +91,9 @@
     <string name="copy_action">Copy</string>
     <string name="unsubscribe_action">Unsubscribe</string>
     <string name="show_headers_action">Show headers</string>
+    <string name="message_view_mark_verified">Verified brand</string>
+    <string name="message_view_mark_common">Verified logo</string>
+    <string name="message_view_mark_self_asserted">Unverified logo</string>
     <string name="message_list_day_today">Today</string>
     <string name="message_list_day_yesterday">Yesterday</string>
     <string name="message_list_grouping_on">Grouped by category</string>

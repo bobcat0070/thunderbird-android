@@ -12,6 +12,9 @@ import android.view.View.OnLongClickListener;
 import android.widget.ImageView;
 
 import java.util.Arrays;
+import java.util.Locale;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import android.widget.LinearLayout;
 import android.widget.Toast;
 
@@ -25,6 +28,10 @@ import com.fsck.k9.FontSizes;
 import com.fsck.k9.K9;
 import com.fsck.k9.activity.misc.ContactPicture;
 import com.fsck.k9.contacts.ContactPictureLoader;
+import com.fsck.k9.contacts.bimi.BimiLogoLoader;
+import com.fsck.k9.contacts.bimi.BimiRecordKt;
+import com.fsck.k9.contacts.bimi.CachedMark;
+import com.fsck.k9.contacts.bimi.MarkTrust;
 import com.fsck.k9.mailstore.SenderAuthenticationKt;
 import com.fsck.k9.helper.ClipboardManager;
 import com.fsck.k9.helper.MessageHelper;
@@ -63,6 +70,15 @@ public class MessageHeader extends LinearLayout implements OnClickListener, OnLo
     private BottomBaselineTextView subjectView;
     private ImageView starView;
     private ImageView contactPictureView;
+    private MaterialTextView markVerificationView;
+
+    /**
+     * One thread: these lookups are cached and infrequent, and serialising them keeps a burst of header
+     * rebuilds from starting a pile of threads.
+     */
+    private static final ExecutorService markVerificationExecutor = Executors.newSingleThreadExecutor();
+
+    private String currentSenderDomain;
     private MaterialTextView fromView;
     private ImageView cryptoStatusIcon;
     private RecipientNamesView recipientNamesView;
@@ -94,6 +110,7 @@ public class MessageHeader extends LinearLayout implements OnClickListener, OnLo
         subjectView = findViewById(R.id.subject);
         starView = findViewById(R.id.flagged);
         contactPictureView = findViewById(R.id.contact_picture);
+        markVerificationView = findViewById(R.id.mark_verification);
         fromView = findViewById(R.id.from);
         cryptoStatusIcon = findViewById(R.id.crypto_status_icon);
         recipientNamesView = findViewById(R.id.recipients);
@@ -205,6 +222,57 @@ public class MessageHeader extends LinearLayout implements OnClickListener, OnLo
     }
 
     /**
+     * Says which verification the sender logo carries, once it is known.
+     *
+     * The badge on the avatar is small and symbolic; a reader deciding whether to trust a message deserves
+     * the claim in words. Looked up off the main thread and only for mail that passed DMARC, because that is
+     * the same gate the logo itself is behind.
+     */
+    private void showMarkVerification(Address fromAddress, boolean isSenderAuthenticated) {
+        markVerificationView.setVisibility(View.GONE);
+
+        String address = fromAddress.getAddress();
+        if (!isSenderAuthenticated || address == null) {
+            return;
+        }
+
+        int atIndex = address.lastIndexOf('@');
+        if (atIndex < 0 || atIndex == address.length() - 1) {
+            return;
+        }
+
+        final String domain = address.substring(atIndex + 1).toLowerCase(Locale.ROOT);
+        markVerificationExecutor.execute(() -> {
+            CachedMark mark = DI.get(BimiLogoLoader.class).markFor(domain, BimiRecordKt.BIMI_DEFAULT_SELECTOR);
+            if (mark == null) {
+                return;
+            }
+
+            // The header is recycled between messages, so the answer is only applied if it is still the
+            // sender being shown by the time it arrives.
+            post(() -> {
+                if (domain.equals(currentSenderDomain)) {
+                    markVerificationView.setText(labelFor(mark.getTrust()));
+                    markVerificationView.setVisibility(View.VISIBLE);
+                }
+            });
+        });
+
+        currentSenderDomain = domain;
+    }
+
+    private int labelFor(MarkTrust trust) {
+        switch (trust) {
+            case VERIFIED:
+                return R.string.message_view_mark_verified;
+            case COMMON:
+                return R.string.message_view_mark_common;
+            default:
+                return R.string.message_view_mark_self_asserted;
+        }
+    }
+
+    /**
      * Whether the receiving server reported that this message passed DMARC.
      *
      * Read from the message in hand rather than from the stored row, because the message view is the one
@@ -248,8 +316,9 @@ public class MessageHeader extends LinearLayout implements OnClickListener, OnLo
             contactPictureView.setVisibility(View.VISIBLE);
             if (fromAddress != null) {
                 ContactPictureLoader contactsPictureLoader = ContactPicture.getContactPictureLoader();
-                contactsPictureLoader.setContactPicture(
-                        contactPictureView, fromAddress, isSenderAuthenticated(message));
+                boolean senderAuthenticated = isSenderAuthenticated(message);
+                contactsPictureLoader.setContactPicture(contactPictureView, fromAddress, senderAuthenticated);
+                showMarkVerification(fromAddress, senderAuthenticated);
             } else {
                 contactPictureView.setImageResource(Icons.Outlined.AccountCircle);
             }

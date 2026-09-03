@@ -3,7 +3,7 @@ package com.fsck.k9.contacts.bimi
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import com.caverock.androidsvg.SVG
-import java.util.Collections
+import com.fsck.k9.contacts.AvatarCache
 import net.thunderbird.core.logging.Logger
 import net.thunderbird.core.preference.GeneralSettingsManager
 import okhttp3.OkHttpClient
@@ -12,11 +12,15 @@ import okhttp3.Request
 private const val TAG = "BimiLogoLoader"
 
 /**
- * How many domains to remember as having no usable indicator.
- *
- * Most domains publish nothing, so without this every scroll past the same sender would repeat a DNS lookup.
+ * Namespaces this loader entries in the shared cache.
  */
-private const val MISS_CACHE_SIZE = 512
+private const val CACHE_PREFIX = "bimi:"
+
+/**
+ * The trust tier is stored as a single leading byte in front of the mark, so one cache entry answers both
+ * what the logo is and what it was worth.
+ */
+private const val TIER_BYTE_LENGTH = 1
 
 /**
  * Certificates are small. The cap is what stops a hostile or broken host from streaming an unbounded body
@@ -47,40 +51,45 @@ class BimiLogoLoader(
     private val generalSettingsManager: GeneralSettingsManager,
     private val dnsTxtLookup: DnsTxtLookup,
     private val httpClient: OkHttpClient,
+    private val cache: AvatarCache,
     private val vmcValidator: VmcValidator,
     private val logger: Logger,
 ) {
 
-    private val domainsWithoutLogo: MutableMap<String, Unit> = Collections.synchronizedMap(
-        object : LinkedHashMap<String, Unit>() {
-            override fun removeEldestEntry(eldest: Map.Entry<String, Unit>?): Boolean = size > MISS_CACHE_SIZE
-        },
-    )
-
-    @Suppress("TooGenericExceptionCaught")
     fun loadLogo(senderDomain: String, size: Int, selector: String = BIMI_DEFAULT_SELECTOR): Bitmap? {
-        val domain = senderDomain.trim().lowercase()
-        val shouldLookUp = generalSettingsManager.getConfig().bimi.isEnabled &&
-            domain.isNotEmpty() &&
-            !domainsWithoutLogo.containsKey(domain)
+        val mark = markFor(senderDomain, selector) ?: return null
 
-        if (!shouldLookUp) return null
+        return renderSvg(mark.svg, size).withMarkBadge(mark.trust)
+    }
+
+    /**
+     * The mark a domain publishes and how much it is worth, without drawing anything.
+     *
+     * Separate from [loadLogo] so the message view can say which verification a logo carries without
+     * rendering a second copy of it. Both go through the same cache, so asking twice costs one lookup.
+     */
+    @Suppress("TooGenericExceptionCaught", "ReturnCount")
+    fun markFor(senderDomain: String, selector: String = BIMI_DEFAULT_SELECTOR): CachedMark? {
+        val domain = senderDomain.trim().lowercase()
+        if (!generalSettingsManager.getConfig().bimi.isEnabled || domain.isEmpty()) return null
+
+        cache.get(CACHE_PREFIX + domain)?.let { cached -> return cached.toCachedMark() }
 
         return try {
-            fetchLogo(domain, size, selector)
+            fetchMark(domain, selector)
         } catch (e: Exception) {
-            // A DNS failure, an unreachable host, or an SVG this renderer cannot read. None of them are worth
-            // failing the row over: the caller falls back to the next avatar source.
+            // A DNS failure, an unreachable host, or an SVG this renderer cannot read. Not cached: an outage
+            // says nothing about what this domain publishes. The caller falls back to the next source.
             logger.debug(TAG, e) { "Could not load BIMI logo" }
             null
         }
     }
 
     @Suppress("ReturnCount")
-    private fun fetchLogo(domain: String, size: Int, selector: String): Bitmap? {
+    private fun fetchMark(domain: String, selector: String): CachedMark? {
         val record = findRecord(domain, selector)
         if (record == null) {
-            domainsWithoutLogo[domain] = Unit
+            cache.putMiss(CACHE_PREFIX + domain)
             return null
         }
 
@@ -89,11 +98,14 @@ class BimiLogoLoader(
         val mark = record.authorityUrl?.let { downloadVerifiedMark(it, domain) }
         val svg = mark?.svg ?: downloadLogo(record.logoUrl)
         if (svg == null) {
-            domainsWithoutLogo[domain] = Unit
+            cache.putMiss(CACHE_PREFIX + domain)
             return null
         }
 
-        return renderSvg(svg, size).withMarkBadge(mark.trust())
+        val cachedMark = CachedMark(mark.trust(), svg)
+        cache.put(CACHE_PREFIX + domain, cachedMark.toBytes())
+
+        return cachedMark
     }
 
     private fun VerifiedMark?.trust(): MarkTrust = when (this?.assurance) {
@@ -172,6 +184,28 @@ class BimiLogoLoader(
 
         return bitmap
     }
+}
+
+/**
+ * A mark and what it was worth, as held in the cache.
+ */
+data class CachedMark(val trust: MarkTrust, val svg: ByteArray) {
+    override fun equals(other: Any?): Boolean = this === other ||
+        (other is CachedMark && trust == other.trust && svg.contentEquals(other.svg))
+
+    override fun hashCode(): Int = 31 * trust.hashCode() + svg.contentHashCode()
+}
+
+private fun CachedMark.toBytes(): ByteArray = byteArrayOf(trust.ordinal.toByte()) + svg
+
+@Suppress("ReturnCount")
+private fun ByteArray.toCachedMark(): CachedMark? {
+    // An empty entry is a remembered miss, and anything without a body after the tier byte is unusable.
+    if (size <= TIER_BYTE_LENGTH) return null
+
+    val trust = MarkTrust.entries.getOrNull(this[0].toInt()) ?: return null
+
+    return CachedMark(trust, copyOfRange(TIER_BYTE_LENGTH, size))
 }
 
 /**

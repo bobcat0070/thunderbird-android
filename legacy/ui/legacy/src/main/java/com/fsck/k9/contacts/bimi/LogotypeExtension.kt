@@ -8,6 +8,7 @@ import java.util.zip.GZIPInputStream
 const val LOGOTYPE_EXTENSION_OID = "1.3.6.1.5.5.7.1.12"
 
 private const val TAG_IA5_STRING = 0x16
+private const val TAG_OCTET_STRING = 0x04
 private const val TAG_CONSTRUCTED = 0x20
 
 private const val DATA_URI_PREFIX = "data:image/svg+xml;base64,"
@@ -43,7 +44,7 @@ private const val BITS_PER_BYTE = 8
  */
 @Suppress("ReturnCount")
 fun extractLogotypeSvg(extensionValue: ByteArray): ByteArray? {
-    val uri = runCatching { collectIa5Strings(extensionValue) }
+    val uri = runCatching { collectTaggedStrings(extensionValue, TAG_IA5_STRING) }
         .getOrDefault(emptyList())
         .firstOrNull { it.startsWith(DATA_URI_PREFIX, ignoreCase = true) }
         ?: return null
@@ -64,9 +65,12 @@ private fun ByteArray.gunzipOrNull(): ByteArray? =
     runCatching { GZIPInputStream(inputStream()).use { it.readBytes() } }.getOrNull()
 
 /**
- * Walks the DER structure, descending into constructed values and collecting every IA5 string.
+ * Walks the DER structure, descending into constructed values and collecting every string with [targetTag].
+ *
+ * Shared by the two extensions read here: a logotype carries its mark as an IA5 string, and a distribution
+ * point carries its URL under a context-specific tag. Both want the same walk over the same shape.
  */
-private fun collectIa5Strings(bytes: ByteArray, depth: Int = 0): List<String> {
+internal fun collectTaggedStrings(bytes: ByteArray, targetTag: Int, depth: Int = 0): List<String> {
     if (depth > MAX_NESTING_DEPTH) return emptyList()
 
     return buildList {
@@ -81,10 +85,10 @@ private fun collectIa5Strings(bytes: ByteArray, depth: Int = 0): List<String> {
             if (length < 0 || offset + length > bytes.size) return@buildList
 
             when {
-                tag == TAG_IA5_STRING -> add(String(bytes, offset, length, Charsets.US_ASCII))
+                tag == targetTag -> add(String(bytes, offset, length, Charsets.US_ASCII))
 
                 tag and TAG_CONSTRUCTED != 0 ->
-                    addAll(collectIa5Strings(bytes.copyOfRange(offset, offset + length), depth + 1))
+                    addAll(collectTaggedStrings(bytes.copyOfRange(offset, offset + length), targetTag, depth + 1))
             }
 
             offset += length
@@ -112,4 +116,17 @@ private fun readLength(bytes: ByteArray, offset: Int): Pair<Int, Int>? {
     }
 
     return if (length < 0) null else length to (count + 1)
+}
+
+/**
+ * Extension values arrive wrapped in a DER OCTET STRING, which has to come off before the contents can be
+ * read.
+ */
+internal fun unwrapOctetString(value: ByteArray): ByteArray? {
+    if (value.size < 2 || value[0].toInt() != TAG_OCTET_STRING) return null
+
+    val first = value[1].toInt() and BYTE_MASK
+    val start = if (first and LENGTH_LONG_FORM == 0) 2 else 2 + (first and (LENGTH_LONG_FORM - 1))
+
+    return if (start >= value.size) null else value.copyOfRange(start, value.size)
 }

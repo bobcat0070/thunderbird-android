@@ -3,7 +3,6 @@ package com.fsck.k9.contacts
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import java.security.MessageDigest
-import java.util.Collections
 import net.thunderbird.core.preference.GeneralSettingsManager
 import net.thunderbird.core.logging.Logger
 import okhttp3.OkHttpClient
@@ -20,12 +19,9 @@ import okhttp3.Request
 const val GRAVATAR_AVATAR_BASE_URL = "https://secure.gravatar.com/avatar/"
 
 /**
- * How many addresses to remember as having no Gravatar.
- *
- * Misses are the common case — most senders in a mailbox have never heard of Gravatar — and without this
- * every scroll past the same message would ask again.
+ * Namespaces this loader's entries in the shared cache.
  */
-private const val MISS_CACHE_SIZE = 512
+private const val CACHE_PREFIX = "gravatar:"
 
 private const val TAG = "GravatarLoader"
 
@@ -53,42 +49,32 @@ private const val ACCEPT = "image/*"
 class GravatarLoader(
     private val generalSettingsManager: GeneralSettingsManager,
     private val httpClient: OkHttpClient,
+    private val cache: AvatarCache,
     private val logger: Logger,
     private val baseUrl: String = GRAVATAR_AVATAR_BASE_URL,
 ) {
 
-    /**
-     * Addresses known to have no Gravatar, oldest evicted first.
-     *
-     * Held for the life of the process rather than given an expiry: being stale here costs a picture that
-     * appears one restart late, while the alternative is re-asking for hundreds of addresses that will go on
-     * saying no.
-     */
-    private val addressesWithoutGravatar: MutableMap<String, Unit> = Collections.synchronizedMap(
-        object : LinkedHashMap<String, Unit>() {
-            override fun removeEldestEntry(eldest: Map.Entry<String, Unit>?): Boolean = size > MISS_CACHE_SIZE
-        },
-    )
-
-    @Suppress("TooGenericExceptionCaught")
+    @Suppress("TooGenericExceptionCaught", "ReturnCount")
     fun loadGravatar(emailAddress: String, size: Int): Bitmap? {
         val settings = generalSettingsManager.getConfig().gravatar
         val address = emailAddress.trim().lowercase()
-        val shouldLookUp = settings.isEnabled &&
-            address.isNotEmpty() &&
-            !addressesWithoutGravatar.containsKey(address)
+        if (!settings.isEnabled || address.isEmpty()) return null
 
-        if (!shouldLookUp) return null
+        cache.get(CACHE_PREFIX + address)?.let { cached ->
+            return if (cached.isEmpty()) null else decode(cached)
+        }
 
         return try {
             fetch(address, size, settings.apiKey)
         } catch (e: Exception) {
-            // Anything from a DNS failure to a truncated image. A failed lookup is not worth failing the row
-            // over: the caller falls back to the letter avatar.
+            // Anything from a DNS failure to a truncated image. Not cached either way: an outage says
+            // nothing about whether this address has a picture. The caller falls back to the letter avatar.
             logger.debug(TAG, e) { "Could not load Gravatar" }
             null
         }
     }
+
+    private fun decode(bytes: ByteArray): Bitmap? = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
 
     private fun fetch(address: String, size: Int, apiKey: String): Bitmap? {
         val url = "$baseUrl${address.sha256()}?s=$size&d=404"
@@ -106,7 +92,7 @@ class GravatarLoader(
         return httpClient.newCall(request).execute().use { response ->
             when {
                 response.code == HTTP_NOT_FOUND -> {
-                    addressesWithoutGravatar[address] = Unit
+                    cache.putMiss(CACHE_PREFIX + address)
                     null
                 }
 
@@ -117,7 +103,11 @@ class GravatarLoader(
                     null
                 }
 
-                else -> response.body.byteStream().use { BitmapFactory.decodeStream(it) }
+                else -> {
+                    val bytes = response.body.bytes()
+                    cache.put(CACHE_PREFIX + address, bytes)
+                    decode(bytes)
+                }
             }
         }
     }
