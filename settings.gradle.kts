@@ -248,6 +248,7 @@ include(
     ":backend:imap",
     ":backend:pop3",
     ":backend:jmap",
+    ":backend:graph",
     ":backend:demo",
 )
 
