@@ -82,11 +82,6 @@ private fun GraphMessage.applyInternetHeaders(message: MimeMessage) {
 }
 
 /**
- * Whether the envelope carries a body preview, which makes the saved message partial rather than headers-only.
- */
-internal fun GraphMessage.hasBodyPreview(): Boolean = !bodyPreview.isNullOrBlank()
-
-/**
  * Maps the Graph message state onto the flags the app tracks.
  *
  * Graph has no equivalent of the IMAP `\Answered` flag on the message resource, so replies are not reflected here.

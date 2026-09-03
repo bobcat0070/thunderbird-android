@@ -5,6 +5,7 @@ import assertk.assertThat
 import assertk.assertions.contains
 import assertk.assertions.containsExactly
 import assertk.assertions.containsExactlyInAnyOrder
+import assertk.assertions.containsNone
 import assertk.assertions.isEmpty
 import assertk.assertions.isEqualTo
 import assertk.assertions.isNotNull
@@ -182,7 +183,7 @@ class GraphSyncTest {
     }
 
     @Test
-    fun `body preview should be stored so the message list can show the first lines`() {
+    fun `a message with preview text should still be stored as headers-only`() {
         createFolder()
         enqueueWindowProbe()
         server.enqueue(
@@ -196,9 +197,11 @@ class GraphSyncTest {
 
         createTestSubject().sync(FOLDER_ID, syncConfig(), listener)
 
-        // A message carrying preview text is stored as partial, not headers-only, so the list can render a preview.
+        // The preview text reaches the message list either way. What must not happen is the message being
+        // called partial: that tells the message view it has enough to show, and the user gets a "download
+        // complete message" button instead of the body.
         assertThat(backendStorage.getFolder(FOLDER_ID).getMessageFlags("m1"))
-            .contains(Flag.X_DOWNLOADED_PARTIAL)
+            .containsNone(Flag.X_DOWNLOADED_PARTIAL, Flag.X_DOWNLOADED_FULL)
     }
 
     @Test
@@ -275,16 +278,21 @@ class GraphSyncTest {
     }
 
     @Test
-    fun `already stored message without a body should gain its preview on the next sync`() {
+    fun `a format upgrade should not overwrite a message whose body was already downloaded`() {
+        // Re-saving writes the envelope over the stored message, so doing it to a message the user has
+        // already downloaded would throw the body away and put the download button back.
         createFolderWithMessage()
+        val folder = backendStorage.getFolder(FOLDER_ID)
+        folder.setMessageFlag("existing", Flag.X_DOWNLOADED_FULL, true)
         val deltaLink = "${server.url("/v1.0/")}me/mailFolders/$FOLDER_ID/messages/delta?\$deltatoken=t1"
-        givenCompletedFullRound(deltaLink)
+        folder.setFolderExtraString(FOLDER_EXTRA_DELTA_LINK, deltaLink)
+        folder.setFolderExtraString(FOLDER_EXTRA_SYNC_WINDOW_LIMIT, folder.visibleLimit.toString())
+        folder.setFolderExtraString(FOLDER_EXTRA_SYNC_FORMAT, "1")
+        enqueueWindowProbe()
         server.enqueue(
             MockResponse().setBody(
                 deltaResponse(
-                    messages = listOf(
-                        message("existing", subject = "Existing", bodyPreview = "Now with preview text"),
-                    ),
+                    messages = listOf(message("existing", subject = "Existing", bodyPreview = "Preview")),
                     deltaLink = deltaLink,
                 ),
             ),
@@ -292,8 +300,7 @@ class GraphSyncTest {
 
         createTestSubject().sync(FOLDER_ID, syncConfig(), listener)
 
-        assertThat(backendStorage.getFolder(FOLDER_ID).getMessageFlags("existing"))
-            .contains(Flag.X_DOWNLOADED_PARTIAL)
+        assertThat(folder.getMessageFlags("existing")).contains(Flag.X_DOWNLOADED_FULL)
     }
 
     @Test

@@ -7,7 +7,6 @@ import com.fsck.k9.backend.api.SyncListener
 import com.fsck.k9.mail.MessageDownloadState
 import net.thunderbird.backend.graph.api.GraphApiClient
 import net.thunderbird.backend.graph.api.GraphMessage
-import net.thunderbird.backend.graph.api.hasBodyPreview
 import net.thunderbird.backend.graph.api.receivedDate
 import net.thunderbird.backend.graph.api.toEnvelopeMessage
 import net.thunderbird.backend.graph.api.toFlags
@@ -48,12 +47,14 @@ internal const val FOLDER_EXTRA_SYNC_FORMAT = "graphSyncFormat"
  * Incremental rounds only report changes, so a folder synchronized by an older version keeps whatever was stored
  * then. Raising this forces one full round, which is how an improvement to what is stored per message reaches mail
  * that was already synchronized. Version 2 added the message list preview text, version 3 the headers
- * used to classify a message, and version 4 the classification itself.
+ * used to classify a message, version 4 the classification itself, version 5 a revision of the
+ * classification rules, and version 6 stores envelopes as headers-only so that opening one downloads the
+ * body instead of offering a button.
  *
  * A change to the classification rules also needs a bump: the headers a verdict was derived from are not
  * kept, so the only way to re-classify stored mail is to fetch its envelope again and re-save it.
  */
-internal const val SYNC_FORMAT_VERSION = 5
+internal const val SYNC_FORMAT_VERSION = 6
 
 /**
  * Synchronizes a single folder with Microsoft Graph.
@@ -226,36 +227,24 @@ internal class GraphSync(
         val localMessageServerIds = backendFolder.getMessageServerIds()
         val newMessages = messages.filter { it.id !in localMessageServerIds }
 
-        // A stored message is refreshed on a format upgrade, and otherwise only when it is missing the preview
-        // text the message list needs. Re-saving is cheap here because the envelope is already in hand.
+        // Stored messages are only re-saved on a format upgrade, and never one whose body has already been
+        // downloaded: re-saving writes the envelope over it, which would throw that body away.
         val messagesToRefresh = messages.filter { graphMessage ->
-            graphMessage.id in localMessageServerIds &&
-                (
-                    refreshStoredMessages ||
-                        (graphMessage.hasBodyPreview() && backendFolder.isEnvelopeOnly(graphMessage.id))
-                    )
+            refreshStoredMessages &&
+                graphMessage.id in localMessageServerIds &&
+                !backendFolder.isFullyDownloaded(graphMessage.id)
         }
 
         messagesToRefresh.forEach { graphMessage ->
-            val downloadState = if (graphMessage.hasBodyPreview()) {
-                MessageDownloadState.PARTIAL
-            } else {
-                MessageDownloadState.ENVELOPE
-            }
-
-            backendFolder.saveMessage(graphMessage.toEnvelopeMessage(), downloadState)
+            backendFolder.saveMessage(graphMessage.toEnvelopeMessage(), MessageDownloadState.ENVELOPE)
         }
 
         newMessages.forEachIndexed { index, graphMessage ->
-            // A preview body makes the stored message partial rather than headers-only, which is what lets the
-            // message list show its first lines. Opening it still downloads the complete message.
-            val downloadState = if (graphMessage.hasBodyPreview()) {
-                MessageDownloadState.PARTIAL
-            } else {
-                MessageDownloadState.ENVELOPE
-            }
-
-            backendFolder.saveMessage(graphMessage.toEnvelopeMessage(), downloadState)
+            // Stored as headers-only even though the envelope carries the preview text. The preview is written
+            // to the message list either way, and calling the message partial would tell the message view it
+            // has enough to show - which is what put a "download complete message" button in front of the user
+            // instead of just fetching the body when they opened it.
+            backendFolder.saveMessage(graphMessage.toEnvelopeMessage(), MessageDownloadState.ENVELOPE)
 
             listener.syncNewMessage(
                 folderServerId = folderServerId,
@@ -269,12 +258,10 @@ internal class GraphSync(
     }
 
     /**
-     * Whether only the headers of a message are stored, meaning no body was ever downloaded for it.
+     * Whether the complete message is stored, meaning re-saving the envelope over it would lose the body.
      */
-    private fun BackendFolder.isEnvelopeOnly(messageServerId: String): Boolean {
-        val flags = getMessageFlags(messageServerId)
-
-        return Flag.X_DOWNLOADED_FULL !in flags && Flag.X_DOWNLOADED_PARTIAL !in flags
+    private fun BackendFolder.isFullyDownloaded(messageServerId: String): Boolean {
+        return Flag.X_DOWNLOADED_FULL in getMessageFlags(messageServerId)
     }
 
     /**
