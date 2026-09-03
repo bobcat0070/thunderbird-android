@@ -48,9 +48,12 @@ internal const val FOLDER_EXTRA_SYNC_FORMAT = "graphSyncFormat"
  * Incremental rounds only report changes, so a folder synchronized by an older version keeps whatever was stored
  * then. Raising this forces one full round, which is how an improvement to what is stored per message reaches mail
  * that was already synchronized. Version 2 added the message list preview text, version 3 the headers
- * used to classify a message.
+ * used to classify a message, and version 4 the classification itself.
+ *
+ * A change to the classification rules also needs a bump: the headers a verdict was derived from are not
+ * kept, so the only way to re-classify stored mail is to fetch its envelope again and re-save it.
  */
-internal const val SYNC_FORMAT_VERSION = 3
+internal const val SYNC_FORMAT_VERSION = 5
 
 /**
  * Synchronizes a single folder with Microsoft Graph.

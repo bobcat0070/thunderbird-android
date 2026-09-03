@@ -9,23 +9,24 @@ import net.thunderbird.feature.mail.message.classification.api.MessageEvidence
 /**
  * Local parts that conventionally mean "this mailbox does not read replies".
  *
- * Matched as whole words against the address local part rather than as substrings, so a person named
- * `alerts.morgan@` or a team mailbox at `noreplyagency.com` is not swept up.
+ * Held without separators and matched against whole runs of an address local part, so `no-reply`,
+ * `jira.noreply` and `E-tradeAlerts-DoNotReply` all match while `noreplacement` does not.
  */
-private val NO_REPLY_LOCAL_PARTS = setOf(
+private val NO_REPLY_MARKERS = setOf(
     "noreply",
-    "no-reply",
-    "no_reply",
     "donotreply",
-    "do-not-reply",
-    "do_not_reply",
     "notification",
     "notifications",
-    "mailer-daemon",
+    "mailerdaemon",
     "postmaster",
     "bounce",
     "bounces",
 )
+
+/**
+ * The characters senders use to join words inside a local part.
+ */
+private val LOCAL_PART_SEPARATORS = charArrayOf('.', '-', '+', '=', '_')
 
 /**
  * `Precedence` values that indicate mail sent to many recipients.
@@ -107,13 +108,20 @@ class RuleBasedMessageClassifier : MessageClassifier {
     }
 
     /**
-     * Splits the local part on the separators senders actually use, so `no-reply`, `jira.noreply` and
-     * `bounces+tag` all match while `noreplacement` does not.
+     * Splits the local part on the separators senders use, then tests every contiguous run of the resulting
+     * words.
+     *
+     * Runs rather than single words because the marker is itself often split — `no-reply` is two words, and
+     * `E-tradeAlerts-DoNotReply` buries a third word between others. Requiring whole words is what keeps
+     * `noreplacement` and `alerts.morgan` out.
      */
     private fun String.hasNoReplyPart(): Boolean {
-        if (this in NO_REPLY_LOCAL_PARTS) return true
+        val words = split(*LOCAL_PART_SEPARATORS).filter { it.isNotEmpty() }
 
-        return split('.', '+', '=', '_').any { it in NO_REPLY_LOCAL_PARTS } ||
-            NO_REPLY_LOCAL_PARTS.any { this.startsWith("$it-") || this.startsWith("$it.") }
+        return words.indices.any { start ->
+            (start until words.size).any { end ->
+                words.subList(start, end + 1).joinToString(separator = "") in NO_REPLY_MARKERS
+            }
+        }
     }
 }

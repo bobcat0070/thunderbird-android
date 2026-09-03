@@ -79,7 +79,7 @@ data class MessageClassification(
 /**
  * The version of the rules that produced a classification.
  *
- * Stored with each verdict so a later improvement can re-classify only the messages that predate it, rather
- * than re-parsing every mailbox.
+ * Stored with each verdict so a later improvement can tell which messages predate it. Version 2 recognises a
+ * do-not-reply marker anywhere in the sender's local part, not only at the start.
  */
-const val CLASSIFIER_VERSION: Int = 1
+const val CLASSIFIER_VERSION: Int = 2

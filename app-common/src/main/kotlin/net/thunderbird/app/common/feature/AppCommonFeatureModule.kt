@@ -4,9 +4,6 @@ import app.k9mail.feature.launcher.FeatureLauncherExternalContract
 import app.k9mail.feature.launcher.di.featureLauncherModule
 import net.thunderbird.app.common.feature.mail.appCommonFeatureMailModule
 import net.thunderbird.feature.account.avatar.di.featureAccountAvatarModule
-import net.thunderbird.feature.mail.message.classification.api.ClassificationOverrideStore
-import net.thunderbird.feature.mail.message.classification.internal.SharedPreferencesClassificationOverrideStore
-import net.thunderbird.feature.mail.message.classification.internal.featureMessageClassificationModule
 import net.thunderbird.feature.mail.message.composer.internal.featureMessageComposerModule
 import net.thunderbird.feature.mail.message.reader.impl.inject.featureMessageReaderModule
 import net.thunderbird.feature.navigation.drawer.api.NavigationDrawerExternalContract
@@ -20,16 +17,9 @@ internal val appCommonFeatureModule = module {
     includes(featureAccountAvatarModule)
     includes(featureLauncherModule)
     includes(featureNotificationModule)
-    includes(featureMessageClassificationModule)
     includes(featureMessageComposerModule)
     includes(featureMessageReaderModule)
     includes(featureThundermailCommonModule)
-
-    single<ClassificationOverrideStore> {
-        SharedPreferencesClassificationOverrideStore(
-            context = androidContext(),
-        )
-    }
 
     factory<FeatureLauncherExternalContract.MessageListLauncher> {
         MessageListLauncher(

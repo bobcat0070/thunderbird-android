@@ -49,6 +49,7 @@ dependencies {
     implementation(libs.uri)
     implementation(projects.feature.navigation.drawer.api)
     implementation(projects.feature.mail.message.classification.api)
+    implementation(projects.feature.mail.message.classification.internal)
     implementation(projects.feature.mail.message.list.api)
     implementation(projects.feature.mail.message.reader.api)
     implementation(projects.feature.mail.message.composer.api)

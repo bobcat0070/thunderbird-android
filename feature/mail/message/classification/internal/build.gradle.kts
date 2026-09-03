@@ -11,6 +11,9 @@ kotlin {
             api(projects.feature.mail.message.classification.api)
             implementation(libs.koin.core)
         }
+        androidMain.dependencies {
+            implementation(libs.koin.android)
+        }
         commonTest.dependencies {
             implementation(libs.assertk)
         }

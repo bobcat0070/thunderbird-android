@@ -91,6 +91,17 @@
     <string name="copy_action">Copy</string>
     <string name="unsubscribe_action">Unsubscribe</string>
     <string name="show_headers_action">Show headers</string>
+    <string name="classify_action">Classify message</string>
+    <string name="classify_message_title">What kind of mail is this?</string>
+    <string name="classify_message_description">Thunderbird will use this to sort future mail from %1$s.</string>
+    <string name="classify_as_human">Personal mail</string>
+    <string name="classify_as_notification">Notification</string>
+    <string name="classify_as_newsletter">Newsletter or promotion</string>
+    <string name="classify_apply_to_domain">Apply to everyone at %1$s</string>
+    <plurals name="classify_message_result">
+        <item quantity="one">Reclassified %1$d message</item>
+        <item quantity="other">Reclassified %1$d messages</item>
+    </plurals>
     <string name="message_view_menu_action_export_eml">Export as EML</string>
     <string name="print_message_action">Print</string>
 

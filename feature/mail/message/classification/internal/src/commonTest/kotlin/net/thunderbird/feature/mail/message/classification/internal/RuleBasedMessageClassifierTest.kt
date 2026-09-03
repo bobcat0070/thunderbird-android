@@ -127,6 +127,31 @@ class RuleBasedMessageClassifierTest {
     }
 
     @Test
+    fun `a marker buried between other words should be recognised`() {
+        // From the test mailbox: five messages that the earlier whole-word match missed because the marker
+        // sits after a hyphen rather than at the start.
+        val result = testSubject.classify(evidenceOf(from = "E-tradeAlerts-DoNotReply@etrade.com"))
+
+        assertThat(result.messageClass).isEqualTo(MessageClass.NOTIFICATION)
+        assertThat(result.signal).isEqualTo(ClassificationSignal.NO_REPLY_SENDER)
+    }
+
+    @Test
+    fun `a hyphenated marker should be recognised`() {
+        val result = testSubject.classify(evidenceOf(from = "do-not-reply@example.com"))
+
+        assertThat(result.messageClass).isEqualTo(MessageClass.NOTIFICATION)
+    }
+
+    @Test
+    fun `a person whose name merely contains a marker word should not be a notification`() {
+        // "bounce" is a marker; "Bounce Fitness" is a company someone works at.
+        val result = testSubject.classify(evidenceOf(from = "morgan.bouncer@example.com"))
+
+        assertThat(result.messageClass).isEqualTo(MessageClass.UNKNOWN)
+    }
+
+    @Test
     fun `a person whose address merely contains those letters should not be a notification`() {
         // The failure mode that matters: a human misfiled by a substring match.
         val result = testSubject.classify(evidenceOf(from = "noreplacement@example.com"))
