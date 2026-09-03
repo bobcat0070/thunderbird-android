@@ -29,6 +29,7 @@ import net.thunderbird.core.preference.display.visualSettings.message.list.Messa
 import net.thunderbird.core.preference.interaction.InteractionSettingsPreferenceManager
 import net.thunderbird.core.preference.network.NetworkSettingsPreferenceManager
 import net.thunderbird.core.preference.notification.NotificationPreferenceManager
+import net.thunderbird.core.preference.bimi.BimiSettingsPreferenceManager
 import net.thunderbird.core.preference.gravatar.GravatarSettingsPreferenceManager
 import net.thunderbird.core.preference.widget.WidgetSettingsPreferenceManager
 import net.thunderbird.core.preference.privacy.PrivacySettingsPreferenceManager
@@ -61,6 +62,7 @@ internal class DefaultGeneralSettingsManager(
     private val interactionSettingsPreferenceManager: InteractionSettingsPreferenceManager,
     private val gravatarSettingsPreferenceManager: GravatarSettingsPreferenceManager,
     private val widgetSettingsPreferenceManager: WidgetSettingsPreferenceManager,
+    private val bimiSettingsPreferenceManager: BimiSettingsPreferenceManager,
     private val debugLogConfigurator: DebugLogConfigurator,
     private val backgroundDispatcher: CoroutineDispatcher = Dispatchers.IO,
     private val platformConfigProvider: PlatformConfigProvider,
@@ -138,6 +140,9 @@ internal class DefaultGeneralSettingsManager(
         .combine(widgetSettingsPreferenceManager.getConfigFlow()) { generalSettings, widgetSettings ->
             generalSettings.copy(widget = widgetSettings)
         }
+        .combine(bimiSettingsPreferenceManager.getConfigFlow()) { generalSettings, bimiSettings ->
+            generalSettings.copy(bimi = bimiSettings)
+        }
         .stateIn(
             scope = coroutineScope,
             started = SharingStarted.WhileSubscribed(),
@@ -194,6 +199,7 @@ internal class DefaultGeneralSettingsManager(
                 interactionSettingsPreferenceManager.save(config.interaction)
                 gravatarSettingsPreferenceManager.save(config.gravatar)
                 widgetSettingsPreferenceManager.save(config.widget)
+                bimiSettingsPreferenceManager.save(config.bimi)
             }
         }
     }

@@ -29,6 +29,9 @@ class SaveMessageDataCreator(
         // Classified here because this is the only point where the headers are in hand; the store keeps only
         // a subset of them, and re-deriving later would mean re-parsing the message.
         val classification = messageClassifier.classify(message.toClassificationEvidence())
+        val isSenderAuthenticated = hasDmarcPass(
+            message.getHeader(authenticationResultsHeaderName()).orEmpty().toList(),
+        )
 
         val encryptionResult = encryptionExtractor.extractEncryption(message)
         return if (encryptionResult != null) {
@@ -43,6 +46,7 @@ class SaveMessageDataCreator(
                 textForSearchIndex = encryptionResult.textForSearchIndex,
                 encryptionType = encryptionResult.encryptionType,
                 classification = classification,
+                isSenderAuthenticated = isSenderAuthenticated,
             )
         } else {
             SaveMessageData(
@@ -56,6 +60,7 @@ class SaveMessageDataCreator(
                 textForSearchIndex = messageFulltextCreator.createFulltext(message),
                 encryptionType = null,
                 classification = classification,
+                isSenderAuthenticated = isSenderAuthenticated,
             )
         }
     }

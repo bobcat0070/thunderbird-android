@@ -49,12 +49,12 @@ internal const val FOLDER_EXTRA_SYNC_FORMAT = "graphSyncFormat"
  * that was already synchronized. Version 2 added the message list preview text, version 3 the headers
  * used to classify a message, version 4 the classification itself, version 5 a revision of the
  * classification rules, and version 6 stores envelopes as headers-only so that opening one downloads the
- * body instead of offering a button.
+ * body instead of offering a button, and version 7 the sender's authentication result.
  *
  * A change to the classification rules also needs a bump: the headers a verdict was derived from are not
  * kept, so the only way to re-classify stored mail is to fetch its envelope again and re-save it.
  */
-internal const val SYNC_FORMAT_VERSION = 6
+internal const val SYNC_FORMAT_VERSION = 7
 
 /**
  * Synchronizes a single folder with Microsoft Graph.

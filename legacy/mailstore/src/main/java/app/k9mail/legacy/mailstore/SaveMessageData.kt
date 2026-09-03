@@ -20,4 +20,9 @@ data class SaveMessageData(
      * What kind of mail this is, decided from the headers while they are in hand.
      */
     val classification: MessageClassification = MessageClassification.UNKNOWN,
+    /**
+     * Whether the receiving server reported that the message passed DMARC. Recorded per message rather than
+     * per sender, because the whole point is to tell a domain's real mail from mail claiming to be it.
+     */
+    val isSenderAuthenticated: Boolean = false,
 )

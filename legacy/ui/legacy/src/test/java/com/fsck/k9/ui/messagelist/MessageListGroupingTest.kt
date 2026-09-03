@@ -164,5 +164,6 @@ class MessageListGroupingTest {
         threadRoot = uniqueId,
         contactColor = 0,
         classification = classification,
+        isSenderAuthenticated = false,
     )
 }

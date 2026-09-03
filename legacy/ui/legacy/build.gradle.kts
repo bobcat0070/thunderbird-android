@@ -12,6 +12,7 @@ dependencies {
 
     implementation(projects.legacy.core)
     implementation(libs.okhttp)
+    implementation(libs.androidsvg)
     implementation(projects.legacy.logging)
     implementation(projects.feature.mail.account.api)
     implementation(projects.mail.common)

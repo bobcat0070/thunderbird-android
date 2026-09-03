@@ -492,6 +492,7 @@ class MessageListAdapterTest : RobolectricTest() {
             threadRoot,
             contactColor = -1,
             classification = MessageClass.UNKNOWN,
+            isSenderAuthenticated = false,
         )
     }
 

@@ -2,6 +2,7 @@ package com.fsck.k9.contacts
 
 import android.graphics.Bitmap
 import com.bumptech.glide.load.Options
+import com.fsck.k9.contacts.bimi.BimiLogoLoader
 import com.bumptech.glide.load.ResourceDecoder
 import com.bumptech.glide.load.engine.Resource
 import com.bumptech.glide.load.engine.bitmap_recycle.BitmapPool
@@ -16,6 +17,7 @@ import kotlin.math.max
 internal class ContactImageBitmapDecoder(
     private val contactPhotoLoader: ContactPhotoLoader,
     private val gravatarLoader: GravatarLoader,
+    private val bimiLogoLoader: BimiLogoLoader,
     private val bitmapPool: BitmapPool,
 ) : ResourceDecoder<ContactImage, Bitmap> {
 
@@ -23,6 +25,7 @@ internal class ContactImageBitmapDecoder(
         val size = max(width, height)
 
         val bitmap = loadContactPhoto(contactImage)
+            ?: loadBimiLogo(contactImage, size)
             ?: loadGravatar(contactImage, size)
             ?: createContactLetterBitmap(contactImage, size)
 
@@ -33,6 +36,23 @@ internal class ContactImageBitmapDecoder(
         if (contactImage.contactLetterOnly) return null
 
         return contactPhotoLoader.loadContactPhoto(contactImage.address.address)
+    }
+
+    /**
+     * The sender domain's brand indicator, asked for only when the receiving server reported that the message
+     * passed DMARC.
+     *
+     * That check is the entire basis for showing the logo. Without it the indicator would say nothing about
+     * who sent the message while looking exactly like it did, which is worse than showing no logo at all.
+     */
+    @Suppress("ReturnCount")
+    private fun loadBimiLogo(contactImage: ContactImage, size: Int): Bitmap? {
+        if (contactImage.contactLetterOnly || !contactImage.isSenderAuthenticated) return null
+
+        val domain = contactImage.address.address?.substringAfterLast('@', "")?.takeIf { it.isNotEmpty() }
+            ?: return null
+
+        return bimiLogoLoader.loadLogo(domain, size)
     }
 
     /**
@@ -56,8 +76,9 @@ internal class ContactImageBitmapDecoder(
 internal class ContactImageBitmapDecoderFactory(
     private val contactPhotoLoader: ContactPhotoLoader,
     private val gravatarLoader: GravatarLoader,
+    private val bimiLogoLoader: BimiLogoLoader,
 ) {
     fun create(bitmapPool: BitmapPool): ContactImageBitmapDecoder {
-        return ContactImageBitmapDecoder(contactPhotoLoader, gravatarLoader, bitmapPool)
+        return ContactImageBitmapDecoder(contactPhotoLoader, gravatarLoader, bimiLogoLoader, bitmapPool)
     }
 }

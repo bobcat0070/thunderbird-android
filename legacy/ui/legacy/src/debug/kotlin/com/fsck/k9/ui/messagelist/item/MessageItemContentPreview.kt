@@ -97,6 +97,7 @@ private val fakeMessageListItem = MessageListItem(
     threadRoot = 1L,
     contactColor = Color.Magenta.toArgb(),
     classification = MessageClass.HUMAN,
+    isSenderAuthenticated = false,
 )
 
 private val fakeMessageListAppearance = MessageListAppearance(

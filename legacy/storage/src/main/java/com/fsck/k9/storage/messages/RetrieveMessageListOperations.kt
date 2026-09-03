@@ -40,7 +40,8 @@ SELECT
   forwarded, 
   attachment_count, 
   root,
-  classification
+  classification,
+  sender_authenticated
 FROM messages
 JOIN threads ON (threads.message_id = messages.id)
 LEFT JOIN FOLDERS ON (folders.id = messages.folder_id)
@@ -98,7 +99,8 @@ SELECT
   aggregated.attachment_count AS attachment_count, 
   root, 
   aggregated.thread_count AS thread_count,
-  classification
+  classification,
+  sender_authenticated
 FROM (
   SELECT 
     threads.root AS thread_root,
@@ -171,7 +173,8 @@ SELECT
   forwarded, 
   attachment_count, 
   root,
-  classification
+  classification,
+  sender_authenticated
 FROM threads 
 JOIN messages ON (messages.id = threads.message_id)
 LEFT JOIN FOLDERS ON (folders.id = messages.folder_id)
@@ -251,6 +254,13 @@ private class CursorMessageAccessor(val cursor: Cursor, val includesThreadCount:
             val name = cursor.getStringOrNull(columnIndex) ?: return MessageClass.UNKNOWN
 
             return MessageClass.entries.firstOrNull { it.name == name } ?: MessageClass.UNKNOWN
+        }
+
+    override val isSenderAuthenticated: Boolean
+        get() {
+            val columnIndex = cursor.getColumnIndex("sender_authenticated")
+
+            return columnIndex >= 0 && cursor.getInt(columnIndex) == 1
         }
 }
 

@@ -323,6 +323,13 @@
                 android:title="@string/global_settings_gravatar_label"
                 />
 
+            <CheckBoxPreference
+                android:dependency="messagelist_show_contact_picture"
+                android:key="bimi_enabled"
+                android:summary="@string/global_settings_bimi_summary"
+                android:title="@string/global_settings_bimi_label"
+                />
+
             <EditTextPreference
                 android:dependency="gravatar_enabled"
                 android:key="gravatar_api_key"

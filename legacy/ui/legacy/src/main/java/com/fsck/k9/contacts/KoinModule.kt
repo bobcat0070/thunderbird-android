@@ -1,5 +1,8 @@
 package com.fsck.k9.contacts
 
+import com.fsck.k9.contacts.bimi.BimiLogoLoader
+import com.fsck.k9.contacts.bimi.PlatformDnsTxtLookup
+import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 import org.koin.core.qualifier.named
 import okhttp3.OkHttpClient
@@ -30,5 +33,19 @@ val contactsModule = module {
             logger = get(),
         )
     }
-    factory { ContactImageBitmapDecoderFactory(contactPhotoLoader = get(), gravatarLoader = get()) }
+    single {
+        BimiLogoLoader(
+            generalSettingsManager = get(),
+            dnsTxtLookup = PlatformDnsTxtLookup(executor = Executors.newCachedThreadPool()),
+            httpClient = get(named("gravatarHttpClient")),
+            logger = get(),
+        )
+    }
+    factory {
+        ContactImageBitmapDecoderFactory(
+            contactPhotoLoader = get(),
+            gravatarLoader = get(),
+            bimiLogoLoader = get(),
+        )
+    }
 }

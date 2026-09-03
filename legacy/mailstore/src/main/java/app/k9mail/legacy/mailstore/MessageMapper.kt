@@ -34,4 +34,12 @@ interface MessageDetailsAccessor {
      * classified anything, since neither can be presented as a confident answer.
      */
     val classification: MessageClass
+
+    /**
+     * Whether the receiving server reported that this message passed DMARC.
+     *
+     * Per message rather than per sender on purpose: the point of the flag is to tell a domain's real mail
+     * apart from mail that only claims to be from it.
+     */
+    val isSenderAuthenticated: Boolean
 }

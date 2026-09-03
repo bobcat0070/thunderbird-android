@@ -420,6 +420,7 @@ internal class SaveMessageOperations(
             put("classification", classification.messageClass.name)
             put("classification_signal", classification.signal.name)
             put("classifier_version", CLASSIFIER_VERSION)
+            put("sender_authenticated", if (messageData.isSenderAuthenticated) 1 else 0)
 
             val previewResult = messageData.previewResult
             put("preview_type", previewResult.previewType.toDatabaseValue())

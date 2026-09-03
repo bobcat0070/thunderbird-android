@@ -597,6 +597,7 @@ internal class RealImapFolder(
                     // arrival is what makes the message list useful; fetching them later would mean a
                     // second round trip per message.
                     "list-id precedence auto-submitted x-auto-response-suppress " +
+                    "authentication-results " +
                     K9MailLib.IDENTITY_HEADER + " " + K9MailLib.CHAT_HEADER + ")]",
             )
         }

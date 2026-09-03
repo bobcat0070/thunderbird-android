@@ -21,9 +21,10 @@ class ContactPictureLoader(
         if (hasDefaultBackgroundColor) defaultBackgroundColor.toString() else "*"
     }
 
-    fun setContactPicture(imageView: ImageView, address: Address) {
+    @JvmOverloads
+    fun setContactPicture(imageView: ImageView, address: Address, isSenderAuthenticated: Boolean = false) {
         Glide.with(imageView.context)
-            .load(createContactImage(address, contactLetterOnly = false))
+            .load(createContactImage(address, contactLetterOnly = false, isSenderAuthenticated))
             .diskCacheStrategy(DiskCacheStrategy.NONE)
             .dontAnimate()
             .into(imageView)
@@ -89,12 +90,17 @@ class ContactPictureLoader(
             .getOrNull()
     }
 
-    private fun createContactImage(address: Address, contactLetterOnly: Boolean): ContactImage {
+    private fun createContactImage(
+        address: Address,
+        contactLetterOnly: Boolean,
+        isSenderAuthenticated: Boolean = false,
+    ): ContactImage {
         return ContactImage(
             contactLetterOnly = contactLetterOnly,
             backgroundCacheId = backgroundCacheId,
             contactLetterBitmapCreator = contactLetterBitmapCreator,
             address = address,
+            isSenderAuthenticated = isSenderAuthenticated,
         )
     }
 

@@ -1,6 +1,7 @@
 package net.thunderbird.core.preference
 
 import net.thunderbird.core.common.appConfig.PlatformConfigProvider
+import net.thunderbird.core.preference.bimi.BimiSettings
 import net.thunderbird.core.preference.debugging.DebuggingSettings
 import net.thunderbird.core.preference.display.DisplaySettings
 import net.thunderbird.core.preference.gravatar.GravatarSettings
@@ -26,6 +27,7 @@ data class GeneralSettings(
     val privacy: PrivacySettings = PrivacySettings(),
     val gravatar: GravatarSettings = GravatarSettings(),
     val widget: WidgetSettings = WidgetSettings(),
+    val bimi: BimiSettings = BimiSettings(),
     val debugging: DebuggingSettings = DebuggingSettings(isDebugLoggingEnabled = platformConfigProvider.isDebug),
     val interaction: InteractionSettings = InteractionSettings(),
 )

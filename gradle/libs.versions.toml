@@ -300,6 +300,7 @@ moshi-kotlin-codegen = { module = "com.squareup.moshi:moshi-kotlin-codegen", ver
 mozilla-components-glean = { module = "org.mozilla.components:service-glean", version.ref = "mozillaAndroidComponents" }
 mozilla-components-fetch-okhttp = { module = "org.mozilla.components:lib-fetch-okhttp", version.ref = "mozillaAndroidComponents" }
 networknt-jsonSchemaValidator = { module = "com.networknt:json-schema-validator", version.ref = "jsonSchemaValidator" }
+androidsvg = { module = "com.caverock:androidsvg-aar", version = "1.4" }
 okhttp = { module = "com.squareup.okhttp3:okhttp", version.ref = "okhttp" }
 okhttp-mockwebserver = { module = "com.squareup.okhttp3:mockwebserver", version.ref = "okhttp" }
 okio = { module = "com.squareup.okio:okio", version.ref = "okio" }

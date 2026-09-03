@@ -30,6 +30,7 @@ data class MessageListItem(
     @get:ColorInt
     val contactColor: Int,
     val classification: MessageClass,
+    val isSenderAuthenticated: Boolean,
 ) {
     val messageReference: MessageReference
         get() = MessageReference(account.uuid, folderId, messageUid)

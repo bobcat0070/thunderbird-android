@@ -63,6 +63,8 @@ private val RETAINED_HEADERS = setOf(
     "auto-submitted",
     "x-auto-response-suppress",
     "return-path",
+    // Carries the receiving server's DMARC verdict, which gates whether a sender's brand logo may be shown.
+    "authentication-results",
 )
 
 /**
