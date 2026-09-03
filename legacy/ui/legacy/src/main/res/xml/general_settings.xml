@@ -316,6 +316,12 @@
                 android:title="@string/global_settings_colorize_missing_contact_pictures_label"
                 />
 
+            <Preference
+                android:key="learned_rules"
+                android:summary="@string/learned_rules_settings_summary"
+                android:title="@string/learned_rules_title"
+                />
+
             <CheckBoxPreference
                 android:dependency="messagelist_show_contact_picture"
                 android:key="gravatar_enabled"

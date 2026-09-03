@@ -45,6 +45,16 @@ class RemoteImageSenderStore(context: Context) {
         return address in read(KEY_SENDERS) || (domain != null && domain in read(KEY_DOMAINS))
     }
 
+    /**
+     * @return everything the user has trusted, so it can be reviewed and taken back.
+     */
+    fun trusted(): List<Pair<RemoteImageScope, String>> {
+        val senders = read(KEY_SENDERS).map { RemoteImageScope.SENDER to it }
+        val domains = read(KEY_DOMAINS).map { RemoteImageScope.DOMAIN to it }
+
+        return (senders + domains).sortedBy { (_, pattern) -> pattern }
+    }
+
     fun trust(emailAddress: String, scope: RemoteImageScope) {
         val value = valueFor(emailAddress, scope) ?: return
 

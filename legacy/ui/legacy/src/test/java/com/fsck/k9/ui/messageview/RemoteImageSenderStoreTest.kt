@@ -2,6 +2,8 @@ package com.fsck.k9.ui.messageview
 
 import androidx.test.core.app.ApplicationProvider
 import assertk.assertThat
+import assertk.assertions.containsExactly
+import assertk.assertions.isEmpty
 import assertk.assertions.isFalse
 import assertk.assertions.isTrue
 import net.thunderbird.core.android.testing.RobolectricTest
@@ -82,5 +84,34 @@ class RemoteImageSenderStoreTest : RobolectricTest() {
     @Test
     fun `a blank address should not be trusted`() {
         assertThat(testSubject.isTrusted("   ")).isFalse()
+    }
+
+    @Test
+    fun `nothing should be listed before anything is trusted`() {
+        assertThat(testSubject.trusted()).isEmpty()
+    }
+
+    @Test
+    fun `both scopes should be listed, in a stable order`() {
+        // Listed so the user can see and take back what they granted; ordered so the list does not reshuffle
+        // itself between visits, which SharedPreferences string sets would otherwise do.
+        testSubject.trust("zoe@example.com", RemoteImageScope.SENDER)
+        testSubject.trust("news@shop.com", RemoteImageScope.DOMAIN)
+        testSubject.trust("adam@example.com", RemoteImageScope.SENDER)
+
+        assertThat(testSubject.trusted()).containsExactly(
+            RemoteImageScope.SENDER to "adam@example.com",
+            RemoteImageScope.DOMAIN to "shop.com",
+            RemoteImageScope.SENDER to "zoe@example.com",
+        )
+    }
+
+    @Test
+    fun `a forgotten sender should stop being listed`() {
+        testSubject.trust("sam@example.com", RemoteImageScope.SENDER)
+
+        testSubject.forget("sam@example.com", RemoteImageScope.SENDER)
+
+        assertThat(testSubject.trusted()).isEmpty()
     }
 }
