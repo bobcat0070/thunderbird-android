@@ -10,6 +10,7 @@ import app.k9mail.feature.account.oauth.featureAccountOAuthModule
 import app.k9mail.feature.account.server.settings.featureAccountServerSettingsModule
 import app.k9mail.feature.account.server.validation.featureAccountServerValidationModule
 import app.k9mail.feature.account.setup.domain.DomainContract
+import app.k9mail.feature.account.setup.domain.ProtocolFolderFetcher
 import app.k9mail.feature.account.setup.domain.usecase.CreateAccount
 import app.k9mail.feature.account.setup.domain.usecase.GetAutoDiscovery
 import app.k9mail.feature.account.setup.domain.usecase.GetSpecialFolderOptions
@@ -29,6 +30,7 @@ import app.k9mail.feature.account.setup.ui.specialfolders.SpecialFoldersFormUiMo
 import app.k9mail.feature.account.setup.ui.specialfolders.SpecialFoldersViewModel
 import com.fsck.k9.mail.folders.FolderFetcher
 import com.fsck.k9.mail.store.imap.ImapFolderFetcher
+import net.thunderbird.backend.graph.GraphFolderFetcher
 import okhttp3.OkHttpClient
 import org.koin.core.module.Module
 import org.koin.core.module.dsl.viewModel
@@ -90,11 +92,16 @@ val featureAccountSetupModule: Module = module {
     }
 
     factory<FolderFetcher> {
-        ImapFolderFetcher(
-            trustedSocketFactory = get(),
-            oAuth2TokenProviderFactory = get(),
-            clientInfoAppName = get(named("ClientInfoAppName")),
-            clientInfoAppVersion = get(named("ClientInfoAppVersion")),
+        ProtocolFolderFetcher(
+            imapFolderFetcher = ImapFolderFetcher(
+                trustedSocketFactory = get(),
+                oAuth2TokenProviderFactory = get(),
+                clientInfoAppName = get(named("ClientInfoAppName")),
+                clientInfoAppVersion = get(named("ClientInfoAppVersion")),
+            ),
+            graphFolderFetcher = GraphFolderFetcher(
+                oAuth2TokenProviderFactory = get(),
+            ),
         )
     }
 

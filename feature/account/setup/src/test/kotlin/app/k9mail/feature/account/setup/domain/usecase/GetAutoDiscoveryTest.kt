@@ -4,6 +4,7 @@ import app.k9mail.autodiscovery.api.AuthenticationType
 import app.k9mail.autodiscovery.api.AutoDiscoveryResult
 import app.k9mail.autodiscovery.api.AutoDiscoveryService
 import app.k9mail.autodiscovery.api.ConnectionSecurity
+import app.k9mail.autodiscovery.api.GraphServerSettings
 import app.k9mail.autodiscovery.api.ImapServerSettings
 import app.k9mail.autodiscovery.api.IncomingServerSettings
 import app.k9mail.autodiscovery.api.OutgoingServerSettings
@@ -126,6 +127,34 @@ class GetAutoDiscoveryTest {
             )
     }
 
+    @Test
+    fun `should keep Microsoft Graph settings when an OAuth configuration is available`() = runTest {
+        val useCase = GetAutoDiscovery(
+            service = FakeAutoDiscoveryService(GRAPH_SETTINGS),
+            oauthProvider = FakeOAuthConfigurationProvider(OAUTH_CONFIGURATION),
+        )
+
+        val result = useCase.execute("user@example.com")
+
+        assertThat(result)
+            .isInstanceOf<AutoDiscoveryResult.Settings>()
+            .isEqualTo(GRAPH_SETTINGS)
+    }
+
+    @Test
+    fun `should reject Microsoft Graph settings when no OAuth configuration is available`() = runTest {
+        // Graph has no password fallback, so without an OAuth client configuration the settings are unusable.
+        val useCase = GetAutoDiscovery(
+            service = FakeAutoDiscoveryService(GRAPH_SETTINGS),
+            oauthProvider = FakeOAuthConfigurationProvider(),
+        )
+
+        val result = useCase.execute("user@example.com")
+
+        assertThat(result)
+            .isInstanceOf<AutoDiscoveryResult.NoUsableSettingsFound>()
+    }
+
     private class FakeAutoDiscoveryService(
         private val answer: AutoDiscoveryResult = AutoDiscoveryResult.NoUsableSettingsFound,
     ) : AutoDiscoveryService {
@@ -142,6 +171,19 @@ class GetAutoDiscoveryTest {
     private class UnsupportedOutgoingServerSettings : OutgoingServerSettings
 
     private companion object {
+        private val GRAPH_SETTINGS = AutoDiscoveryResult.Settings(
+            incomingServerSettings = GraphServerSettings(
+                hostname = "graph.microsoft.com".toHostname(),
+                username = "user@example.com",
+            ),
+            outgoingServerSettings = GraphServerSettings(
+                hostname = "graph.microsoft.com".toHostname(),
+                username = "user@example.com",
+            ),
+            isTrusted = true,
+            source = "source",
+        )
+
         private val SETTINGS_WITH_OAUTH = AutoDiscoveryResult.Settings(
             incomingServerSettings = ImapServerSettings(
                 hostname = "imap.example.com".toHostname(),

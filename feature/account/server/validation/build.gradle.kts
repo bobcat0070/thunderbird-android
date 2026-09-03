@@ -21,6 +21,7 @@ dependencies {
     implementation(projects.mail.protocols.imap)
     implementation(projects.mail.protocols.pop3)
     implementation(projects.mail.protocols.smtp)
+    implementation(projects.backend.graph)
 
     implementation(projects.feature.account.common)
     implementation(projects.feature.account.oauth)

@@ -1,5 +1,6 @@
 package app.k9mail.feature.account.setup.domain
 
+import app.k9mail.autodiscovery.api.GraphServerSettings
 import app.k9mail.autodiscovery.api.ImapServerSettings
 import app.k9mail.autodiscovery.api.IncomingServerSettings
 import app.k9mail.autodiscovery.api.OutgoingServerSettings
@@ -9,12 +10,16 @@ import app.k9mail.feature.account.common.domain.entity.toAuthType
 import app.k9mail.feature.account.common.domain.entity.toMailConnectionSecurity
 import app.k9mail.feature.account.setup.domain.entity.toAuthenticationType
 import app.k9mail.feature.account.setup.domain.entity.toConnectionSecurity
+import com.fsck.k9.mail.AuthType
+import com.fsck.k9.mail.ConnectionSecurity
 import com.fsck.k9.mail.ServerSettings
 import com.fsck.k9.mail.store.imap.ImapStoreSettings
+import net.thunderbird.core.common.mail.Protocols
 
 fun IncomingServerSettings.toServerSettings(password: String?): ServerSettings {
     return when (this) {
         is ImapServerSettings -> this.toImapServerSettings(password)
+        is GraphServerSettings -> this.toGraphServerSettings()
         is DemoServerSettings -> this.serverSettings
         else -> throw IllegalArgumentException("Unknown server settings type: $this")
     }
@@ -47,6 +52,7 @@ private fun ImapServerSettings.toImapServerSettings(password: String?): ServerSe
 fun OutgoingServerSettings.toServerSettings(password: String?): ServerSettings {
     return when (this) {
         is SmtpServerSettings -> this.toSmtpServerSettings(password)
+        is GraphServerSettings -> this.toGraphServerSettings()
         is DemoServerSettings -> this.serverSettings
         else -> throw IllegalArgumentException("Unknown server settings type: $this")
     }
@@ -63,5 +69,24 @@ private fun SmtpServerSettings.toSmtpServerSettings(password: String?): ServerSe
         password = password,
         clientCertificateAlias = null,
         extra = emptyMap(),
+    )
+}
+
+/**
+ * Microsoft Graph is used for both the incoming and the outgoing side of an account, so one conversion serves both.
+ *
+ * There is no password: Graph only accepts OAuth 2.0 bearer tokens, and the port and connection security are fixed
+ * properties of the HTTPS endpoint rather than something the user can configure.
+ */
+private fun GraphServerSettings.toGraphServerSettings(): ServerSettings {
+    return ServerSettings(
+        type = Protocols.GRAPH,
+        host = hostname.value,
+        port = 443,
+        connectionSecurity = ConnectionSecurity.SSL_TLS_REQUIRED,
+        authenticationType = AuthType.XOAUTH2,
+        username = username,
+        password = null,
+        clientCertificateAlias = null,
     )
 }

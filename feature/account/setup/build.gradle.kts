@@ -22,6 +22,7 @@ dependencies {
     implementation(projects.legacy.logging)
     implementation(projects.mail.common)
     implementation(projects.mail.protocols.imap)
+    implementation(projects.backend.graph)
     implementation(projects.mail.protocols.pop3)
     implementation(projects.mail.protocols.smtp)
     implementation(projects.feature.mail.folder.api)
