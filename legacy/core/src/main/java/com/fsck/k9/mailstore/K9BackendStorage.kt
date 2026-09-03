@@ -55,7 +55,7 @@ class K9BackendStorage(
                     serverId = folderInfo.serverId,
                     name = folderInfo.name,
                     type = folderInfo.type,
-                    settings = folderSettingsProvider.getFolderSettings(folderInfo.serverId),
+                    settings = folderSettingsProvider.getFolderSettings(folderInfo.serverId, folderInfo.type),
                 )
             }
             return messageStore.createFolders(createFolderInfo)

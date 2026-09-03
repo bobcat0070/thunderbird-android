@@ -12,6 +12,7 @@ class K9OAuthConfigurationFactory : OAuthConfigurationFactory {
             createFastmailConfiguration(),
             createGmailConfiguration(),
             createMicrosoftConfiguration(),
+            createMicrosoftGraphConfiguration(),
             createYahooConfiguration(),
             createThundermailConfiguration(),
             createThundermailStageConfiguration(),
@@ -72,6 +73,36 @@ class K9OAuthConfigurationFactory : OAuthConfigurationFactory {
                 "email",
                 "https://outlook.office.com/IMAP.AccessAsUser.All",
                 "https://outlook.office.com/SMTP.Send",
+                "offline_access",
+            ),
+            authorizationEndpoint = "https://login.microsoftonline.com/common/oauth2/v2.0/authorize",
+            tokenEndpoint = "https://login.microsoftonline.com/common/oauth2/v2.0/token",
+            redirectUri = "msauth://com.fsck.k9.debug/VZF2DYuLYAu4TurFd6usQB2JPts%3D",
+        )
+    }
+
+    /**
+     * Microsoft Graph configuration for Microsoft 365 and Outlook.com accounts.
+     *
+     * Microsoft 365 tenants commonly disable IMAP and SMTP AUTH, so Graph is the only mail protocol available to
+     * them. Graph tokens are scoped to the Graph resource, which is why this is a separate configuration from the
+     * IMAP/SMTP one rather than an extra scope on it: the Microsoft identity platform only issues a token for one
+     * resource at a time.
+     *
+     * The app registration behind [clientId] must have the delegated Microsoft Graph permissions Mail.ReadWrite and
+     * Mail.Send granted, otherwise sign-in fails with an invalid scope error.
+     */
+    private fun createMicrosoftGraphConfiguration(): Pair<List<String>, OAuthConfiguration> {
+        return listOf(
+            "graph.microsoft.com",
+        ) to OAuthConfiguration(
+            clientId = "e647013a-ada4-4114-b419-e43d250f99c5",
+            scopes = listOf(
+                "profile",
+                "openid",
+                "email",
+                "https://graph.microsoft.com/Mail.ReadWrite",
+                "https://graph.microsoft.com/Mail.Send",
                 "offline_access",
             ),
             authorizationEndpoint = "https://login.microsoftonline.com/common/oauth2/v2.0/authorize",

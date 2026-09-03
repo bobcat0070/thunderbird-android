@@ -9,6 +9,7 @@ dependencies {
     implementation(projects.legacy.storage)
     implementation(projects.legacy.ui.legacy)
     implementation(projects.backend.imap)
+    implementation(projects.backend.graph)
     implementation(projects.backend.pop3)
 
     implementation(projects.core.featureflag)

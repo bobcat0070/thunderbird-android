@@ -8,6 +8,8 @@ class DefaultDeletePolicyProvider : DeletePolicyProvider {
         return when (accountType) {
             Protocols.IMAP -> DeletePolicy.ON_DELETE
             Protocols.POP3 -> DeletePolicy.NEVER
+            // Deleting through Graph moves the message to Deleted Items, the same as IMAP.
+            Protocols.GRAPH -> DeletePolicy.ON_DELETE
             "demo" -> DeletePolicy.ON_DELETE
             else -> throw AssertionError("Unhandled case: $accountType")
         }
