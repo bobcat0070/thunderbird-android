@@ -15,7 +15,7 @@ class MessageListGroupingTest {
     fun `a list with no bulk mail should be unchanged`() {
         val items = listOf(item(1, MessageClass.HUMAN), item(2, MessageClass.UNKNOWN))
 
-        val result = items.groupByClassification(expandedClasses = emptySet())
+        val result = items.groupByClassification()
 
         assertThat(result.map { it.viewId }).containsExactly(1L, 2L)
     }
@@ -26,82 +26,81 @@ class MessageListGroupingTest {
         // message gets lost.
         val items = listOf(item(1, MessageClass.UNKNOWN))
 
-        val result = items.groupByClassification(expandedClasses = emptySet())
+        val result = items.groupByClassification()
 
         assertThat(result).hasSize(1)
         assertThat(result.first() is MessageListViewItem.Message).isTrue()
     }
 
     @Test
-    fun `bulk mail should collapse into one row per class`() {
-        val items = listOf(
-            item(1, MessageClass.NEWSLETTER),
-            item(2, MessageClass.NEWSLETTER),
-            item(3, MessageClass.NOTIFICATION),
-        )
-
-        val result = items.groupByClassification(expandedClasses = emptySet())
-
-        assertThat(result).hasSize(2)
-        assertThat(result.filterIsInstance<MessageListViewItem.Bundle>().map { it.messageCount })
-            .containsExactly(2, 1)
-    }
-
-    @Test
-    fun `a bundle should sit where its newest message was`() {
-        // The list is already in date order, so keeping the bundle at its first member's position is what
-        // stops a burst of newsletters from pushing correspondence down the screen.
+    fun `bundles should be pinned above every message`() {
+        // The bundle stands for a whole category rather than for one moment in the timeline, so it does not
+        // move as mail arrives.
         val items = listOf(
             item(1, MessageClass.HUMAN),
             item(2, MessageClass.NEWSLETTER),
             item(3, MessageClass.HUMAN),
-            item(4, MessageClass.NEWSLETTER),
+            item(4, MessageClass.NOTIFICATION),
         )
 
-        val result = items.groupByClassification(expandedClasses = emptySet())
+        val result = items.groupByClassification()
 
-        assertThat(result.map { it.viewId }).containsExactly(1L, bundleId(MessageClass.NEWSLETTER), 3L)
+        assertThat(result.map { it.viewId }).containsExactly(
+            bundleId(MessageClass.NOTIFICATION),
+            bundleId(MessageClass.NEWSLETTER),
+            1L,
+            3L,
+        )
     }
 
     @Test
-    fun `an expanded bundle should list its messages after the bundle row`() {
-        val items = listOf(
-            item(1, MessageClass.HUMAN),
-            item(2, MessageClass.NEWSLETTER),
-            item(3, MessageClass.NEWSLETTER),
-        )
-
-        val result = items.groupByClassification(expandedClasses = setOf(MessageClass.NEWSLETTER))
-
-        assertThat(result.map { it.viewId })
-            .containsExactly(1L, bundleId(MessageClass.NEWSLETTER), 2L, 3L)
-    }
-
-    @Test
-    fun `expanding one bundle should leave the other collapsed`() {
+    fun `bulk mail should be lifted out of the list entirely`() {
         val items = listOf(
             item(1, MessageClass.NEWSLETTER),
-            item(2, MessageClass.NOTIFICATION),
+            item(2, MessageClass.NEWSLETTER),
             item(3, MessageClass.NOTIFICATION),
         )
 
-        val result = items.groupByClassification(expandedClasses = setOf(MessageClass.NEWSLETTER))
+        val result = items.groupByClassification()
 
-        assertThat(result.map { it.viewId }).containsExactly(
-            bundleId(MessageClass.NEWSLETTER),
-            1L,
-            bundleId(MessageClass.NOTIFICATION),
-        )
+        assertThat(result).hasSize(2)
+        assertThat(result.filterIsInstance<MessageListViewItem.Bundle>().map { it.messageCount })
+            .containsExactly(1, 2)
     }
 
     @Test
-    fun `a bundle should count only its unread messages separately`() {
+    fun `a class with no messages should get no row`() {
+        val items = listOf(item(1, MessageClass.NEWSLETTER))
+
+        val result = items.groupByClassification()
+
+        assertThat(result.filterIsInstance<MessageListViewItem.Bundle>().map { it.messageClass })
+            .containsExactly(MessageClass.NEWSLETTER)
+    }
+
+    @Test
+    fun `remaining messages should keep their order`() {
+        val items = listOf(
+            item(1, MessageClass.HUMAN),
+            item(2, MessageClass.NEWSLETTER),
+            item(3, MessageClass.UNKNOWN),
+            item(4, MessageClass.HUMAN),
+        )
+
+        val result = items.groupByClassification()
+
+        assertThat(result.filterIsInstance<MessageListViewItem.Message>().map { it.viewId })
+            .containsExactly(1L, 3L, 4L)
+    }
+
+    @Test
+    fun `a bundle should count its unread messages separately`() {
         val items = listOf(
             item(1, MessageClass.NEWSLETTER, isRead = false),
             item(2, MessageClass.NEWSLETTER, isRead = true),
         )
 
-        val bundle = items.groupByClassification(emptySet())
+        val bundle = items.groupByClassification()
             .filterIsInstance<MessageListViewItem.Bundle>()
             .single()
 
@@ -117,7 +116,7 @@ class MessageListGroupingTest {
             item(3, MessageClass.NEWSLETTER, displayName = "Kohl's"),
         )
 
-        val bundle = items.groupByClassification(emptySet())
+        val bundle = items.groupByClassification()
             .filterIsInstance<MessageListViewItem.Bundle>()
             .single()
 
@@ -129,7 +128,7 @@ class MessageListGroupingTest {
         // Both feed the adapter's stable ids; a collision would make rows swap places on every update.
         val items = listOf(item(1, MessageClass.NEWSLETTER), item(2, MessageClass.NOTIFICATION))
 
-        val result = items.groupByClassification(emptySet())
+        val result = items.groupByClassification()
 
         assertThat(result.map { it.viewId }.distinct()).hasSize(2)
         assertThat(result.all { it.viewId < 0 }).isTrue()

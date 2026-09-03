@@ -118,6 +118,7 @@ import net.thunderbird.feature.notification.api.ui.dialog.ErrorNotificationsDial
 import net.thunderbird.feature.notification.api.ui.host.DisplayInAppNotificationFlag
 import net.thunderbird.feature.notification.api.ui.host.visual.SnackbarVisual
 import net.thunderbird.feature.notification.api.ui.style.SnackbarDuration
+import net.thunderbird.feature.search.legacy.api.MessageSearchField
 import net.thunderbird.feature.search.legacy.LocalMessageSearch
 import net.thunderbird.feature.search.legacy.SearchAccount
 import net.thunderbird.feature.search.legacy.serialization.LocalMessageSearchSerializer
@@ -767,7 +768,11 @@ class LegacyMessageListFragment :
     }
 
     private fun setWindowTitle() {
+        val classification = displayedClassification
         val title = when {
+            // Checked before the folder cases: a category list is a view of a folder, and naming the folder
+            // would leave nothing on screen saying which category is being shown.
+            classification != null -> getString(classification.titleRes())
             isUnifiedFolders -> getString(R.string.integrated_inbox_title)
             isNewMessagesView -> getString(R.string.new_messages_title)
             isManualSearch -> getString(R.string.search_results)
@@ -795,14 +800,28 @@ class LegacyMessageListFragment :
         fragmentListener.setMessageListProgressEnabled(progress)
     }
 
+    private fun MessageClass.titleRes(): Int = when (this) {
+        MessageClass.NOTIFICATION -> R.string.message_list_bundle_notifications
+        else -> R.string.message_list_bundle_newsletters
+    }
+
+    /**
+     * The class this list is already filtered to, when it is a bundle that was opened.
+     */
+    private val displayedClassification: MessageClass?
+        get() = localSearch.leafSet
+            .mapNotNull { it.condition }
+            .firstOrNull { it.field == MessageSearchField.CLASSIFICATION }
+            ?.let { condition -> MessageClass.entries.firstOrNull { it.name == condition.value } }
+
     /**
      * Grouping is for a mailbox being read, not for a result set the user asked a question of.
      *
-     * A search or a thread is already a specific answer, and collapsing part of it would hide the very
-     * messages that were asked for.
+     * A search, a thread, or an already-opened bundle is a specific answer, and lifting part of it out of the
+     * list would hide the very messages that were asked for.
      */
     private val isGroupingEnabled: Boolean
-        get() = !isThreadDisplay && !localSearch.isManualSearch
+        get() = !isThreadDisplay && !localSearch.isManualSearch && displayedClassification == null
 
     private fun updateViewItems(messageListItems: List<MessageListItem>) {
         adapter.viewItems = buildList {
@@ -811,21 +830,22 @@ class LegacyMessageListFragment :
             }
 
             if (isGroupingEnabled) {
-                addAll(messageListItems.groupByClassification(expandedBundles))
+                addAll(messageListItems.groupByClassification())
             } else {
                 addAll(messageListItems.map { MessageListViewItem.Message(it) })
             }
         }
     }
 
+    /**
+     * Opens the category as its own list.
+     *
+     * A screen rather than an expansion in place, because the bundle stands for every message of its class in
+     * the folder and not only the ones the list has loaded. Reusing the search machinery means the category
+     * list is an ordinary message list: same sorting, same actions, and the footer still loads older mail.
+     */
     override fun onBundleClicked(messageClass: MessageClass) {
-        expandedBundles = if (messageClass in expandedBundles) {
-            expandedBundles - messageClass
-        } else {
-            expandedBundles + messageClass
-        }
-
-        currentMessageListItems?.let { updateViewItems(it) }
+        fragmentListener.showClassification(messageClass)
     }
 
     override fun onFooterClicked() {
@@ -2080,7 +2100,6 @@ class LegacyMessageListFragment :
             }
         }
 
-        currentMessageListItems = messageListItems
         updateViewItems(messageListItems)
 
         rememberedSelected?.let {

@@ -40,4 +40,5 @@ enum class MessageSearchField(
     READ("read", SearchFieldType.NUMBER),
     FLAGGED("flagged", SearchFieldType.NUMBER),
     VISIBLE("visible", SearchFieldType.NUMBER),
+    CLASSIFICATION("classification", SearchFieldType.TEXT),
 }

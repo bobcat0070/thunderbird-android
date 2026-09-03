@@ -453,14 +453,13 @@ sealed interface MessageListViewItem {
     }
 
     /**
-     * A collapsed group of bulk mail, standing in for every message of one class.
+     * A row standing in for every message of one class, and the way into them.
      */
     data class Bundle(
         val messageClass: MessageClass,
         val messageCount: Int,
         val unreadCount: Int,
         val senderNames: List<String>,
-        val isExpanded: Boolean,
     ) : MessageListViewItem {
         // Negative so it cannot collide with a message's unique id, which is derived from a row id.
         override val viewId: Long get() = -(messageClass.ordinal + 2L)

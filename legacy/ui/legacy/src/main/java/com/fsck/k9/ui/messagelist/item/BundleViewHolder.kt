@@ -11,10 +11,10 @@ import com.google.android.material.textview.MaterialTextView
 import net.thunderbird.feature.mail.message.classification.api.MessageClass
 
 /**
- * A collapsed group of bulk mail.
+ * A row standing in for every message of one class.
  *
- * The row names the senders inside rather than only counting them: a count says how much was hidden, but the
- * senders are what let someone decide at a glance whether opening it is worth their time.
+ * It names the senders inside rather than only counting them: a count says how much was lifted out of the
+ * list, but the senders are what let someone decide at a glance whether opening it is worth their time.
  */
 class BundleViewHolder(
     view: View,
@@ -24,8 +24,6 @@ class BundleViewHolder(
     private val icon: ImageView = view.findViewById(R.id.bundle_icon)
     private val title: MaterialTextView = view.findViewById(R.id.bundle_title)
     private val senders: MaterialTextView = view.findViewById(R.id.bundle_senders)
-    private val chevron: ImageView = view.findViewById(R.id.bundle_chevron)
-
     private var boundClass: MessageClass? = null
 
     init {
@@ -51,9 +49,6 @@ class BundleViewHolder(
         senders.visibility = if (bundle.senderNames.isEmpty()) View.GONE else View.VISIBLE
 
         icon.setImageResource(bundle.messageClass.iconRes())
-        chevron.setImageResource(
-            if (bundle.isExpanded) DesignSystemR.drawable.ic_expand_less else DesignSystemR.drawable.ic_expand_more,
-        )
     }
 
     private fun MessageClass.titleRes(): Int = when (this) {

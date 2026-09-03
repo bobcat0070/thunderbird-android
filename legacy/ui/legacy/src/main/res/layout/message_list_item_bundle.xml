@@ -59,7 +59,7 @@
         android:layout_width="24dp"
         android:layout_height="24dp"
         android:contentDescription="@null"
-        tools:src="@drawable/ic_expand_more"
+        android:src="@drawable/ic_chevron_right"
         />
 
 </LinearLayout>
