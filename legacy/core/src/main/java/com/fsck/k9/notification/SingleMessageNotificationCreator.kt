@@ -67,8 +67,15 @@ internal class SingleMessageNotificationCreator(
     private suspend fun NotificationBuilder.setAvatar(content: NotificationContent) = apply {
         if (!notificationPreferenceManager.getConfig().isShowContactPictureInNotification) return@apply
 
-        resourceProvider.avatar(content.sender)?.let {
-            setLargeIcon(IconCompat.createWithAdaptiveBitmap(it).toIcon(application))
+        resourceProvider.avatar(content.sender, content.isSenderAuthenticated)?.let {
+            // Not an adaptive icon: that mask crops to a circle and scales to the safe zone, which cuts the
+            // corners off a sender's brand mark and takes the verification badge with them - the badge is
+            // exactly what says whether an authority vouched for the logo, so a logo shown without it claims
+            // more than it should. The bitmap already carries its own shape, drawn the same way the message
+            // list draws it, so the notification now shows the sender the way the list about to be opened
+            // will. Device contact photos come through square here rather than masked round, which is how
+            // the list has always shown them.
+            setLargeIcon(IconCompat.createWithBitmap(it).toIcon(application))
         }
     }
 

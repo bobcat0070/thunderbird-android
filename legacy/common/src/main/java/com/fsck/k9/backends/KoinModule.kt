@@ -6,6 +6,7 @@ import com.fsck.k9.backend.imap.SystemAlarmManager
 import com.fsck.k9.mail.oauth.OAuth2TokenProviderFactory
 import com.fsck.k9.mail.store.imap.IdleRefreshManager
 import net.thunderbird.backend.api.BackendFactory
+import net.thunderbird.core.common.mail.Protocols
 import org.koin.core.qualifier.named
 import org.koin.dsl.module
 
@@ -16,6 +17,7 @@ val backendsModule = module {
             backendFactories = mapOf(
                 "imap" to get<ImapBackendFactory>(),
                 "pop3" to get<Pop3BackendFactory>(),
+                Protocols.GRAPH to get<GraphBackendFactory>(),
             ) + developmentBackends,
             accountManager = get(),
         )
@@ -34,6 +36,16 @@ val backendsModule = module {
     }
     single<SystemAlarmManager> { AndroidAlarmManager(context = get(), alarmManager = get()) }
     single<IdleRefreshManager> { BackendIdleRefreshManager(alarmManager = get()) }
+    single<GraphBackendFactory> {
+        DefaultGraphBackendFactory(
+            accountManager = get(),
+            backendStorageFactory = get(),
+            context = get(),
+            logger = get(),
+            powerManager = get(),
+            alarmManager = get(),
+        )
+    }
     single<Pop3BackendFactory> {
         DefaultPop3BackendFactory(
             accountManager = get(),

@@ -109,7 +109,7 @@ class MessageViewHolder(
             }
 
             if (appearance.showContactPicture && contactPictureView.isVisible) {
-                setContactPicture(contactPictureView, displayAddress)
+                setContactPicture(contactPictureView, displayAddress, isSenderAuthenticated)
             }
             itemView.setBackgroundColor(selectBackgroundColor(isSelected, isRead, isActive))
             updateWithThreadCount(displayThreadCount)
@@ -175,9 +175,13 @@ class MessageViewHolder(
         }
     }
 
-    private fun setContactPicture(contactPictureView: ImageView, displayAddress: Address?) {
+    private fun setContactPicture(
+        contactPictureView: ImageView,
+        displayAddress: Address?,
+        isSenderAuthenticated: Boolean,
+    ) {
         if (displayAddress != null) {
-            contactsPictureLoader.setContactPicture(contactPictureView, displayAddress)
+            contactsPictureLoader.setContactPicture(contactPictureView, displayAddress, isSenderAuthenticated)
         } else {
             contactPictureView.setImageResource(Icons.Outlined.Check)
         }

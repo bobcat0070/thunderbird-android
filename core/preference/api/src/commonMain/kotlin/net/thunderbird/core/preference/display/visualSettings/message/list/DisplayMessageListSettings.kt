@@ -6,6 +6,7 @@ const val MESSAGE_LIST_SETTINGS_DEFAULT_IS_SHOW_CONTACT_PICTURE = true
 const val MESSAGE_LIST_SETTINGS_DEFAULT_IS_CHANGE_CONTACT_NAME_COLOR = true
 const val MESSAGE_LIST_SETTINGS_DEFAULT_IS_COLORIZE_MISSING_CONTACT_PICTURE = true
 const val MESSAGE_LIST_SETTINGS_DEFAULT_IS_USE_BACKGROUND_AS_INDICATOR = false
+const val MESSAGE_LIST_SETTINGS_DEFAULT_IS_CATEGORY_GROUPING_ENABLED = true
 const val MESSAGE_LIST_SETTINGS_DEFAULT_PREVIEW_LINES = 2
 val MESSAGE_LIST_SETTINGS_DEFAULT_UI_DENSITY = UiDensity.Default
 const val DISPLAY_SETTINGS_DEFAULT_CONTACT_NAME_COLOR = 0xFF1093F5.toInt()
@@ -18,6 +19,12 @@ data class DisplayMessageListSettings(
     val isChangeContactNameColor: Boolean = MESSAGE_LIST_SETTINGS_DEFAULT_IS_CHANGE_CONTACT_NAME_COLOR,
     val isColorizeMissingContactPictures: Boolean = MESSAGE_LIST_SETTINGS_DEFAULT_IS_COLORIZE_MISSING_CONTACT_PICTURE,
     val isUseBackgroundAsUnreadIndicator: Boolean = MESSAGE_LIST_SETTINGS_DEFAULT_IS_USE_BACKGROUND_AS_INDICATOR,
+    /**
+     * Whether bulk mail is lifted into category rows. Turning it off puts every message back in one
+     * date-ordered list, which is what someone wants when they are looking for a specific message rather
+     * than triaging.
+     */
+    val isCategoryGroupingEnabled: Boolean = MESSAGE_LIST_SETTINGS_DEFAULT_IS_CATEGORY_GROUPING_ENABLED,
     val previewLines: Int = MESSAGE_LIST_SETTINGS_DEFAULT_PREVIEW_LINES,
     val uiDensity: UiDensity = MESSAGE_LIST_SETTINGS_DEFAULT_UI_DENSITY,
     val contactNameColor: Int = DISPLAY_SETTINGS_DEFAULT_CONTACT_NAME_COLOR,

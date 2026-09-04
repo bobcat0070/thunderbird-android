@@ -9,4 +9,11 @@ internal data class NotificationContent(
     val subject: String,
     val preview: CharSequence,
     val summary: CharSequence,
+
+    /**
+     * Whether the receiving server reported that this message passed DMARC. Carried this far because the
+     * sender's brand logo may only be shown for mail that did, and the notification is the one place the
+     * sender is presented before the reader has opened anything.
+     */
+    val isSenderAuthenticated: Boolean = false,
 )

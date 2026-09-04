@@ -29,7 +29,15 @@ import net.thunderbird.core.preference.network.DefaultNetworkSettingsPreferenceM
 import net.thunderbird.core.preference.network.NetworkSettingsPreferenceManager
 import net.thunderbird.core.preference.notification.DefaultNotificationPreferenceManager
 import net.thunderbird.core.preference.notification.NotificationPreferenceManager
+import net.thunderbird.core.preference.bimi.BimiSettingsPreferenceManager
+import net.thunderbird.core.preference.websiteicon.DefaultWebsiteIconSettingsPreferenceManager
+import net.thunderbird.core.preference.websiteicon.WebsiteIconSettingsPreferenceManager
+import net.thunderbird.core.preference.bimi.DefaultBimiSettingsPreferenceManager
+import net.thunderbird.core.preference.gravatar.DefaultGravatarSettingsPreferenceManager
+import net.thunderbird.core.preference.gravatar.GravatarSettingsPreferenceManager
 import net.thunderbird.core.preference.privacy.DefaultPrivacySettingsPreferenceManager
+import net.thunderbird.core.preference.widget.DefaultWidgetSettingsPreferenceManager
+import net.thunderbird.core.preference.widget.WidgetSettingsPreferenceManager
 import net.thunderbird.core.preference.privacy.PrivacySettingsPreferenceManager
 import org.koin.core.qualifier.named
 import org.koin.dsl.bind
@@ -49,6 +57,38 @@ val preferencesModule = module {
     }
     factory { FolderSettingsProvider(folderRepository = get()) }
     factory<LegacyAccountDtoManager> { get<Preferences>() }
+    single<GravatarSettingsPreferenceManager> {
+        DefaultGravatarSettingsPreferenceManager(
+            logger = get(),
+            storagePersister = get(),
+            storageEditor = get<Preferences>().createStorageEditor(),
+            preferenceChangeBroker = get(),
+        )
+    }
+    single<BimiSettingsPreferenceManager> {
+        DefaultBimiSettingsPreferenceManager(
+            logger = get(),
+            storagePersister = get(),
+            storageEditor = get<Preferences>().createStorageEditor(),
+            preferenceChangeBroker = get(),
+        )
+    }
+    single<WebsiteIconSettingsPreferenceManager> {
+        DefaultWebsiteIconSettingsPreferenceManager(
+            logger = get(),
+            storagePersister = get(),
+            storageEditor = get<Preferences>().createStorageEditor(),
+            preferenceChangeBroker = get(),
+        )
+    }
+    single<WidgetSettingsPreferenceManager> {
+        DefaultWidgetSettingsPreferenceManager(
+            logger = get(),
+            storagePersister = get(),
+            storageEditor = get<Preferences>().createStorageEditor(),
+            preferenceChangeBroker = get(),
+        )
+    }
     single<PrivacySettingsPreferenceManager> {
         DefaultPrivacySettingsPreferenceManager(
             logger = get(),
@@ -167,6 +207,10 @@ val preferencesModule = module {
             networkSettingsPreferenceManager = get(),
             debuggingSettingsPreferenceManager = get(),
             interactionSettingsPreferenceManager = get(),
+            gravatarSettingsPreferenceManager = get(),
+            widgetSettingsPreferenceManager = get(),
+            bimiSettingsPreferenceManager = get(),
+            websiteIconSettingsPreferenceManager = get(),
             debugLogConfigurator = get(),
             platformConfigProvider = get(),
             logger = get(),

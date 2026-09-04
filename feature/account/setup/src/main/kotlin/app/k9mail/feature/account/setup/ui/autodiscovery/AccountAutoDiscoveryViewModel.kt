@@ -2,6 +2,7 @@ package app.k9mail.feature.account.setup.ui.autodiscovery
 
 import androidx.lifecycle.viewModelScope
 import app.k9mail.autodiscovery.api.AutoDiscoveryResult
+import app.k9mail.autodiscovery.api.GraphServerSettings
 import app.k9mail.autodiscovery.api.ImapServerSettings
 import app.k9mail.autodiscovery.api.IncomingServerSettings
 import app.k9mail.autodiscovery.demo.DemoServerSettings
@@ -173,13 +174,26 @@ internal class AccountAutoDiscoveryViewModel(
             return
         }
 
-        val imapServerSettings = settings.incomingServerSettings as ImapServerSettings
-        val isOAuth = imapServerSettings.authenticationTypes.first() == AutoDiscoveryAuthenticationType.OAuth2
+        // Microsoft Graph accounts can only be authenticated with OAuth, and there are no server details for the
+        // user to review or change, so they go straight to the sign-in step.
+        val incomingServerSettings = settings.incomingServerSettings
+        val oAuthHostname = when (incomingServerSettings) {
+            is GraphServerSettings -> incomingServerSettings.hostname.value
 
-        if (isOAuth) {
+            is ImapServerSettings -> {
+                val isImapOAuth =
+                    incomingServerSettings.authenticationTypes.first() == AutoDiscoveryAuthenticationType.OAuth2
+                incomingServerSettings.hostname.value.takeIf { isImapOAuth }
+            }
+
+            else -> null
+        }
+        val isOAuth = oAuthHostname != null
+
+        if (oAuthHostname != null) {
             oAuthViewModel.initState(
                 AccountOAuthContract.State(
-                    hostname = imapServerSettings.hostname.value,
+                    hostname = oAuthHostname,
                     emailAddress = state.value.emailAddress.value,
                 ),
             )

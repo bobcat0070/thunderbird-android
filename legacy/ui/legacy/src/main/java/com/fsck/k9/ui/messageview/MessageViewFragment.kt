@@ -56,6 +56,9 @@ import com.fsck.k9.mail.Message
 import com.fsck.k9.mail.Part
 import com.fsck.k9.mailstore.AttachmentViewInfo
 import com.fsck.k9.mailstore.LocalMessage
+import com.fsck.k9.mailstore.MessageClassificationTeacher
+import com.fsck.k9.mailstore.authenticationResultsHeaderName
+import com.fsck.k9.mailstore.hasDmarcPass
 import com.fsck.k9.mailstore.MessageViewInfo
 import com.fsck.k9.provider.RawMessageProvider
 import com.fsck.k9.ui.R
@@ -73,9 +76,11 @@ import kotlin.time.ExperimentalTime
 import kotlin.time.Instant
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toPersistentList
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
 import net.thunderbird.core.android.account.LegacyAccountDto
@@ -85,6 +90,8 @@ import net.thunderbird.core.common.provider.AppNameProvider
 import net.thunderbird.core.featureflag.FeatureFlagProvider
 import net.thunderbird.core.featureflag.keys.GeneratedFeatureFlagKey
 import net.thunderbird.core.logging.Logger
+import net.thunderbird.feature.mail.message.classification.api.MessageClass
+import net.thunderbird.feature.mail.message.classification.api.RuleScope
 import net.thunderbird.core.preference.GeneralSettingsManager
 import net.thunderbird.core.preference.interaction.InteractionSettings
 import net.thunderbird.core.ui.contract.mvi.observe
@@ -156,6 +163,8 @@ class MessageViewFragment :
     private var preferredUnsubscribeUri: UnsubscribeUri? = null
 
     private val messageExporter: MessageExporter by inject()
+    private val messageClassificationTeacher: MessageClassificationTeacher by inject()
+    private val remoteImageSenderStore: RemoteImageSenderStore by inject()
 
     private val fileNameSuggester: MessageFileNameSuggester by inject()
 
@@ -223,6 +232,8 @@ class MessageViewFragment :
         )
 
         setFragmentResultListener(MessageDetailsFragment.FRAGMENT_RESULT_KEY, ::onMessageDetailsResult)
+        setFragmentResultListener(ClassifyMessageDialogFragment.FRAGMENT_RESULT_KEY, ::onClassifyResult)
+        setFragmentResultListener(AlwaysShowImagesDialogFragment.FRAGMENT_RESULT_KEY, ::onAlwaysShowImagesResult)
     }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
@@ -240,6 +251,11 @@ class MessageViewFragment :
 
     private fun initializeMessageTopView(messageTopView: MessageTopView) {
         messageTopView.setShowAccountIndicator(showAccountIndicator)
+
+        messageTopView.onAlwaysShowPictures = { senderAddress ->
+            AlwaysShowImagesDialogFragment.create(senderAddress)
+                .show(parentFragmentManager, "always_show_images")
+        }
 
         val sizeFormatter = SizeFormatter(resources)
         val composeView = messageTopView.findViewById<ComposeView>(R.id.bottom_sheet_compose_view)
@@ -453,6 +469,7 @@ class MessageViewFragment :
 
         menu.findItem(R.id.move_to_drafts).isVisible = isOutbox
         menu.findItem(R.id.unsubscribe).isVisible = canMessageBeUnsubscribed()
+        menu.findItem(R.id.classify).isVisible = senderAddress() != null
         menu.findItem(R.id.show_headers).isVisible = true
         menu.findItem(R.id.export_eml).isVisible =
             featureFlagProvider.provide(GeneratedFeatureFlagKey.MESSAGE_VIEW_ACTION_EXPORT_EML).isEnabled()
@@ -493,6 +510,7 @@ class MessageViewFragment :
             R.id.copy, R.id.refile_copy -> onCopy()
             R.id.move_to_drafts -> onMoveToDrafts()
             R.id.unsubscribe -> onUnsubscribe()
+            R.id.classify -> onClassify()
             R.id.show_headers -> onShowHeaders()
             R.id.print -> {
                 printMessage()
@@ -524,6 +542,74 @@ class MessageViewFragment :
             noSubjectText = getString(R.string.general_no_subject),
         ).print(messageViewInfo)
     }
+
+    /**
+     * Records the user's answer and re-renders, so the images they just allowed appear without a second tap.
+     */
+    private fun onAlwaysShowImagesResult(requestKey: String, result: Bundle) {
+        val scope = result.getString(AlwaysShowImagesDialogFragment.RESULT_SCOPE)
+            ?.let { name -> RemoteImageScope.entries.firstOrNull { it.name == name } }
+            ?: return
+        val senderAddress = senderAddress() ?: return
+
+        remoteImageSenderStore.trust(senderAddress, scope)
+
+        val trusted = if (scope == RemoteImageScope.DOMAIN) {
+            senderAddress.emailDomainOrNull() ?: senderAddress
+        } else {
+            senderAddress
+        }
+        Toast.makeText(
+            requireContext(),
+            getString(R.string.message_view_always_show_remote_images_done, trusted),
+            Toast.LENGTH_SHORT,
+        ).show()
+
+        mMessageViewInfo?.let { showMessage(it) }
+    }
+
+    private fun onClassify() {
+        val senderAddress = senderAddress() ?: return
+
+        ClassifyMessageDialogFragment.create(senderAddress)
+            .show(parentFragmentManager, "classify_message")
+    }
+
+    /**
+     * Applies the correction, then says how much of the mailbox moved.
+     *
+     * Reporting the count is the point: a rule the user cannot see the effect of is indistinguishable from
+     * one that was never recorded.
+     */
+    private fun onClassifyResult(requestKey: String, result: Bundle) {
+        val messageClass = result.getString(ClassifyMessageDialogFragment.RESULT_MESSAGE_CLASS)
+            ?.let { name -> MessageClass.entries.firstOrNull { it.name == name } }
+            ?: return
+        val scope = result.getString(ClassifyMessageDialogFragment.RESULT_SCOPE)
+            ?.let { name -> RuleScope.entries.firstOrNull { it.name == name } }
+            ?: RuleScope.SENDER
+        val senderAddress = senderAddress() ?: return
+
+        lifecycleScope.launch {
+            val updated = withContext(Dispatchers.IO) {
+                messageClassificationTeacher.teach(senderAddress, messageClass, scope)
+            }
+
+            val text = resources.getQuantityString(R.plurals.classify_message_result, updated, updated)
+            Toast.makeText(requireContext(), text, Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    /**
+     * Whether the receiving server reported that this message passed DMARC, read from the message in hand.
+     */
+    private fun isSenderAuthenticated(): Boolean {
+        val message = this.message ?: return false
+
+        return hasDmarcPass(message.getHeader(authenticationResultsHeaderName()).orEmpty().toList())
+    }
+
+    private fun senderAddress(): String? = message?.from?.firstOrNull()?.address?.takeIf { it.isNotBlank() }
 
     private fun onShowHeaders() {
         val launchIntent = MessageSourceActivity.createLaunchIntent(requireActivity(), messageReference)
@@ -586,7 +672,10 @@ class MessageViewFragment :
 
     private val messageHeaderClickListener = object : MessageHeaderClickListener {
         override fun onParticipantsContainerClick() {
-            val messageDetailsFragment = MessageDetailsFragment.create(messageReference)
+            val messageDetailsFragment = MessageDetailsFragment.create(
+                messageReference,
+                isSenderAuthenticated = isSenderAuthenticated(),
+            )
             messageDetailsFragment.cryptoResult = messageCryptoPresenter.cryptoResultAnnotation
             messageDetailsFragment.show(parentFragmentManager, "message_details")
         }

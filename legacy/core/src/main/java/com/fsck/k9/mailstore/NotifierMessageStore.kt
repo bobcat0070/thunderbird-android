@@ -4,10 +4,14 @@ import app.k9mail.legacy.mailstore.MessageStore
 import app.k9mail.legacy.mailstore.MoreMessages
 import app.k9mail.legacy.mailstore.SaveMessageData
 import net.thunderbird.core.common.mail.Flag
+import net.thunderbird.feature.mail.message.classification.api.MessageClass
+import net.thunderbird.feature.mail.message.classification.api.MessageClassification
+import net.thunderbird.feature.mail.message.classification.api.RuleScope
 
 /**
  * [MessageStore] wrapper that triggers notifications on certain changes to the message store.
  */
+@Suppress("TooManyFunctions")
 class NotifierMessageStore(
     private val messageStore: MessageStore,
     private val localStore: LocalStore,
@@ -64,6 +68,22 @@ class NotifierMessageStore(
     override fun setMoreMessages(folderId: Long, moreMessages: MoreMessages) {
         messageStore.setMoreMessages(folderId, moreMessages)
         notifyChange()
+    }
+
+    override fun setClassificationForSender(
+        scope: RuleScope,
+        pattern: String,
+        messageClass: MessageClass,
+        signal: String,
+        classifierVersion: Int,
+    ): Int {
+        return messageStore.setClassificationForSender(scope, pattern, messageClass, signal, classifierVersion)
+            .also { updated -> if (updated > 0) notifyChange() }
+    }
+
+    override fun setClassifications(classifications: Map<Long, MessageClassification>, classifierVersion: Int): Int {
+        return messageStore.setClassifications(classifications, classifierVersion)
+            .also { updated -> if (updated > 0) notifyChange() }
     }
 
     private fun notifyChange() {

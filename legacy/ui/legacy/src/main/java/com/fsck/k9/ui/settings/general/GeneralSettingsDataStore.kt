@@ -16,9 +16,12 @@ import net.thunderbird.core.preference.LockScreenNotificationVisibility
 import net.thunderbird.core.preference.SplitViewMode
 import net.thunderbird.core.preference.SubTheme
 import net.thunderbird.core.preference.display.visualSettings.message.list.MessageListDateTimeFormat
+import net.thunderbird.core.preference.notification.NotificationPreference
+import net.thunderbird.core.preference.websiteicon.WebsiteIconSettings
 import net.thunderbird.core.preference.display.visualSettings.message.list.UiDensity
 import net.thunderbird.core.preference.interaction.PostMarkAsUnreadNavigation
 import net.thunderbird.core.preference.update
+import net.thunderbird.core.preference.widget.WidgetSettings
 
 @Suppress("LargeClass")
 class GeneralSettingsDataStore(
@@ -52,6 +55,12 @@ class GeneralSettingsDataStore(
             "messagelist_change_contact_name_color" -> messageListSettings.isChangeContactNameColor
             "messagelist_show_contact_picture" -> messageListSettings.isShowContactPicture
             "messagelist_colorize_missing_contact_pictures" -> messageListSettings.isColorizeMissingContactPictures
+            "gravatar_enabled" -> config.gravatar.isEnabled
+            "bimi_enabled" -> config.bimi.isEnabled
+            "website_icon_enabled" -> config.websiteIcon.isEnabled
+            "widget_show_personal" -> config.widget.showPersonal
+            "widget_show_notifications" -> config.widget.showNotifications
+            "widget_show_newsletters" -> config.widget.showNewsletters
             "messagelist_background_as_unread_indicator" -> messageListSettings.isUseBackgroundAsUnreadIndicator
             "show_compose_button" -> inboxSettings.isShowComposeButtonOnMessageList
             "threaded_view" -> inboxSettings.isThreadedViewEnabled
@@ -62,6 +71,9 @@ class GeneralSettingsDataStore(
             "disable_notifications_during_quiet_time" -> !notificationSettings.isNotificationDuringQuietTimeEnabled
             "notification_summary_delete" -> notificationSettings.isSummaryDeleteActionEnabled
             "notification_show_contact_picture" -> notificationSettings.isShowContactPictureInNotification
+            "notify_personal" -> notificationSettings.isNotifyPersonal
+            "notify_notifications" -> notificationSettings.isNotifyNotifications
+            "notify_newsletters" -> notificationSettings.isNotifyNewsletters
             "privacy_hide_useragent" -> privacySettings.isHideUserAgent
             "privacy_hide_timezone" -> privacySettings.isHideTimeZone
             "privacy_incognito_keyboard" -> privacySettings.isIncognitoKeyboardEnabled
@@ -89,6 +101,12 @@ class GeneralSettingsDataStore(
             "messagelist_show_contact_name" -> setIsShowContactName(isShowContactName = value)
             "messagelist_change_contact_name_color" -> setIsChangeContactNameColor(isChangeContactNameColor = value)
             "messagelist_show_contact_picture" -> setIsShowContactPicture(isShowContactPicture = value)
+            "gravatar_enabled" -> setGravatarEnabled(value)
+            "bimi_enabled" -> setBimiEnabled(value)
+            "website_icon_enabled" -> updateWebsiteIconSettings { it.copy(isEnabled = value) }
+            "widget_show_personal" -> updateWidgetSettings { it.copy(showPersonal = value) }
+            "widget_show_notifications" -> updateWidgetSettings { it.copy(showNotifications = value) }
+            "widget_show_newsletters" -> updateWidgetSettings { it.copy(showNewsletters = value) }
             "messagelist_colorize_missing_contact_pictures" -> setIsColorizeMissingContactPictures(
                 isColorizeMissingContactPictures = value,
             )
@@ -107,6 +125,10 @@ class GeneralSettingsDataStore(
             "notification_show_contact_picture" -> setIsShowContactPictureInNotification(
                 isShowContactPictureInNotification = value,
             )
+
+            "notify_personal" -> updateNotificationSettings { it.copy(isNotifyPersonal = value) }
+            "notify_notifications" -> updateNotificationSettings { it.copy(isNotifyNotifications = value) }
+            "notify_newsletters" -> updateNotificationSettings { it.copy(isNotifyNewsletters = value) }
 
             "privacy_hide_useragent" -> setIsHideUserAgent(isHideUserAgent = value)
             "privacy_hide_timezone" -> setIsHideTimeZone(isHideTimeZone = value)
@@ -157,6 +179,7 @@ class GeneralSettingsDataStore(
             "animations" -> animationPreferenceToString(visualSettings.animationPreference)
             "message_compose_theme" -> subThemeToString(coreSettings.messageComposeTheme)
             "messageViewTheme" -> subThemeToString(coreSettings.messageViewTheme)
+            "gravatar_api_key" -> config.gravatar.apiKey
             "messagelist_preview_lines" -> messageListSettings.previewLines.toString()
             "message_list_date_time_format" -> messageListSettings.dateTimeFormat.toString()
             "splitview_mode" -> coreSettings.splitViewMode.name
@@ -198,6 +221,7 @@ class GeneralSettingsDataStore(
             "animations" -> setAnimationPreference(stringToAnimationPreference(value))
             "message_compose_theme" -> setMessageComposeTheme(value)
             "messageViewTheme" -> setMessageViewTheme(value)
+            "gravatar_api_key" -> setGravatarApiKey(value)
             "messagelist_preview_lines" -> setMessageListPreviewLines(value.toInt())
             "message_list_date_time_format" -> updateMessageListDateTimeFormat(value)
             "splitview_mode" -> setSplitViewModel(SplitViewMode.valueOf(value.uppercase()))
@@ -501,6 +525,48 @@ class GeneralSettingsDataStore(
                     ),
                 ),
             )
+        }
+    }
+
+    private fun updateWebsiteIconSettings(transform: (WebsiteIconSettings) -> WebsiteIconSettings) {
+        skipSaveSettings = true
+        generalSettingsManager.update { settings ->
+            settings.copy(websiteIcon = transform(settings.websiteIcon))
+        }
+    }
+
+    private fun updateNotificationSettings(transform: (NotificationPreference) -> NotificationPreference) {
+        skipSaveSettings = true
+        generalSettingsManager.update { settings ->
+            settings.copy(notification = transform(settings.notification))
+        }
+    }
+
+    private fun updateWidgetSettings(transform: (WidgetSettings) -> WidgetSettings) {
+        skipSaveSettings = true
+        generalSettingsManager.update { settings ->
+            settings.copy(widget = transform(settings.widget))
+        }
+    }
+
+    private fun setBimiEnabled(isEnabled: Boolean) {
+        skipSaveSettings = true
+        generalSettingsManager.update { settings ->
+            settings.copy(bimi = settings.bimi.copy(isEnabled = isEnabled))
+        }
+    }
+
+    private fun setGravatarEnabled(isEnabled: Boolean) {
+        skipSaveSettings = true
+        generalSettingsManager.update { settings ->
+            settings.copy(gravatar = settings.gravatar.copy(isEnabled = isEnabled))
+        }
+    }
+
+    private fun setGravatarApiKey(apiKey: String) {
+        skipSaveSettings = true
+        generalSettingsManager.update { settings ->
+            settings.copy(gravatar = settings.gravatar.copy(apiKey = apiKey.trim()))
         }
     }
 

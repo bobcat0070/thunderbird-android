@@ -24,6 +24,8 @@ import app.k9mail.legacy.message.extractors.PreviewResult.PreviewType;
 import net.thunderbird.core.android.account.LegacyAccountDto;
 import net.thunderbird.legacy.logging.Log;
 import net.thunderbird.core.preference.GeneralSettingsManager;
+import net.thunderbird.feature.mail.message.classification.api.MessageClass;
+import net.thunderbird.feature.mail.message.classification.api.MessageClassificationKt;
 import net.thunderbird.feature.mail.message.list.LocalMessageUidPrefixProvider;
 
 
@@ -34,6 +36,8 @@ public class LocalMessage extends MimeMessage {
     private long rootId;
     private long threadId;
     private long messagePartId;
+    private MessageClass classification = MessageClass.UNKNOWN;
+    private boolean senderAuthenticated = false;
     private MessageReference messageReference;
     private int attachmentCount;
     private String subject;
@@ -145,7 +149,31 @@ public class LocalMessage extends MimeMessage {
             Log.d("No headers available for this message!");
         }
 
+        classification = MessageClassificationKt.messageClassOrUnknown(cursor.getString(LocalStore.MSG_INDEX_CLASSIFICATION));
+        senderAuthenticated = cursor.getInt(LocalStore.MSG_INDEX_SENDER_AUTHENTICATED) == 1;
+
         headerNeedsUpdating = false;
+    }
+
+    /**
+     * What kind of mail this is.
+     *
+     * Read from the row rather than derived here: the headers a classification is based on are only all in
+     * hand while a message is being saved, and the verdict made then is the one the rest of the app sorts,
+     * filters and groups by.
+     */
+    public MessageClass getClassification() {
+        return classification;
+    }
+
+    /**
+     * Whether the receiving server reported that this message passed DMARC.
+     *
+     * Per message rather than per sender: the flag exists to tell a domain's real mail apart from mail that
+     * only claims to be from it, and it is what decides whether the sender's brand logo may be shown.
+     */
+    public boolean isSenderAuthenticated() {
+        return senderAuthenticated;
     }
 
     @VisibleForTesting

@@ -4,6 +4,7 @@ import androidx.annotation.ColorInt
 import app.k9mail.legacy.message.controller.MessageReference
 import com.fsck.k9.mail.Address
 import net.thunderbird.core.android.account.LegacyAccount
+import net.thunderbird.feature.mail.message.classification.api.MessageClass
 
 data class MessageListItem(
     val account: LegacyAccount,
@@ -28,6 +29,8 @@ data class MessageListItem(
     val threadRoot: Long,
     @get:ColorInt
     val contactColor: Int,
+    val classification: MessageClass,
+    val isSenderAuthenticated: Boolean,
 ) {
     val messageReference: MessageReference
         get() = MessageReference(account.uuid, folderId, messageUid)

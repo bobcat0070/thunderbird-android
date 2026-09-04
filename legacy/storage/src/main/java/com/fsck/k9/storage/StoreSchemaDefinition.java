@@ -12,7 +12,7 @@ import net.thunderbird.legacy.logging.Log;
 
 
 class StoreSchemaDefinition implements SchemaDefinition {
-    static final int DB_VERSION = 91;
+    static final int DB_VERSION = 93;
 
     private final MigrationsHelper migrationsHelper;
 
@@ -144,7 +144,11 @@ class StoreSchemaDefinition implements SchemaDefinition {
                 "message_part_id INTEGER," +
                 "encryption_type TEXT," +
                 "new_message INTEGER DEFAULT 0," +
-                "account_id TEXT" +
+                "account_id TEXT," +
+                "classification TEXT," +
+                "classification_signal TEXT," +
+                "classifier_version INTEGER DEFAULT 0," +
+                "sender_authenticated INTEGER DEFAULT 0" +
                 ")");
 
         db.execSQL("DROP INDEX IF EXISTS new_messages");

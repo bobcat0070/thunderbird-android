@@ -11,6 +11,8 @@ dependencies {
     api(projects.core.ui.legacy.designsystem)
 
     implementation(projects.legacy.core)
+    implementation(libs.okhttp)
+    implementation(libs.androidsvg)
     implementation(projects.legacy.logging)
     implementation(projects.feature.mail.account.api)
     implementation(projects.mail.common)
@@ -95,6 +97,7 @@ dependencies {
 
     testImplementation(libs.androidx.test.core)
     testImplementation(libs.mockito.kotlin)
+    testImplementation(libs.okhttp.mockwebserver)
     testImplementation(libs.robolectric)
 }
 

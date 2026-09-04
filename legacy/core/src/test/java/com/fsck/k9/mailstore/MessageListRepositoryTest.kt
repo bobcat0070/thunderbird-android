@@ -1,5 +1,6 @@
 package com.fsck.k9.mailstore
 
+import net.thunderbird.feature.mail.message.classification.api.MessageClass
 import app.k9mail.legacy.mailstore.ListenableMessageStore
 import app.k9mail.legacy.mailstore.MessageDetailsAccessor
 import app.k9mail.legacy.mailstore.MessageListChangedListener
@@ -410,6 +411,8 @@ class MessageListRepositoryTest {
                     override val hasAttachments = false
                     override val threadRoot = message.threadRoot
                     override val threadCount = 0
+                    override val classification = MessageClass.UNKNOWN
+                    override val isSenderAuthenticated = false
                 },
             )
         }

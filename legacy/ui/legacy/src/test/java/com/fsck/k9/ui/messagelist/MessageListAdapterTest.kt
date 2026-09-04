@@ -1,5 +1,6 @@
 package com.fsck.k9.ui.messagelist
 
+import net.thunderbird.feature.mail.message.classification.api.MessageClass
 import android.content.Context
 import android.text.Spannable
 import android.text.style.AbsoluteSizeSpan
@@ -490,6 +491,8 @@ class MessageListAdapterTest : RobolectricTest() {
             databaseId,
             threadRoot,
             contactColor = -1,
+            classification = MessageClass.UNKNOWN,
+            isSenderAuthenticated = false,
         )
     }
 

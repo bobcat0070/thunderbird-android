@@ -15,6 +15,7 @@ internal class ParticipantItem(
     private val showContactsPicture: Boolean,
     private val alwaysHideAddContactsButton: Boolean,
     val participant: Participant,
+    private val isSenderAuthenticated: Boolean = false,
 ) : AbstractItem<ParticipantItem.ViewHolder>() {
     override val type: Int = R.id.message_details_participant
     override val layoutRes = R.layout.message_details_participant_item
@@ -50,7 +51,11 @@ internal class ParticipantItem(
 
             if (item.showContactsPicture) {
                 contactPicture.isVisible = true
-                item.contactPictureLoader.setContactPicture(contactPicture, participant.address)
+                item.contactPictureLoader.setContactPicture(
+                    contactPicture,
+                    participant.address,
+                    item.isSenderAuthenticated,
+                )
             } else {
                 contactPicture.isVisible = false
             }

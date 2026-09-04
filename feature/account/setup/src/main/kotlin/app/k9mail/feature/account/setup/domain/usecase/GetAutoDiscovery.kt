@@ -3,6 +3,7 @@ package app.k9mail.feature.account.setup.domain.usecase
 import app.k9mail.autodiscovery.api.AuthenticationType
 import app.k9mail.autodiscovery.api.AutoDiscoveryResult
 import app.k9mail.autodiscovery.api.AutoDiscoveryService
+import app.k9mail.autodiscovery.api.GraphServerSettings
 import app.k9mail.autodiscovery.api.ImapServerSettings
 import app.k9mail.autodiscovery.api.SmtpServerSettings
 import app.k9mail.autodiscovery.demo.DemoServerSettings
@@ -20,13 +21,28 @@ internal class GetAutoDiscovery(
         val result = service.discover(email)
 
         return if (result is AutoDiscoveryResult.Settings) {
-            if (result.incomingServerSettings is DemoServerSettings) {
-                return result
-            } else {
-                validateOAuthSupport(result)
+            when (result.incomingServerSettings) {
+                is DemoServerSettings -> result
+                is GraphServerSettings -> validateGraphOAuthSupport(result)
+                else -> validateOAuthSupport(result)
             }
         } else {
             result
+        }
+    }
+
+    /**
+     * Microsoft Graph can only be used with OAuth, so the settings are only usable if this build ships an OAuth
+     * configuration for the Graph endpoint. Without one there is no fallback to offer, and the account has to be
+     * configured by hand instead.
+     */
+    private fun validateGraphOAuthSupport(settings: AutoDiscoveryResult.Settings): AutoDiscoveryResult {
+        val graphServerSettings = settings.incomingServerSettings as GraphServerSettings
+
+        return if (isOAuthSupportedFor(graphServerSettings.hostname.value)) {
+            settings
+        } else {
+            AutoDiscoveryResult.NoUsableSettingsFound
         }
     }
 

@@ -35,6 +35,7 @@ import org.apache.commons.io.IOUtils
 import org.apache.james.mime4j.codec.Base64InputStream
 import org.apache.james.mime4j.codec.QuotedPrintableInputStream
 import org.apache.james.mime4j.util.MimeUtil
+import net.thunderbird.feature.mail.message.classification.api.CLASSIFIER_VERSION
 
 internal const val MAX_BODY_SIZE_FOR_DATABASE = 16 * 1024L
 
@@ -414,6 +415,12 @@ internal class SaveMessageOperations(
             put("message_id", message.messageId)
             put("mime_type", message.mimeType)
             put("encryption_type", messageData.encryptionType)
+
+            val classification = messageData.classification
+            put("classification", classification.messageClass.name)
+            put("classification_signal", classification.signal.name)
+            put("classifier_version", CLASSIFIER_VERSION)
+            put("sender_authenticated", if (messageData.isSenderAuthenticated) 1 else 0)
 
             val previewResult = messageData.previewResult
             put("preview_type", previewResult.previewType.toDatabaseValue())

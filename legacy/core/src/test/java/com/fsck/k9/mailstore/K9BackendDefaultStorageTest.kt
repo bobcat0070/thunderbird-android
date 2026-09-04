@@ -98,7 +98,7 @@ class K9BackendDefaultStorageTest : K9RobolectricTest() {
 
 internal fun createFolderSettingsProvider(): FolderSettingsProvider {
     return mock {
-        on { getFolderSettings(any()) } doReturn
+        on { getFolderSettings(any(), any()) } doReturn
             FolderSettings(
                 visibleLimit = 25,
                 isVisible = true,

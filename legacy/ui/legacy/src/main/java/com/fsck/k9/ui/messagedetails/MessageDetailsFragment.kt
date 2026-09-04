@@ -49,6 +49,8 @@ class MessageDetailsFragment : ToolbarBottomSheetDialogFragment() {
     private val folderIconProvider: FolderIconProvider by inject { parametersOf(requireContext().theme) }
 
     private lateinit var messageReference: MessageReference
+
+    private var isSenderAuthenticated: Boolean = false
     private val itemAdapter = ItemAdapter<GenericItem>()
 
     // FIXME: Replace this with a mechanism that survives process death
@@ -59,6 +61,7 @@ class MessageDetailsFragment : ToolbarBottomSheetDialogFragment() {
 
         messageReference = MessageReference.parse(arguments?.getString(ARG_REFERENCE))
             ?: error("Missing argument $ARG_REFERENCE")
+        isSenderAuthenticated = arguments?.getBoolean(ARG_SENDER_AUTHENTICATED) ?: false
     }
 
     override fun onCreateView(
@@ -160,7 +163,14 @@ class MessageDetailsFragment : ToolbarBottomSheetDialogFragment() {
 
             addCryptoStatus(details)
 
-            addParticipants(details.from, R.string.message_details_from_section_title, appearance)
+            // Only the From section: a brand indicator describes who sent the message, so applying it to a
+            // recipient would attach a sender's mark to someone who merely received the mail.
+            addParticipants(
+                details.from,
+                R.string.message_details_from_section_title,
+                appearance,
+                isSenderAuthenticated,
+            )
             addParticipants(details.sender, R.string.message_details_sender_section_title, appearance)
             addParticipants(details.replyTo, R.string.message_details_replyto_section_title, appearance)
 
@@ -194,6 +204,7 @@ class MessageDetailsFragment : ToolbarBottomSheetDialogFragment() {
         participants: List<Participant>,
         @StringRes title: Int,
         appearance: MessageDetailsAppearance,
+        isSenderAuthenticated: Boolean = false,
     ) {
         if (participants.isNotEmpty()) {
             val extraText = if (participants.size > 1) participants.size.toString() else null
@@ -206,6 +217,7 @@ class MessageDetailsFragment : ToolbarBottomSheetDialogFragment() {
                         appearance.showContactPicture,
                         appearance.alwaysHideAddToContactsButton,
                         participant,
+                        isSenderAuthenticated,
                     ),
                 )
             }
@@ -359,14 +371,24 @@ class MessageDetailsFragment : ToolbarBottomSheetDialogFragment() {
     companion object {
         private const val ARG_REFERENCE = "reference"
 
+        /**
+         * Whether the message passed DMARC. Passed in rather than looked up, because the message view that
+         * opens this sheet already holds the headers the verdict comes from.
+         */
+        private const val ARG_SENDER_AUTHENTICATED = "senderAuthenticated"
+
         const val FRAGMENT_RESULT_KEY = "messageDetailsResult"
         const val RESULT_ACTION = "action"
         const val ACTION_SEARCH_KEYS = "search_keys"
         const val ACTION_SHOW_WARNING = "show_warning"
 
-        fun create(messageReference: MessageReference): MessageDetailsFragment {
+        fun create(
+            messageReference: MessageReference,
+            isSenderAuthenticated: Boolean = false,
+        ): MessageDetailsFragment {
             return MessageDetailsFragment().withArguments(
                 ARG_REFERENCE to messageReference.toIdentityString(),
+                ARG_SENDER_AUTHENTICATED to isSenderAuthenticated,
             )
         }
     }

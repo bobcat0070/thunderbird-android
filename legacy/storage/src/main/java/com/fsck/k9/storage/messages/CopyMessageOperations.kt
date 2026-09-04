@@ -11,6 +11,34 @@ import java.util.UUID
 import net.thunderbird.feature.account.AccountId
 import net.thunderbird.feature.mail.message.list.LocalMessageUidPrefixProvider
 
+/**
+ * The columns a copy carries over, read back below in exactly this order.
+ */
+private val MESSAGE_COLUMNS = arrayOf(
+    "deleted",
+    "subject",
+    "date",
+    "flags",
+    "sender_list",
+    "to_list",
+    "cc_list",
+    "bcc_list",
+    "reply_to_list",
+    "attachment_count",
+    "internal_date",
+    "message_id",
+    "preview_type",
+    "preview",
+    "mime_type",
+    "normalized_subject_hash",
+    "empty",
+    "read",
+    "flagged",
+    "answered",
+    "forwarded",
+    "encryption_type",
+) + CLASSIFICATION_COLUMNS
+
 internal class CopyMessageOperations(
     private val lockableDatabase: LockableDatabase,
     private val attachmentFileManager: AttachmentFileManager,
@@ -214,30 +242,7 @@ ORDER BY message_parts.seq
     private fun readMessageToContentValues(database: SQLiteDatabase, messageId: Long): ContentValues {
         return database.query(
             "messages",
-            arrayOf(
-                "deleted",
-                "subject",
-                "date",
-                "flags",
-                "sender_list",
-                "to_list",
-                "cc_list",
-                "bcc_list",
-                "reply_to_list",
-                "attachment_count",
-                "internal_date",
-                "message_id",
-                "preview_type",
-                "preview",
-                "mime_type",
-                "normalized_subject_hash",
-                "empty",
-                "read",
-                "flagged",
-                "answered",
-                "forwarded",
-                "encryption_type",
-            ),
+            MESSAGE_COLUMNS,
             "id = ?",
             arrayOf(messageId.toString()),
             null,
@@ -269,6 +274,7 @@ ORDER BY message_parts.seq
                 put("answered", cursor.getInt(19))
                 put("forwarded", cursor.getInt(20))
                 put("encryption_type", cursor.getStringOrNull(21))
+                putClassificationFrom(cursor)
             }
         }
     }

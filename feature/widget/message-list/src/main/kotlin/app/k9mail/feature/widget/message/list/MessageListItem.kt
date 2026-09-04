@@ -1,6 +1,7 @@
 package app.k9mail.feature.widget.message.list
 
 import app.k9mail.legacy.message.controller.MessageReference
+import net.thunderbird.feature.mail.message.classification.api.MessageClass
 
 internal data class MessageListItem(
     val displayName: String,
@@ -13,6 +14,7 @@ internal data class MessageListItem(
     val accountColor: Int,
     val messageReference: MessageReference,
     val uniqueId: Long,
+    val classification: MessageClass,
 
     val sortSubject: String?,
     val sortMessageDate: Long,

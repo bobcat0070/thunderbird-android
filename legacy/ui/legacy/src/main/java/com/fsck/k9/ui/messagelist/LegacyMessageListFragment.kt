@@ -1,5 +1,6 @@
 package com.fsck.k9.ui.messagelist
 
+import net.thunderbird.feature.mail.message.classification.api.MessageClass
 import android.app.SearchManager
 import android.content.Context
 import android.content.Intent
@@ -99,6 +100,7 @@ import net.thunderbird.core.featureflag.keys.GeneratedFeatureFlagKey
 import net.thunderbird.core.logging.Logger
 import net.thunderbird.core.outcome.Outcome
 import net.thunderbird.core.preference.GeneralSettingsManager
+import net.thunderbird.core.preference.display.visualSettings.message.list.MessageListPreferencesManager
 import net.thunderbird.core.preference.display.visualSettings.message.list.DisplayMessageListSettings
 import net.thunderbird.core.preference.interaction.InteractionSettings
 import net.thunderbird.core.ui.theme.api.FeatureThemeProvider
@@ -117,6 +119,7 @@ import net.thunderbird.feature.notification.api.ui.dialog.ErrorNotificationsDial
 import net.thunderbird.feature.notification.api.ui.host.DisplayInAppNotificationFlag
 import net.thunderbird.feature.notification.api.ui.host.visual.SnackbarVisual
 import net.thunderbird.feature.notification.api.ui.style.SnackbarDuration
+import net.thunderbird.feature.search.legacy.api.MessageSearchField
 import net.thunderbird.feature.search.legacy.LocalMessageSearch
 import net.thunderbird.feature.search.legacy.SearchAccount
 import net.thunderbird.feature.search.legacy.serialization.LocalMessageSearchSerializer
@@ -160,6 +163,7 @@ class LegacyMessageListFragment :
 
     private val generalSettingsManager: GeneralSettingsManager by inject()
     private val sortTypeToastProvider: SortTypeToastProvider by inject()
+    private val messageListPreferencesManager: MessageListPreferencesManager by inject()
     private val folderNameFormatter: FolderNameFormatter by inject { parametersOf(requireContext()) }
     private val messagingController: MessagingControllerWrapper by inject()
     private val messagingControllerRegistry: MessagingControllerRegistry by inject()
@@ -236,6 +240,18 @@ class LegacyMessageListFragment :
     private var activeMessages: List<MessageReference>? = null
     private var showingThreadedList = false
     private var isThreadDisplay = false
+
+    /**
+     * Bundles the user has opened.
+     *
+     * Kept in the fragment rather than in the adapter so a reload - new mail arriving, a flag changing - does
+     * not silently collapse a group the user is reading.
+     */
+
+    /**
+     * The last list the loader produced, so toggling a bundle can rebuild the rows without a reload.
+     */
+    private var currentMessageListItems: List<MessageListItem>? = null
     private var activeMessage: MessageReference? = null
     private var rememberedSelected: Set<Long>? = null
     private var lastMessageClick = 0L
@@ -753,7 +769,11 @@ class LegacyMessageListFragment :
     }
 
     private fun setWindowTitle() {
+        val classification = displayedClassification
         val title = when {
+            // Checked before the folder cases: a category list is a view of a folder, and naming the folder
+            // would leave nothing on screen saying which category is being shown.
+            classification != null -> getString(classification.titleRes())
             isUnifiedFolders -> getString(R.string.integrated_inbox_title)
             isNewMessagesView -> getString(R.string.new_messages_title)
             isManualSearch -> getString(R.string.search_results)
@@ -779,6 +799,70 @@ class LegacyMessageListFragment :
         }
 
         fragmentListener.setMessageListProgressEnabled(progress)
+    }
+
+    private fun MessageClass.titleRes(): Int = when (this) {
+        MessageClass.NOTIFICATION -> R.string.message_list_bundle_notifications
+        else -> R.string.message_list_bundle_newsletters
+    }
+
+    /**
+     * The class this list is already filtered to, when it is a bundle that was opened.
+     */
+    private val displayedClassification: MessageClass?
+        get() = localSearch.leafSet
+            .mapNotNull { it.condition }
+            .firstOrNull { it.field == MessageSearchField.CLASSIFICATION }
+            ?.let { condition -> MessageClass.entries.firstOrNull { it.name == condition.value } }
+
+    /**
+     * Whether this list is a mailbox being read rather than a result set the user asked a question of.
+     *
+     * A search, a thread, or an already-opened category is a specific answer, and lifting part of it out of
+     * the list would hide the very messages that were asked for.
+     */
+    private val isCategoryListEligible: Boolean
+        get() = !isThreadDisplay && !localSearch.isManualSearch && displayedClassification == null
+
+    private val isGroupingEnabled: Boolean
+        get() = messageListPreferencesManager.getConfig().isCategoryGroupingEnabled
+
+    private fun updateViewItems(messageListItems: List<MessageListItem>) {
+        adapter.viewItems = buildList {
+            if (featureFlagProvider.provide(GeneratedFeatureFlagKey.DISPLAY_IN_APP_NOTIFICATIONS).isEnabled()) {
+                add(MessageListViewItem.InAppNotificationBannerList)
+            }
+
+            if (isCategoryListEligible) {
+                addAll(
+                    messageListItems.toViewItems(
+                        isGroupingEnabled = isGroupingEnabled,
+                        showDayHeaders = true,
+                    ),
+                )
+            } else {
+                addAll(messageListItems.map { MessageListViewItem.Message(it) })
+            }
+        }
+    }
+
+    override fun onGroupingToggled(isEnabled: Boolean) {
+        messageListPreferencesManager.save(
+            messageListPreferencesManager.getConfig().copy(isCategoryGroupingEnabled = isEnabled),
+        )
+
+        currentMessageListItems?.let { updateViewItems(it) }
+    }
+
+    /**
+     * Opens the category as its own list.
+     *
+     * A screen rather than an expansion in place, because the bundle stands for every message of its class in
+     * the folder and not only the ones the list has loaded. Reusing the search machinery means the category
+     * list is an ordinary message list: same sorting, same actions, and the footer still loads older mail.
+     */
+    override fun onBundleClicked(messageClass: MessageClass) {
+        fragmentListener.showClassification(messageClass)
     }
 
     override fun onFooterClicked() {
@@ -2033,12 +2117,8 @@ class LegacyMessageListFragment :
             }
         }
 
-        adapter.viewItems = buildList {
-            if (featureFlagProvider.provide(GeneratedFeatureFlagKey.DISPLAY_IN_APP_NOTIFICATIONS).isEnabled()) {
-                add(MessageListViewItem.InAppNotificationBannerList)
-            }
-            addAll(messageListItems.map { MessageListViewItem.Message(it) })
-        }
+        currentMessageListItems = messageListItems
+        updateViewItems(messageListItems)
 
         rememberedSelected?.let {
             rememberedSelected = null

@@ -10,6 +10,7 @@ import app.k9mail.feature.account.server.validation.ui.OutgoingServerValidationV
 import com.fsck.k9.mail.store.imap.ImapServerSettingsValidator
 import com.fsck.k9.mail.store.pop3.Pop3ServerSettingsValidator
 import com.fsck.k9.mail.transport.smtp.SmtpServerSettingsValidator
+import net.thunderbird.backend.graph.GraphServerSettingsValidator
 import net.thunderbird.core.common.coreCommonModule
 import org.koin.core.module.dsl.viewModel
 import org.koin.core.qualifier.named
@@ -37,6 +38,9 @@ val featureAccountServerValidationModule = module {
             ),
             smtpValidator = SmtpServerSettingsValidator(
                 trustedSocketFactory = get(),
+                oAuth2TokenProviderFactory = get(),
+            ),
+            graphValidator = GraphServerSettingsValidator(
                 oAuth2TokenProviderFactory = get(),
             ),
         )

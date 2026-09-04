@@ -1,5 +1,6 @@
 package com.fsck.k9.activity
 
+import net.thunderbird.feature.mail.message.classification.api.MessageClass
 import android.app.SearchManager
 import android.content.Context
 import android.content.Intent
@@ -1237,6 +1238,25 @@ open class MessageHomeActivity :
         val fragment = messageListFragmentFactory.newInstance(
             search = tmpSearch,
             isThreadDisplay = true,
+            threadedList = false,
+        )
+        addMessageListFragment(fragment)
+    }
+
+    override fun showClassification(messageClass: MessageClass) {
+        val currentSearch = search ?: return
+
+        showMessageViewPlaceHolder()
+
+        val classificationSearch = currentSearch.narrowedToClassification(messageClass)
+
+        initializeFromLocalSearch(classificationSearch)
+
+        val fragment = messageListFragmentFactory.newInstance(
+            search = classificationSearch,
+            isThreadDisplay = false,
+            // Threading would hide messages behind a thread root, and a category list exists to show every
+            // message in the category.
             threadedList = false,
         )
         addMessageListFragment(fragment)

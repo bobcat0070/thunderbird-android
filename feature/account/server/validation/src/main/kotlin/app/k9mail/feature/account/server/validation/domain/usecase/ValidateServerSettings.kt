@@ -8,12 +8,14 @@ import com.fsck.k9.mail.server.ServerSettingsValidator
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import net.thunderbird.core.common.mail.Protocols
 
 class ValidateServerSettings(
     private val authStateStorage: AuthStateStorage,
     private val imapValidator: ServerSettingsValidator,
     private val pop3Validator: ServerSettingsValidator,
     private val smtpValidator: ServerSettingsValidator,
+    private val graphValidator: ServerSettingsValidator,
     private val coroutineDispatcher: CoroutineDispatcher = Dispatchers.IO,
 ) : ServerValidationDomainContract.UseCase.ValidateServerSettings {
     override suspend fun execute(settings: ServerSettings): ServerSettingsValidationResult {
@@ -24,6 +26,8 @@ class ValidateServerSettings(
                 "pop3" -> pop3Validator.checkServerSettings(settings, authStateStorage)
 
                 "smtp" -> smtpValidator.checkServerSettings(settings, authStateStorage)
+
+                Protocols.GRAPH -> graphValidator.checkServerSettings(settings, authStateStorage)
 
                 "demo" -> ServerSettingsValidationResult.Success
 

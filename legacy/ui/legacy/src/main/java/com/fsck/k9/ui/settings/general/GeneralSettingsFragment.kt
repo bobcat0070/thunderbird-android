@@ -17,6 +17,7 @@ import app.k9mail.feature.telemetry.api.TelemetryManager
 import com.fsck.k9.job.K9JobManager
 import com.fsck.k9.ui.BuildConfig
 import com.fsck.k9.ui.R
+import com.fsck.k9.ui.settings.learnedrules.LearnedRulesActivity
 import com.fsck.k9.ui.base.extensions.withArguments
 import com.fsck.k9.ui.observe
 import com.fsck.k9.ui.settings.notificationactions.NotificationActionsSettingsActivity
@@ -79,6 +80,12 @@ class GeneralSettingsFragment : PreferenceFragmentCompat() {
         preferenceManager.preferenceDataStore = dataStore
         this.rootKey = rootKey
         setPreferencesFromResource(R.xml.general_settings, rootKey)
+
+        findPreference<Preference>("learned_rules")?.onPreferenceClickListener =
+            Preference.OnPreferenceClickListener {
+                context?.let { LearnedRulesActivity.start(it) }
+                true
+            }
 
         findPreference<Preference>("notification_actions_settings")?.onPreferenceClickListener =
             Preference.OnPreferenceClickListener {

@@ -1,5 +1,6 @@
 package com.fsck.k9.ui.messagelist
 
+import net.thunderbird.feature.mail.message.classification.api.MessageClass
 import androidx.appcompat.view.ActionMode
 import androidx.fragment.app.FragmentActivity
 import app.k9mail.legacy.message.controller.MessageReference
@@ -57,6 +58,14 @@ interface MessageListFragmentBridgeContract {
         fun setMessageListProgressEnabled(enable: Boolean)
         fun setMessageListProgress(level: Int)
         fun showThread(account: LegacyAccount, threadRootId: Long)
+
+        /**
+         * Opens every message of one class in the folders the current list covers.
+         *
+         * A list of its own rather than an expansion in place: the bundle row stands for the whole category
+         * in the folder, not only the part the list has loaded.
+         */
+        fun showClassification(messageClass: MessageClass)
         fun openMessage(messageReference: MessageReference)
         fun setMessageListTitle(title: String, subtitle: String? = null)
         fun onCompose(account: LegacyAccount?)

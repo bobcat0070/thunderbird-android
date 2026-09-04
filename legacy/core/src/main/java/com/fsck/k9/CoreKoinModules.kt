@@ -16,6 +16,8 @@ import com.fsck.k9.preferences.preferencesModule
 import net.thunderbird.core.android.logging.loggingModule
 import net.thunderbird.core.android.network.coreAndroidNetworkModule
 import net.thunderbird.feature.account.storage.legacy.featureAccountStorageLegacyModule
+import net.thunderbird.feature.mail.message.classification.internal.featureMessageClassificationAndroidModule
+import net.thunderbird.feature.mail.message.classification.internal.featureMessageClassificationModule
 
 val legacyCoreModules = listOf(
     mainModule,
@@ -23,6 +25,8 @@ val legacyCoreModules = listOf(
     openPgpModule,
     autocryptModule,
     mailStoreModule,
+    featureMessageClassificationModule,
+    featureMessageClassificationAndroidModule,
     extractorModule,
     htmlModule,
     quoteModule,

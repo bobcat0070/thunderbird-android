@@ -42,7 +42,7 @@ class TestNotificationResourceProvider : NotificationResourceProvider {
             "Tap to open notification settings."
     }
 
-    override suspend fun avatar(address: Address): Bitmap? = null
+    override suspend fun avatar(address: Address, isSenderAuthenticated: Boolean): Bitmap? = null
 
     override fun certificateErrorTitle(): String = "Certificate error"
 

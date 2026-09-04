@@ -125,6 +125,8 @@ include(
     ":feature:mail:message:list:internal",
     ":feature:mail:message:export:api",
     ":feature:mail:message:export:impl-eml",
+    ":feature:mail:message:classification:api",
+    ":feature:mail:message:classification:internal",
     ":feature:mail:message:reader:api",
     ":feature:mail:message:reader:impl",
 )
@@ -248,6 +250,7 @@ include(
     ":backend:imap",
     ":backend:pop3",
     ":backend:jmap",
+    ":backend:graph",
     ":backend:demo",
 )
 

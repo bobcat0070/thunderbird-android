@@ -63,6 +63,8 @@ class MessageListItemMapper(
             contactColor = displayAddress?.let { displayAddress ->
                 contactLetterBitmapCreator?.calcUnknownContactColor(displayAddress)
             } ?: -1,
+            classification = message.classification,
+            isSenderAuthenticated = message.isSenderAuthenticated,
         )
     }
 

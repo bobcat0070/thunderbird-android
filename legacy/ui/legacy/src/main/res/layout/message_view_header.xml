@@ -127,6 +127,23 @@
             tools:text="Sep 19"
             />
 
+        <com.google.android.material.textview.MaterialTextView
+            android:id="@+id/mark_verification"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="16dp"
+            android:layout_marginEnd="8dp"
+            android:ellipsize="end"
+            android:maxLines="1"
+            android:textAppearance="?attr/textAppearanceLabelSmall"
+            android:visibility="gone"
+            app:layout_constraintEnd_toStartOf="@+id/menu_primary_action"
+            app:layout_constraintStart_toEndOf="@id/contact_picture"
+            app:layout_constraintTop_toBottomOf="@+id/from"
+            tools:text="Verified brand"
+            tools:visibility="visible"
+            />
+
         <ImageView
             android:id="@+id/crypto_status_icon"
             android:layout_width="18sp"
@@ -150,7 +167,7 @@
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toStartOf="@+id/menu_primary_action"
             app:layout_constraintStart_toEndOf="@id/crypto_status_icon"
-            app:layout_constraintTop_toBottomOf="@+id/from"
+            app:layout_constraintTop_toBottomOf="@+id/mark_verification"
             app:layout_constraintVertical_bias="0.0"
             app:layout_goneMarginStart="16dp"
             />

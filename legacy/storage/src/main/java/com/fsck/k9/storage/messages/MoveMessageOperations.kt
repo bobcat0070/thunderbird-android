@@ -56,7 +56,7 @@ internal class MoveMessageOperations(
                 "attachment_count", "internal_date", "message_id", "preview_type", "preview", "mime_type",
                 "normalized_subject_hash", "read", "flagged", "answered", "forwarded", "message_part_id",
                 "encryption_type",
-            ),
+            ) + CLASSIFICATION_COLUMNS,
             "id = ?",
             arrayOf(messageId.toString()),
             null,
@@ -93,6 +93,7 @@ internal class MoveMessageOperations(
                 put("forwarded", cursor.getIntOrNull("forwarded"))
                 put("message_part_id", cursor.getLongOrNull("message_part_id"))
                 put("encryption_type", cursor.getStringOrNull("encryption_type"))
+                putClassificationFrom(cursor)
                 put("account_id", accountId.toString())
             }
         }

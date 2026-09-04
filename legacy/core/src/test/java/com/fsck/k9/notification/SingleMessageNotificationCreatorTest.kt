@@ -81,6 +81,34 @@ class SingleMessageNotificationCreatorTest : RobolectricTest() {
         assertThat(resourceProvider.avatarCalls).isEqualTo(0)
     }
 
+    @Test
+    fun `create notification passes on that the message passed DMARC`() = runTest {
+        // Gates the sender domain's brand indicator. Dropped on the way here, every notification would look
+        // unauthenticated and no verified sender would ever show their logo.
+        notificationPreferenceManager.setShowContactPictureInNotification(true)
+
+        testSubject.createSingleNotification(
+            baseNotificationData = createBaseNotificationData(),
+            singleNotificationData = createSingleNotificationData(isSenderAuthenticated = true),
+        ).join()
+
+        assertThat(resourceProvider.lastSenderAuthenticated).isEqualTo(true)
+    }
+
+    @Test
+    fun `create notification passes on that the message did not pass DMARC`() = runTest {
+        // The direction that matters: a message that failed or was never checked must not be able to borrow
+        // the logo of the domain it claims to come from.
+        notificationPreferenceManager.setShowContactPictureInNotification(true)
+
+        testSubject.createSingleNotification(
+            baseNotificationData = createBaseNotificationData(),
+            singleNotificationData = createSingleNotificationData(isSenderAuthenticated = false),
+        ).join()
+
+        assertThat(resourceProvider.lastSenderAuthenticated).isEqualTo(false)
+    }
+
     private fun createNotificationHelper(): NotificationHelper {
         return mock {
             on { createNotificationBuilder(any(), any()) } doReturn builder
@@ -111,7 +139,7 @@ class SingleMessageNotificationCreatorTest : RobolectricTest() {
         )
     }
 
-    private fun createSingleNotificationData(): SingleNotificationData {
+    private fun createSingleNotificationData(isSenderAuthenticated: Boolean = false): SingleNotificationData {
         return SingleNotificationData(
             notificationId = 23,
             isSilent = true,
@@ -122,6 +150,7 @@ class SingleMessageNotificationCreatorTest : RobolectricTest() {
                 subject = "Subject",
                 preview = "Preview",
                 summary = "Summary",
+                isSenderAuthenticated = isSenderAuthenticated,
             ),
             actions = emptyList(),
             wearActions = emptyList(),
@@ -132,9 +161,11 @@ class SingleMessageNotificationCreatorTest : RobolectricTest() {
     private class TestAvatarNotificationResourceProvider :
         NotificationResourceProvider by TestNotificationResourceProvider() {
         var avatarCalls = 0
+        var lastSenderAuthenticated: Boolean? = null
 
-        override suspend fun avatar(address: Address): Bitmap? {
+        override suspend fun avatar(address: Address, isSenderAuthenticated: Boolean): Bitmap? {
             avatarCalls += 1
+            lastSenderAuthenticated = isSenderAuthenticated
             return Bitmap.createBitmap(1, 1, Bitmap.Config.ARGB_8888)
         }
     }
