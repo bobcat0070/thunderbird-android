@@ -76,7 +76,17 @@ class AvatarCache(
             // that would later be read back as a valid picture.
             val temporary = File(directory, "${keyHash(key)}.tmp")
             temporary.writeBytes(bytes)
-            temporary.renameTo(fileFor(key))
+
+            // The destination is removed first because renameTo will not replace an existing file on every
+            // filesystem, and silently returns false instead. Without this a second write kept the first
+            // value, so a sender who changed their picture would keep the old one until the entry expired.
+            // The gap this opens is a missing entry, which reads as a miss and is re-fetched.
+            val destination = fileFor(key)
+            destination.delete()
+            if (!temporary.renameTo(destination)) {
+                temporary.delete()
+                return
+            }
             // Stamped rather than left to the filesystem, so age is measured against the same clock the
             // reader uses and an entry cannot look fresh because a device's time moved.
             fileFor(key).setLastModified(currentTimeMillis())

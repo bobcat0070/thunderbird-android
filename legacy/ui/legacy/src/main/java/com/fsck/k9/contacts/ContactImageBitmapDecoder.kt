@@ -3,6 +3,8 @@ package com.fsck.k9.contacts
 import android.graphics.Bitmap
 import com.bumptech.glide.load.Options
 import com.fsck.k9.contacts.bimi.BimiLogoLoader
+import com.fsck.k9.contacts.bimi.MarkTrust
+import com.fsck.k9.contacts.bimi.withMarkBadge
 import com.bumptech.glide.load.ResourceDecoder
 import com.bumptech.glide.load.engine.Resource
 import com.bumptech.glide.load.engine.bitmap_recycle.BitmapPool
@@ -18,6 +20,7 @@ internal class ContactImageBitmapDecoder(
     private val contactPhotoLoader: ContactPhotoLoader,
     private val gravatarLoader: GravatarLoader,
     private val bimiLogoLoader: BimiLogoLoader,
+    private val websiteIconLoader: WebsiteIconLoader,
     private val bitmapPool: BitmapPool,
 ) : ResourceDecoder<ContactImage, Bitmap> {
 
@@ -27,6 +30,7 @@ internal class ContactImageBitmapDecoder(
         val bitmap = loadContactPhoto(contactImage)
             ?: loadBimiLogo(contactImage, size)
             ?: loadGravatar(contactImage, size)
+            ?: loadWebsiteIcon(contactImage)
             ?: createContactLetterBitmap(contactImage, size)
 
         return BitmapResource.obtain(bitmap, bitmapPool)
@@ -65,6 +69,27 @@ internal class ContactImageBitmapDecoder(
         return gravatarLoader.loadGravatar(contactImage.address.address, size)
     }
 
+    /**
+     * The icon of the sender domain's website, asked for last and only when the message passed DMARC.
+     *
+     * The DMARC gate is the same one the brand indicator is behind and for the same reason: without it a
+     * message that merely claims to come from a domain would be shown wearing that domain's icon.
+     *
+     * Badged as unverified, because that is what it is. Nobody attested to it, and unlike a self-asserted
+     * brand indicator the domain did not even publish it as a mail identity - it is only what a browser tab
+     * shows for that website. Sharing the badge with the weakest attested tier says the honest thing to the
+     * reader, which is that no authority stands behind this picture.
+     */
+    @Suppress("ReturnCount")
+    private fun loadWebsiteIcon(contactImage: ContactImage): Bitmap? {
+        if (contactImage.contactLetterOnly || !contactImage.isSenderAuthenticated) return null
+
+        val domain = contactImage.address.address?.substringAfterLast('@', "")?.takeIf { it.isNotEmpty() }
+            ?: return null
+
+        return websiteIconLoader.loadIcon(domain)?.withMarkBadge(MarkTrust.SELF_ASSERTED)
+    }
+
     private fun createContactLetterBitmap(contactImage: ContactImage, size: Int): Bitmap {
         val bitmap = bitmapPool.getDirty(size, size, Bitmap.Config.ARGB_8888)
         return contactImage.contactLetterBitmapCreator.drawBitmap(bitmap, size, contactImage.address)
@@ -77,8 +102,15 @@ internal class ContactImageBitmapDecoderFactory(
     private val contactPhotoLoader: ContactPhotoLoader,
     private val gravatarLoader: GravatarLoader,
     private val bimiLogoLoader: BimiLogoLoader,
+    private val websiteIconLoader: WebsiteIconLoader,
 ) {
     fun create(bitmapPool: BitmapPool): ContactImageBitmapDecoder {
-        return ContactImageBitmapDecoder(contactPhotoLoader, gravatarLoader, bimiLogoLoader, bitmapPool)
+        return ContactImageBitmapDecoder(
+            contactPhotoLoader,
+            gravatarLoader,
+            bimiLogoLoader,
+            websiteIconLoader,
+            bitmapPool,
+        )
     }
 }

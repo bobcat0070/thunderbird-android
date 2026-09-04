@@ -30,6 +30,7 @@ import net.thunderbird.core.preference.interaction.InteractionSettingsPreference
 import net.thunderbird.core.preference.network.NetworkSettingsPreferenceManager
 import net.thunderbird.core.preference.notification.NotificationPreferenceManager
 import net.thunderbird.core.preference.bimi.BimiSettingsPreferenceManager
+import net.thunderbird.core.preference.websiteicon.WebsiteIconSettingsPreferenceManager
 import net.thunderbird.core.preference.gravatar.GravatarSettingsPreferenceManager
 import net.thunderbird.core.preference.widget.WidgetSettingsPreferenceManager
 import net.thunderbird.core.preference.privacy.PrivacySettingsPreferenceManager
@@ -63,6 +64,7 @@ internal class DefaultGeneralSettingsManager(
     private val gravatarSettingsPreferenceManager: GravatarSettingsPreferenceManager,
     private val widgetSettingsPreferenceManager: WidgetSettingsPreferenceManager,
     private val bimiSettingsPreferenceManager: BimiSettingsPreferenceManager,
+    private val websiteIconSettingsPreferenceManager: WebsiteIconSettingsPreferenceManager,
     private val debugLogConfigurator: DebugLogConfigurator,
     private val backgroundDispatcher: CoroutineDispatcher = Dispatchers.IO,
     private val platformConfigProvider: PlatformConfigProvider,
@@ -143,6 +145,9 @@ internal class DefaultGeneralSettingsManager(
         .combine(bimiSettingsPreferenceManager.getConfigFlow()) { generalSettings, bimiSettings ->
             generalSettings.copy(bimi = bimiSettings)
         }
+        .combine(websiteIconSettingsPreferenceManager.getConfigFlow()) { generalSettings, websiteIconSettings ->
+            generalSettings.copy(websiteIcon = websiteIconSettings)
+        }
         .stateIn(
             scope = coroutineScope,
             started = SharingStarted.WhileSubscribed(),
@@ -200,6 +205,7 @@ internal class DefaultGeneralSettingsManager(
                 gravatarSettingsPreferenceManager.save(config.gravatar)
                 widgetSettingsPreferenceManager.save(config.widget)
                 bimiSettingsPreferenceManager.save(config.bimi)
+                websiteIconSettingsPreferenceManager.save(config.websiteIcon)
             }
         }
     }

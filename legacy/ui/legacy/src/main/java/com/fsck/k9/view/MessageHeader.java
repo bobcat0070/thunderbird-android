@@ -28,6 +28,7 @@ import com.fsck.k9.FontSizes;
 import com.fsck.k9.K9;
 import com.fsck.k9.activity.misc.ContactPicture;
 import com.fsck.k9.contacts.ContactPictureLoader;
+import com.fsck.k9.contacts.WebsiteIconLoader;
 import com.fsck.k9.contacts.bimi.BimiLogoLoader;
 import com.fsck.k9.contacts.bimi.BimiRecordKt;
 import com.fsck.k9.contacts.bimi.CachedMark;
@@ -243,8 +244,8 @@ public class MessageHeader extends LinearLayout implements OnClickListener, OnLo
 
         final String domain = address.substring(atIndex + 1).toLowerCase(Locale.ROOT);
         markVerificationExecutor.execute(() -> {
-            CachedMark mark = DI.get(BimiLogoLoader.class).markFor(domain, BimiRecordKt.BIMI_DEFAULT_SELECTOR);
-            if (mark == null) {
+            Integer label = labelForDomain(domain);
+            if (label == null) {
                 return;
             }
 
@@ -252,13 +253,32 @@ public class MessageHeader extends LinearLayout implements OnClickListener, OnLo
             // sender being shown by the time it arrives.
             post(() -> {
                 if (domain.equals(currentSenderDomain)) {
-                    markVerificationView.setText(labelFor(mark.getTrust()));
+                    markVerificationView.setText(label);
                     markVerificationView.setVisibility(View.VISIBLE);
                 }
             });
         });
 
         currentSenderDomain = domain;
+    }
+
+    /**
+     * @return what to call the picture beside this sender, or null when there is nothing to say about it.
+     *
+     * A website icon only counts if one is already cached, so building the caption never causes a lookup of
+     * its own: a caption that went to the network could arrive disagreeing with the picture already drawn.
+     */
+    private Integer labelForDomain(String domain) {
+        CachedMark mark = DI.get(BimiLogoLoader.class).markFor(domain, BimiRecordKt.BIMI_DEFAULT_SELECTOR);
+        if (mark != null) {
+            return labelFor(mark.getTrust());
+        }
+
+        if (DI.get(WebsiteIconLoader.class).hasCachedIconFor(domain)) {
+            return R.string.message_view_mark_self_asserted;
+        }
+
+        return null;
     }
 
     private int labelFor(MarkTrust trust) {

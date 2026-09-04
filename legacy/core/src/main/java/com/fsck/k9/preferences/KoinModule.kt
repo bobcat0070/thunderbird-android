@@ -30,6 +30,8 @@ import net.thunderbird.core.preference.network.NetworkSettingsPreferenceManager
 import net.thunderbird.core.preference.notification.DefaultNotificationPreferenceManager
 import net.thunderbird.core.preference.notification.NotificationPreferenceManager
 import net.thunderbird.core.preference.bimi.BimiSettingsPreferenceManager
+import net.thunderbird.core.preference.websiteicon.DefaultWebsiteIconSettingsPreferenceManager
+import net.thunderbird.core.preference.websiteicon.WebsiteIconSettingsPreferenceManager
 import net.thunderbird.core.preference.bimi.DefaultBimiSettingsPreferenceManager
 import net.thunderbird.core.preference.gravatar.DefaultGravatarSettingsPreferenceManager
 import net.thunderbird.core.preference.gravatar.GravatarSettingsPreferenceManager
@@ -65,6 +67,14 @@ val preferencesModule = module {
     }
     single<BimiSettingsPreferenceManager> {
         DefaultBimiSettingsPreferenceManager(
+            logger = get(),
+            storagePersister = get(),
+            storageEditor = get<Preferences>().createStorageEditor(),
+            preferenceChangeBroker = get(),
+        )
+    }
+    single<WebsiteIconSettingsPreferenceManager> {
+        DefaultWebsiteIconSettingsPreferenceManager(
             logger = get(),
             storagePersister = get(),
             storageEditor = get<Preferences>().createStorageEditor(),
@@ -200,6 +210,7 @@ val preferencesModule = module {
             gravatarSettingsPreferenceManager = get(),
             widgetSettingsPreferenceManager = get(),
             bimiSettingsPreferenceManager = get(),
+            websiteIconSettingsPreferenceManager = get(),
             debugLogConfigurator = get(),
             platformConfigProvider = get(),
             logger = get(),

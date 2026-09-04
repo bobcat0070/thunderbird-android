@@ -42,16 +42,22 @@ private val SELF_ASSERTED_COLOR = Color.parseColor("#5F6368")
  * Composited into the avatar rather than added to the row layout so it travels with the image everywhere an
  * avatar is drawn, and so it cannot be separated from the logo it qualifies.
  */
+@Suppress("ReturnCount")
 fun Bitmap.withMarkBadge(trust: MarkTrust): Bitmap {
     if (trust == MarkTrust.COMMON) return this
 
-    val size = width.coerceAtMost(height)
+    // A bitmap decoded from a file is immutable, and a Canvas over one throws rather than failing softly -
+    // which lost the whole avatar, not just the badge. Rendered marks arrive mutable and are drawn on
+    // directly; anything else is copied first.
+    val target = if (isMutable) this else copy(Bitmap.Config.ARGB_8888, true) ?: return this
+
+    val size = target.width.coerceAtMost(target.height)
     val diameter = size * BADGE_DIAMETER_FRACTION
     val radius = diameter / 2f
-    val centreX = width - radius
-    val centreY = height - radius
+    val centreX = target.width - radius
+    val centreY = target.height - radius
 
-    val canvas = Canvas(this)
+    val canvas = Canvas(target)
 
     // A ring in the background colour keeps the badge readable against a logo of any colour.
     canvas.drawCircle(centreX, centreY, radius, Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.WHITE })
@@ -70,7 +76,7 @@ fun Bitmap.withMarkBadge(trust: MarkTrust): Bitmap {
         MarkTrust.COMMON -> Unit
     }
 
-    return this
+    return target
 }
 
 private fun Canvas.drawCheck(centreX: Float, centreY: Float, radius: Float) {

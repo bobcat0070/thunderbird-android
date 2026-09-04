@@ -44,6 +44,28 @@ class MarkBadgeTest : RobolectricTest() {
     }
 
     @Test
+    fun `an immutable logo should still be badged`() {
+        // A logo decoded from downloaded bytes is immutable, and a Canvas over one throws. Unhandled that
+        // cost the whole avatar rather than just the badge, leaving the row blank.
+        val bitmap = solidBitmap().copy(Bitmap.Config.ARGB_8888, false)
+
+        val result = bitmap.withMarkBadge(MarkTrust.SELF_ASSERTED)
+
+        assertThat(result.getPixel(BADGE_CENTRE, BADGE_CENTRE)).isNotEqualTo(Color.RED)
+    }
+
+    @Test
+    fun `an immutable logo should be left as it was`() {
+        // The copy is what gets drawn on, so the caller's bitmap - which Glide may still be holding - keeps
+        // whatever it had.
+        val bitmap = solidBitmap().copy(Bitmap.Config.ARGB_8888, false)
+
+        bitmap.withMarkBadge(MarkTrust.SELF_ASSERTED)
+
+        assertThat(bitmap.getPixel(BADGE_CENTRE, BADGE_CENTRE)).isEqualTo(Color.RED)
+    }
+
+    @Test
     fun `the two badged tiers should not look the same`() {
         // The whole point of the badge is telling them apart.
         val verified = solidBitmap().withMarkBadge(MarkTrust.VERIFIED)

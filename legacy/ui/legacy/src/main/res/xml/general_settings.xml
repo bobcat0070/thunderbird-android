@@ -336,6 +336,13 @@
                 android:title="@string/global_settings_bimi_label"
                 />
 
+            <CheckBoxPreference
+                android:dependency="messagelist_show_contact_picture"
+                android:key="website_icon_enabled"
+                android:summary="@string/global_settings_website_icon_summary"
+                android:title="@string/global_settings_website_icon_label"
+                />
+
             <EditTextPreference
                 android:dependency="gravatar_enabled"
                 android:key="gravatar_api_key"

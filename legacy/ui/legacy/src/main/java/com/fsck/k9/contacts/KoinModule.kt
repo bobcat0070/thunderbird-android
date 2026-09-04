@@ -59,11 +59,20 @@ val contactsModule = module {
             logger = get(),
         )
     }
+    single {
+        WebsiteIconLoader(
+            generalSettingsManager = get(),
+            httpClient = get(named("gravatarHttpClient")),
+            cache = get(),
+            logger = get(),
+        )
+    }
     factory {
         ContactImageBitmapDecoderFactory(
             contactPhotoLoader = get(),
             gravatarLoader = get(),
             bimiLogoLoader = get(),
+            websiteIconLoader = get(),
         )
     }
 }

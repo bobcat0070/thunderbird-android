@@ -9,6 +9,7 @@ import net.thunderbird.core.preference.interaction.InteractionSettings
 import net.thunderbird.core.preference.network.NetworkSettings
 import net.thunderbird.core.preference.notification.NotificationPreference
 import net.thunderbird.core.preference.privacy.PrivacySettings
+import net.thunderbird.core.preference.websiteicon.WebsiteIconSettings
 import net.thunderbird.core.preference.widget.WidgetSettings
 
 /**
@@ -28,6 +29,7 @@ data class GeneralSettings(
     val gravatar: GravatarSettings = GravatarSettings(),
     val widget: WidgetSettings = WidgetSettings(),
     val bimi: BimiSettings = BimiSettings(),
+    val websiteIcon: WebsiteIconSettings = WebsiteIconSettings(),
     val debugging: DebuggingSettings = DebuggingSettings(isDebugLoggingEnabled = platformConfigProvider.isDebug),
     val interaction: InteractionSettings = InteractionSettings(),
 )

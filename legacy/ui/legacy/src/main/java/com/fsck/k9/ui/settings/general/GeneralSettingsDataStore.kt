@@ -17,6 +17,7 @@ import net.thunderbird.core.preference.SplitViewMode
 import net.thunderbird.core.preference.SubTheme
 import net.thunderbird.core.preference.display.visualSettings.message.list.MessageListDateTimeFormat
 import net.thunderbird.core.preference.notification.NotificationPreference
+import net.thunderbird.core.preference.websiteicon.WebsiteIconSettings
 import net.thunderbird.core.preference.display.visualSettings.message.list.UiDensity
 import net.thunderbird.core.preference.interaction.PostMarkAsUnreadNavigation
 import net.thunderbird.core.preference.update
@@ -56,6 +57,7 @@ class GeneralSettingsDataStore(
             "messagelist_colorize_missing_contact_pictures" -> messageListSettings.isColorizeMissingContactPictures
             "gravatar_enabled" -> config.gravatar.isEnabled
             "bimi_enabled" -> config.bimi.isEnabled
+            "website_icon_enabled" -> config.websiteIcon.isEnabled
             "widget_show_personal" -> config.widget.showPersonal
             "widget_show_notifications" -> config.widget.showNotifications
             "widget_show_newsletters" -> config.widget.showNewsletters
@@ -101,6 +103,7 @@ class GeneralSettingsDataStore(
             "messagelist_show_contact_picture" -> setIsShowContactPicture(isShowContactPicture = value)
             "gravatar_enabled" -> setGravatarEnabled(value)
             "bimi_enabled" -> setBimiEnabled(value)
+            "website_icon_enabled" -> updateWebsiteIconSettings { it.copy(isEnabled = value) }
             "widget_show_personal" -> updateWidgetSettings { it.copy(showPersonal = value) }
             "widget_show_notifications" -> updateWidgetSettings { it.copy(showNotifications = value) }
             "widget_show_newsletters" -> updateWidgetSettings { it.copy(showNewsletters = value) }
@@ -522,6 +525,13 @@ class GeneralSettingsDataStore(
                     ),
                 ),
             )
+        }
+    }
+
+    private fun updateWebsiteIconSettings(transform: (WebsiteIconSettings) -> WebsiteIconSettings) {
+        skipSaveSettings = true
+        generalSettingsManager.update { settings ->
+            settings.copy(websiteIcon = transform(settings.websiteIcon))
         }
     }
 

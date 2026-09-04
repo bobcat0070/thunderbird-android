@@ -15,4 +15,5 @@ enum class PreferenceScope {
     PRIVACY,
     WIDGET,
     BIMI,
+    WEBSITE_ICON,
 }
