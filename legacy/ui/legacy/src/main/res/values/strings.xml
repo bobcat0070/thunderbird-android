@@ -119,6 +119,11 @@
     <string name="global_settings_gravatar_summary">When a sender has no picture on this device, look one up on gravatar.com. This tells Gravatar which senders you have mail from.</string>
     <string name="global_settings_gravatar_api_key_label">Gravatar API key</string>
     <string name="global_settings_gravatar_api_key_summary">Optional. Raises the rate limit when many different senders are shown.</string>
+    <string name="global_settings_notification_category">Notify me about</string>
+    <string name="global_settings_notify_personal_label">Personal</string>
+    <string name="global_settings_notify_personal_summary">Mail that was not identified as bulk</string>
+    <string name="global_settings_notify_notifications_label">Notifications</string>
+    <string name="global_settings_notify_newsletters_label">Newsletters and promotions</string>
     <string name="learned_rules_title">What you have taught</string>
     <string name="learned_rules_settings_summary">Review the senders you have categorised or trusted</string>
     <string name="learned_rules_categories">Message categories</string>

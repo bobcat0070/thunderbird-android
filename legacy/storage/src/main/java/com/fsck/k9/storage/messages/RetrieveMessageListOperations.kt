@@ -9,6 +9,7 @@ import com.fsck.k9.mail.Address
 import com.fsck.k9.mailstore.DatabasePreviewType
 import com.fsck.k9.mailstore.LockableDatabase
 import net.thunderbird.feature.mail.message.classification.api.MessageClass
+import net.thunderbird.feature.mail.message.classification.api.messageClassOrUnknown
 import net.thunderbird.feature.search.legacy.sql.SqlWhereClause
 
 internal class RetrieveMessageListOperations(private val lockableDatabase: LockableDatabase) {
@@ -251,9 +252,7 @@ private class CursorMessageAccessor(val cursor: Cursor, val includesThreadCount:
             val columnIndex = cursor.getColumnIndex("classification")
             if (columnIndex < 0) return MessageClass.UNKNOWN
 
-            val name = cursor.getStringOrNull(columnIndex) ?: return MessageClass.UNKNOWN
-
-            return MessageClass.entries.firstOrNull { it.name == name } ?: MessageClass.UNKNOWN
+            return messageClassOrUnknown(cursor.getStringOrNull(columnIndex))
         }
 
     override val isSenderAuthenticated: Boolean

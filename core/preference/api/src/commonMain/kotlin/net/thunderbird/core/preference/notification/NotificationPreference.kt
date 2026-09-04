@@ -15,6 +15,9 @@ const val NOTIFICATION_PREFERENCE_DEFAULT_IS_SUMMARY_DELETE_ACTION_ENABLED = tru
 const val NOTIFICATION_PREFERENCE_DEFAULT_IS_SHOW_CONTACT_PICTURE_IN_NOTIFICATION = true
 val NOTIFICATION_PREFERENCE_DEFAULT_QUICK_DELETE_BEHAVIOUR = NotificationQuickDelete.ALWAYS
 val NOTIFICATION_PREFERENCE_DEFAULT_LOCK_SCREEN_NOTIFICATION_VISIBILITY = LockScreenNotificationVisibility.MESSAGE_COUNT
+const val NOTIFICATION_PREFERENCE_DEFAULT_IS_NOTIFY_PERSONAL = true
+const val NOTIFICATION_PREFERENCE_DEFAULT_IS_NOTIFY_NOTIFICATIONS = true
+const val NOTIFICATION_PREFERENCE_DEFAULT_IS_NOTIFY_NEWSLETTERS = true
 
 data class NotificationPreference(
     val isQuietTimeEnabled: Boolean = NOTIFICATION_PREFERENCE_DEFAULT_IS_QUIET_TIME_ENABLED,
@@ -31,4 +34,13 @@ data class NotificationPreference(
         NOTIFICATION_PREFERENCE_DEFAULT_QUICK_DELETE_BEHAVIOUR,
     val lockScreenNotificationVisibility: LockScreenNotificationVisibility =
         NOTIFICATION_PREFERENCE_DEFAULT_LOCK_SCREEN_NOTIFICATION_VISIBILITY,
+
+    /**
+     * Whether mail that was not identified as bulk raises a notification. Covers mail the classifier could
+     * not place, because silencing a message we could not identify is the failure that actually costs
+     * something.
+     */
+    val isNotifyPersonal: Boolean = NOTIFICATION_PREFERENCE_DEFAULT_IS_NOTIFY_PERSONAL,
+    val isNotifyNotifications: Boolean = NOTIFICATION_PREFERENCE_DEFAULT_IS_NOTIFY_NOTIFICATIONS,
+    val isNotifyNewsletters: Boolean = NOTIFICATION_PREFERENCE_DEFAULT_IS_NOTIFY_NEWSLETTERS,
 )

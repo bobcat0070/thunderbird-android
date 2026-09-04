@@ -14,5 +14,8 @@ enum class NotificationSettingKey(val value: String) {
     NotificationQuickDeleteBehaviour("notificationQuickDelete"),
     LockScreenNotificationVisibility("lockScreenNotificationVisibility"),
     ShowContactPictureInNotification("showContactPictureInNotification"),
+    NotifyPersonal("notifyPersonal"),
+    NotifyNotifications("notifyNotifications"),
+    NotifyNewsletters("notifyNewsletters"),
 }
 interface NotificationPreferenceManager : PreferenceManager<NotificationPreference>

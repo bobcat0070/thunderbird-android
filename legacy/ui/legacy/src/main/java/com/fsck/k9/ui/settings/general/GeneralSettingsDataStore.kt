@@ -16,6 +16,7 @@ import net.thunderbird.core.preference.LockScreenNotificationVisibility
 import net.thunderbird.core.preference.SplitViewMode
 import net.thunderbird.core.preference.SubTheme
 import net.thunderbird.core.preference.display.visualSettings.message.list.MessageListDateTimeFormat
+import net.thunderbird.core.preference.notification.NotificationPreference
 import net.thunderbird.core.preference.display.visualSettings.message.list.UiDensity
 import net.thunderbird.core.preference.interaction.PostMarkAsUnreadNavigation
 import net.thunderbird.core.preference.update
@@ -68,6 +69,9 @@ class GeneralSettingsDataStore(
             "disable_notifications_during_quiet_time" -> !notificationSettings.isNotificationDuringQuietTimeEnabled
             "notification_summary_delete" -> notificationSettings.isSummaryDeleteActionEnabled
             "notification_show_contact_picture" -> notificationSettings.isShowContactPictureInNotification
+            "notify_personal" -> notificationSettings.isNotifyPersonal
+            "notify_notifications" -> notificationSettings.isNotifyNotifications
+            "notify_newsletters" -> notificationSettings.isNotifyNewsletters
             "privacy_hide_useragent" -> privacySettings.isHideUserAgent
             "privacy_hide_timezone" -> privacySettings.isHideTimeZone
             "privacy_incognito_keyboard" -> privacySettings.isIncognitoKeyboardEnabled
@@ -118,6 +122,10 @@ class GeneralSettingsDataStore(
             "notification_show_contact_picture" -> setIsShowContactPictureInNotification(
                 isShowContactPictureInNotification = value,
             )
+
+            "notify_personal" -> updateNotificationSettings { it.copy(isNotifyPersonal = value) }
+            "notify_notifications" -> updateNotificationSettings { it.copy(isNotifyNotifications = value) }
+            "notify_newsletters" -> updateNotificationSettings { it.copy(isNotifyNewsletters = value) }
 
             "privacy_hide_useragent" -> setIsHideUserAgent(isHideUserAgent = value)
             "privacy_hide_timezone" -> setIsHideTimeZone(isHideTimeZone = value)
@@ -514,6 +522,13 @@ class GeneralSettingsDataStore(
                     ),
                 ),
             )
+        }
+    }
+
+    private fun updateNotificationSettings(transform: (NotificationPreference) -> NotificationPreference) {
+        skipSaveSettings = true
+        generalSettingsManager.update { settings ->
+            settings.copy(notification = transform(settings.notification))
         }
     }
 

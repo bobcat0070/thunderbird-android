@@ -94,6 +94,18 @@ class DefaultNotificationPreferenceManager(
                 key = NotificationSettingKey.LockScreenNotificationVisibility.value,
                 default = NOTIFICATION_PREFERENCE_DEFAULT_LOCK_SCREEN_NOTIFICATION_VISIBILITY,
             ),
+            isNotifyPersonal = storage.getBoolean(
+                key = NotificationSettingKey.NotifyPersonal.value,
+                defValue = NOTIFICATION_PREFERENCE_DEFAULT_IS_NOTIFY_PERSONAL,
+            ),
+            isNotifyNotifications = storage.getBoolean(
+                key = NotificationSettingKey.NotifyNotifications.value,
+                defValue = NOTIFICATION_PREFERENCE_DEFAULT_IS_NOTIFY_NOTIFICATIONS,
+            ),
+            isNotifyNewsletters = storage.getBoolean(
+                key = NotificationSettingKey.NotifyNewsletters.value,
+                defValue = NOTIFICATION_PREFERENCE_DEFAULT_IS_NOTIFY_NEWSLETTERS,
+            ),
         )
     }
 
@@ -152,6 +164,12 @@ class DefaultNotificationPreferenceManager(
                     NotificationSettingKey.LockScreenNotificationVisibility.value,
                     config.lockScreenNotificationVisibility,
                 )
+                storageEditor.putBoolean(NotificationSettingKey.NotifyPersonal.value, config.isNotifyPersonal)
+                storageEditor.putBoolean(
+                    NotificationSettingKey.NotifyNotifications.value,
+                    config.isNotifyNotifications,
+                )
+                storageEditor.putBoolean(NotificationSettingKey.NotifyNewsletters.value, config.isNotifyNewsletters)
                 storageEditor.commit().also { commited ->
                     logger.verbose(TAG) { "writeConfig: storageEditor.commit() resulted in: $commited" }
                 }

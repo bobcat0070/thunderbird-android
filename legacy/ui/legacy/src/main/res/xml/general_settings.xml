@@ -563,6 +563,28 @@
             android:summary="@string/notification_show_contact_picture_summary"
             />
 
+        <PreferenceCategory
+            android:key="notification_categories"
+            android:title="@string/global_settings_notification_category"
+            >
+
+            <CheckBoxPreference
+                android:key="notify_personal"
+                android:summary="@string/global_settings_notify_personal_summary"
+                android:title="@string/global_settings_notify_personal_label"
+                />
+
+            <CheckBoxPreference
+                android:key="notify_notifications"
+                android:title="@string/global_settings_notify_notifications_label"
+                />
+
+            <CheckBoxPreference
+                android:key="notify_newsletters"
+                android:title="@string/global_settings_notify_newsletters_label"
+                />
+        </PreferenceCategory>
+
     </PreferenceScreen>
 
     <PreferenceScreen

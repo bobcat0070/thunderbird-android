@@ -31,6 +31,15 @@ enum class MessageClass {
 }
 
 /**
+ * @return the class stored under [name], or [MessageClass.UNKNOWN] when it is missing or unrecognised.
+ *
+ * Unrecognised is treated as unknown rather than as an error: a database written by a newer build can name a
+ * class this one has never heard of, and going back a version has to leave the mailbox readable.
+ */
+fun messageClassOrUnknown(name: String?): MessageClass =
+    MessageClass.entries.firstOrNull { it.name == name } ?: MessageClass.UNKNOWN
+
+/**
  * The evidence that decided a classification.
  *
  * Stored alongside the class so a surprising verdict can be explained to the user and debugged by us. Without

@@ -77,8 +77,14 @@ class K9NotificationStrategy(
             return false
         }
 
+        if (!generalSettingsManager.getConfig().notification.notifiesFor(message.classification)) {
+            Log.v("No notification: Notifications are off for %s mail", message.classification)
+            return false
+        }
+
         return true
     }
+
 
     private val Message.isChatMessage: Boolean
         get() = getHeader(K9MailLib.CHAT_HEADER).isNotEmpty()
