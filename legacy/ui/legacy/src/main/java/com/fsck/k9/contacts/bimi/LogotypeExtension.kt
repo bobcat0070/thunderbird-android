@@ -82,7 +82,10 @@ internal fun collectTaggedStrings(bytes: ByteArray, targetTag: Int, depth: Int =
 
             val (length, lengthBytes) = readLength(bytes, offset) ?: return@buildList
             offset += lengthBytes
-            if (length < 0 || offset + length > bytes.size) return@buildList
+            // Subtraction rather than "offset + length > size": a length of 0x7fffffff is positive, so it
+            // passes the sign check above, and adding it wraps the sum negative - which would let exactly
+            // the largest claimed length through the bounds check meant to stop it.
+            if (length < 0 || length > bytes.size - offset) return@buildList
 
             when {
                 tag == targetTag -> add(String(bytes, offset, length, Charsets.US_ASCII))

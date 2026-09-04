@@ -67,6 +67,7 @@ fun SQLiteDatabase.createMessage(
     classification: String? = null,
     classificationSignal: String? = null,
     classifierVersion: Int? = null,
+    senderAuthenticated: Boolean? = null,
 ): Long {
     val values = ContentValues().apply {
         put("deleted", if (deleted) 1 else 0)
@@ -100,6 +101,7 @@ fun SQLiteDatabase.createMessage(
         classification?.let { put("classification", it) }
         classificationSignal?.let { put("classification_signal", it) }
         classifierVersion?.let { put("classifier_version", it) }
+        senderAuthenticated?.let { put("sender_authenticated", if (it) 1 else 0) }
     }
 
     return insert("messages", null, values)
@@ -141,6 +143,7 @@ fun SQLiteDatabase.readMessages(): List<MessageEntry> {
                 classification = cursor.getStringOrNull("classification"),
                 classificationSignal = cursor.getStringOrNull("classification_signal"),
                 classifierVersion = cursor.getIntOrNull("classifier_version"),
+                senderAuthenticated = cursor.getIntOrNull("sender_authenticated"),
             )
         }
     }
@@ -178,6 +181,7 @@ data class MessageEntry(
     val classification: String? = null,
     val classificationSignal: String? = null,
     val classifierVersion: Int? = null,
+    val senderAuthenticated: Int? = null,
 )
 
 fun SQLiteDatabase.createMessagePart(
