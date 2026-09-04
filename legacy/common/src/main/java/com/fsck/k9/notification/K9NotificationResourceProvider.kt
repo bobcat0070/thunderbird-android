@@ -6,7 +6,6 @@ import app.k9mail.core.ui.legacy.designsystem.atom.icon.Icons
 import com.fsck.k9.activity.misc.ContactPicture
 import com.fsck.k9.mail.Address
 import com.fsck.k9.ui.R
-import com.fsck.k9.view.RecipientSelectView
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -47,9 +46,10 @@ class K9NotificationResourceProvider(private val context: Context) : Notificatio
     override fun authenticationErrorBody(accountName: String): String =
         context.getString(R.string.notification_authentication_error_text, accountName)
 
-    override suspend fun avatar(address: Address): Bitmap? = withContext(Dispatchers.IO) {
-        ContactPicture.getContactPictureLoader().getContactPicture(RecipientSelectView.Recipient(address))
-    }
+    override suspend fun avatar(address: Address, isSenderAuthenticated: Boolean): Bitmap? =
+        withContext(Dispatchers.IO) {
+            ContactPicture.getContactPictureLoader().getContactPicture(address, isSenderAuthenticated)
+        }
 
     override fun notifyErrorTitle(): String = context.getString(R.string.notification_notify_error_title)
 

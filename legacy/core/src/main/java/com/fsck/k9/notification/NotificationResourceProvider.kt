@@ -31,7 +31,13 @@ interface NotificationResourceProvider {
     fun authenticationErrorTitle(): String
     fun authenticationErrorBody(accountName: String): String
 
-    suspend fun avatar(address: Address): Bitmap?
+    /**
+     * The picture to show for a sender.
+     *
+     * @param isSenderAuthenticated whether this message passed DMARC. Gates the sender domain's brand
+     *   indicator, which must never be shown for mail that only claims to come from that domain.
+     */
+    suspend fun avatar(address: Address, isSenderAuthenticated: Boolean): Bitmap?
 
     fun notifyErrorTitle(): String
     fun notifyErrorText(): String

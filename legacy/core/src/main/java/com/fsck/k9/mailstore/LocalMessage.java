@@ -37,6 +37,7 @@ public class LocalMessage extends MimeMessage {
     private long threadId;
     private long messagePartId;
     private MessageClass classification = MessageClass.UNKNOWN;
+    private boolean senderAuthenticated = false;
     private MessageReference messageReference;
     private int attachmentCount;
     private String subject;
@@ -149,6 +150,7 @@ public class LocalMessage extends MimeMessage {
         }
 
         classification = MessageClassificationKt.messageClassOrUnknown(cursor.getString(LocalStore.MSG_INDEX_CLASSIFICATION));
+        senderAuthenticated = cursor.getInt(LocalStore.MSG_INDEX_SENDER_AUTHENTICATED) == 1;
 
         headerNeedsUpdating = false;
     }
@@ -162,6 +164,16 @@ public class LocalMessage extends MimeMessage {
      */
     public MessageClass getClassification() {
         return classification;
+    }
+
+    /**
+     * Whether the receiving server reported that this message passed DMARC.
+     *
+     * Per message rather than per sender: the flag exists to tell a domain's real mail apart from mail that
+     * only claims to be from it, and it is what decides whether the sender's brand logo may be shown.
+     */
+    public boolean isSenderAuthenticated() {
+        return senderAuthenticated;
     }
 
     @VisibleForTesting

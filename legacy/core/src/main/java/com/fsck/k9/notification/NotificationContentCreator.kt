@@ -24,6 +24,7 @@ internal class NotificationContentCreator(
             subject = getMessageSubject(message),
             preview = getMessagePreview(message),
             summary = buildMessageSummary(sender.personal, getMessageSubject(message)),
+            isSenderAuthenticated = message.isSenderAuthenticated,
         )
     }
 

@@ -57,6 +57,27 @@ class ContactPictureLoader(
             .into(imageView)
     }
 
+    /**
+     * The same picture the message list draws, for callers that have no view to load it into.
+     *
+     * Goes through the full chain - the device's contacts, then the sender domain's brand indicator, then
+     * Gravatar, then a letter tile - rather than the contacts-or-letter shortcut below, so a notification
+     * shows the sender the same way the list about to be opened will.
+     *
+     * @param isSenderAuthenticated whether the message passed DMARC. Gates the brand indicator and is part of
+     *   the cache key, so a spoofed message cannot be served the logo cached for the domain's real mail.
+     */
+    @WorkerThread
+    fun getContactPicture(address: Address, isSenderAuthenticated: Boolean): Bitmap? {
+        return Glide.with(context)
+            .asBitmap()
+            .load(createContactImage(address, contactLetterOnly = false, isSenderAuthenticated))
+            .diskCacheStrategy(DiskCacheStrategy.NONE)
+            .dontAnimate()
+            .submit(pictureSizeInPx, pictureSizeInPx)
+            .getOrNull()
+    }
+
     @WorkerThread
     fun getContactPicture(recipient: Recipient): Bitmap? {
         val contactPictureUri = recipient.photoThumbnailUri

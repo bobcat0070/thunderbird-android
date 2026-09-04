@@ -42,6 +42,7 @@ class GetMessagesColumnIndexTest {
         assertThat(columns[LocalStore.MSG_INDEX_PREVIEW_TYPE]).isEqualTo("preview_type")
         assertThat(columns[LocalStore.MSG_INDEX_HEADER_DATA]).isEqualTo("header")
         assertThat(columns[LocalStore.MSG_INDEX_CLASSIFICATION]).isEqualTo("classification")
+        assertThat(columns[LocalStore.MSG_INDEX_SENDER_AUTHENTICATED]).isEqualTo("sender_authenticated")
     }
 
     @Test
