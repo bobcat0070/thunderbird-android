@@ -1248,12 +1248,7 @@ open class MessageHomeActivity :
 
         showMessageViewPlaceHolder()
 
-        val classificationSearch = LocalMessageSearch().apply {
-            id = currentSearch.id
-            currentSearch.accountUuids.forEach { addAccountUuid(it) }
-            currentSearch.folderIds.forEach { addAllowedFolder(it) }
-            and(MessageSearchField.CLASSIFICATION, messageClass.name, SearchAttribute.EQUALS)
-        }
+        val classificationSearch = currentSearch.narrowedToClassification(messageClass)
 
         initializeFromLocalSearch(classificationSearch)
 
