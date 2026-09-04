@@ -115,13 +115,13 @@ class WebsiteIconLoader(
     /**
      * Looks for an icon at the sending domain, then at each parent of it.
      *
-     * Bulk mail is almost never sent from the domain whose website people know: of the sending domains in one
-     * real mailbox, `e.olivegarden.com`, `email.rocketmoney.com`, `mg.homedepot.com` and
-     * `notifications.creditkarma.com` all have no icon of their own while their parents all do. Without this
-     * walk the feature would find nothing for exactly the senders it exists to help.
+     * Bulk mail is almost never sent from the domain whose website people know. Sending subdomains of the
+     * shape `e.<brand>.com`, `email.<brand>.com`, `mg.<brand>.com` and `notifications.<brand>.com` were
+     * checked by hand against a real mailbox: none had an icon of its own, and every one of their parents
+     * did. Without this walk the feature would find nothing for exactly the senders it exists to help.
      *
-     * The exact domain is still tried first, because some sending subdomains do have their own icon -
-     * `snacks.robinhood.com` differs from `robinhood.com`.
+     * The exact domain is still tried first, because a sending subdomain sometimes does publish its own
+     * icon, distinct from the parent's.
      *
      * Walking stops two labels from the end rather than at a registrable domain, because knowing where the
      * registrable part starts needs the public suffix list. Overshooting is harmless in practice: the service

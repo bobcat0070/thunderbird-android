@@ -188,17 +188,17 @@ class RuleBasedMessageClassifierTest {
 
     @Test
     fun `notifications-noreply style sender should be recognised`() {
-        // Taken from real mail in the test mailbox.
-        val result = testSubject.classify(evidenceOf(from = "notifications-noreply@linkedin.com"))
+        // The shape a large social network uses for its notification mail.
+        val result = testSubject.classify(evidenceOf(from = "notifications-noreply@social.example"))
 
         assertThat(result.messageClass).isEqualTo(MessageClass.NOTIFICATION)
     }
 
     @Test
     fun `a marker buried between other words should be recognised`() {
-        // From the test mailbox: five messages that the earlier whole-word match missed because the marker
-        // sits after a hyphen rather than at the start.
-        val result = testSubject.classify(evidenceOf(from = "E-tradeAlerts-DoNotReply@etrade.com"))
+        // A shape the earlier whole-word match missed, because the marker sits after a hyphen rather than
+        // at the start of the local part.
+        val result = testSubject.classify(evidenceOf(from = "X-brokerAlerts-DoNotReply@broker.example"))
 
         assertThat(result.messageClass).isEqualTo(MessageClass.NOTIFICATION)
         assertThat(result.signal).isEqualTo(ClassificationSignal.NO_REPLY_SENDER)

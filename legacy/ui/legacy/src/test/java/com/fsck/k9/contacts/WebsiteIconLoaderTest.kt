@@ -120,8 +120,8 @@ class WebsiteIconLoaderTest : RobolectricTest() {
 
     @Test
     fun `should look up the parent when a sending subdomain has no icon of its own`() {
-        // Bulk mail is almost never sent from the domain whose website people know: e.olivegarden.com,
-        // email.rocketmoney.com and mg.homedepot.com all have no icon while their parents do.
+        // Bulk mail is almost never sent from the domain whose website people know: sending subdomains of
+        // the shape e.<brand>.com or mg.<brand>.com have no icon while their parents do.
         server.enqueue(placeholderResponse())
         server.enqueue(imageResponse())
         val testSubject = loaderFor(WebsiteIconSettings(isEnabled = true))
@@ -134,7 +134,8 @@ class WebsiteIconLoaderTest : RobolectricTest() {
 
     @Test
     fun `should prefer an icon the sending subdomain has of its own`() {
-        // snacks.robinhood.com is not robinhood.com, and the more specific one is the better answer.
+        // A sending subdomain sometimes publishes its own icon, and the more specific one is the better
+        // answer.
         server.enqueue(imageResponse())
         val testSubject = loaderFor(WebsiteIconSettings(isEnabled = true))
 
