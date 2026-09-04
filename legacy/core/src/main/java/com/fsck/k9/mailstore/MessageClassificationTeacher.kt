@@ -52,9 +52,10 @@ class MessageClassificationTeacher(
     /**
      * Drops a rule the user no longer wants.
      *
-     * Stored messages keep the class the rule gave them: re-deriving what they would have been means
-     * re-reading headers this app no longer keeps for old mail, and silently moving a pile of messages back
-     * is a worse surprise than leaving them where the user last saw them. New mail classifies normally.
+     * Stored messages keep the class the rule gave them for now: silently moving a pile of messages back the
+     * moment a rule is dropped is a worse surprise than leaving them where the user last saw them. New mail
+     * classifies normally, and the next time the rules themselves change, [MessageReclassifier] re-derives
+     * these along with everything else - by which point the user is not watching the list they just left.
      */
     fun forget(fromAddress: String, scope: RuleScope = RuleScope.SENDER) {
         val pattern = patternFor(fromAddress, scope) ?: return

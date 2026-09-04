@@ -1,6 +1,7 @@
 package com.fsck.k9.storage.messages
 
 import net.thunderbird.feature.mail.message.classification.api.MessageClass
+import net.thunderbird.feature.mail.message.classification.api.MessageClassification
 import net.thunderbird.feature.mail.message.classification.api.RuleScope
 import app.k9mail.legacy.mailstore.CreateFolderInfo
 import app.k9mail.legacy.mailstore.FolderMapper
@@ -8,6 +9,7 @@ import app.k9mail.legacy.mailstore.MessageMapper
 import app.k9mail.legacy.mailstore.MessageStore
 import app.k9mail.legacy.mailstore.MoreMessages
 import app.k9mail.legacy.mailstore.SaveMessageData
+import app.k9mail.legacy.mailstore.StoredClassificationEvidence
 import com.fsck.k9.mail.FolderType
 import com.fsck.k9.mail.Header
 import com.fsck.k9.mailstore.LockableDatabase
@@ -55,6 +57,7 @@ class K9MessageStore(
     )
     private val flagMessageOperations = FlagMessageOperations(database)
     private val updateMessageOperations = UpdateMessageOperations(database)
+    private val reclassifyMessageOperations = ReclassifyMessageOperations(database)
     private val retrieveMessageOperations = RetrieveMessageOperations(database, localMessageUidPrefixProvider)
     private val retrieveMessageListOperations = RetrieveMessageListOperations(database)
     private val deleteMessageOperations = DeleteMessageOperations(database, attachmentFileManager)
@@ -112,6 +115,14 @@ class K9MessageStore(
             signal = signal,
             classifierVersion = classifierVersion,
         )
+    }
+
+    override fun getMessagesToReclassify(classifierVersion: Int, limit: Int): List<StoredClassificationEvidence> {
+        return reclassifyMessageOperations.getMessagesToReclassify(classifierVersion, limit)
+    }
+
+    override fun setClassifications(classifications: Map<Long, MessageClassification>, classifierVersion: Int): Int {
+        return reclassifyMessageOperations.setClassifications(classifications, classifierVersion)
     }
 
     override fun getMessageServerId(messageId: Long): String? {

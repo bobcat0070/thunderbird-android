@@ -48,14 +48,26 @@ val mailStoreModule = module {
             messageFulltextCreator = get(),
             attachmentCounter = get(),
             messageClassifier = get(),
-            contactRepository = get(),
+            knownContacts = get(),
             knownCorrespondents = get(),
         )
     }
+    single { KnownContacts(contactRepository = get()) }
     single {
         KnownCorrespondents(
             accountManager = get(),
             messageListRepository = get(),
+        )
+    }
+    single { ReclassificationTracker(context = get()) }
+    single {
+        MessageReclassifier(
+            accountManager = get(),
+            messageStoreManager = get(),
+            messageClassifier = get(),
+            knownContacts = get(),
+            knownCorrespondents = get(),
+            tracker = get(),
         )
     }
     single {

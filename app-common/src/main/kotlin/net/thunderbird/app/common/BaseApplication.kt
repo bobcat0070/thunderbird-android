@@ -12,16 +12,19 @@ import com.fsck.k9.K9
 import com.fsck.k9.MessagingListenerProvider
 import com.fsck.k9.controller.MessagingController
 import com.fsck.k9.job.WorkManagerConfigurationProvider
+import com.fsck.k9.mailstore.MessageReclassifier
 import com.fsck.k9.notification.NotificationChannelManager
 import com.fsck.k9.ui.base.AppLanguageManager
 import com.fsck.k9.ui.base.extensions.currentLocale
 import java.util.Locale
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.launch
 import net.thunderbird.app.common.feature.LoggerLifecycleObserver
 import net.thunderbird.core.common.exception.ExceptionHandler
 import net.thunderbird.core.logging.Logger
@@ -42,6 +45,7 @@ abstract class BaseApplication : Application(), WorkManagerConfiguration.Provide
     private val notificationChannelManager: NotificationChannelManager by inject()
     private val messageListWidgetManager: MessageListWidgetManager by inject()
     private val workManagerConfigurationProvider: WorkManagerConfigurationProvider by inject()
+    private val messageReclassifier: MessageReclassifier by inject()
     protected val logger: Logger by inject()
     private val syncDebugFileLogSink: FileLogSink by inject(named("syncDebug"))
 
@@ -75,6 +79,22 @@ abstract class BaseApplication : Application(), WorkManagerConfiguration.Provide
         Thread.setDefaultUncaughtExceptionHandler(ExceptionHandler(originalHandler, logger))
 
         ProcessLifecycleOwner.get().lifecycle.addObserver(LoggerLifecycleObserver(syncDebugFileLogSink))
+
+        reclassifyStoredMessages()
+    }
+
+    /**
+     * Brings stored mail up to the current classification rules, when a new build has changed them.
+     *
+     * Here rather than on a schedule because it is a one-off after an upgrade, and here rather than lazily
+     * when the message list asks, because a list that reshuffles under the reader is worse than one that was
+     * already right when it opened. Costs one preference read when there is nothing to do, which is every
+     * launch but the first after the rules change.
+     */
+    private fun reclassifyStoredMessages() {
+        appCoroutineScope.launch(Dispatchers.IO) {
+            messageReclassifier.reclassifyIfRulesChanged()
+        }
     }
 
     abstract fun provideAppModule(): Module

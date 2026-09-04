@@ -1,6 +1,7 @@
 package app.k9mail.legacy.mailstore
 
 import net.thunderbird.feature.mail.message.classification.api.MessageClass
+import net.thunderbird.feature.mail.message.classification.api.MessageClassification
 import net.thunderbird.feature.mail.message.classification.api.RuleScope
 import com.fsck.k9.mail.FolderType
 import com.fsck.k9.mail.Header
@@ -108,6 +109,27 @@ interface MessageStore {
         signal: String,
         classifierVersion: Int,
     ): Int
+
+    /**
+     * Retrieve stored messages that were classified by rules older than [classifierVersion].
+     *
+     * The evidence is rebuilt from what was kept when the message was saved, so improved rules can be applied
+     * to a mailbox that already exists rather than only to mail that has not arrived yet.
+     *
+     * The behavioural parts of the evidence - whether the sender is a contact, whether the user has written
+     * to them - are left unset, because the store does not know them. The caller fills them in.
+     *
+     * @param limit how many to return, so a large mailbox is worked through in batches instead of being read
+     *   into memory at once.
+     */
+    fun getMessagesToReclassify(classifierVersion: Int, limit: Int): List<StoredClassificationEvidence>
+
+    /**
+     * Write new classifications onto stored messages, by database id.
+     *
+     * @return how many messages were updated.
+     */
+    fun setClassifications(classifications: Map<Long, MessageClassification>, classifierVersion: Int): Int
 
     /**
      * Retrieve the server ID for a given message.

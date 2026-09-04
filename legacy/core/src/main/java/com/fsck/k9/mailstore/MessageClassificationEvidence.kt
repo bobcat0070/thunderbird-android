@@ -1,22 +1,8 @@
 package com.fsck.k9.mailstore
 
 import com.fsck.k9.mail.Message
+import net.thunderbird.feature.mail.message.classification.api.CLASSIFICATION_HEADERS
 import net.thunderbird.feature.mail.message.classification.api.MessageEvidence
-
-/**
- * Headers the classifier reads.
- *
- * Listed explicitly rather than passing the whole header block: most of a header block is routing history, and
- * naming the inputs keeps it obvious which headers a backend has to carry for classification to work.
- */
-private val CLASSIFICATION_HEADERS = listOf(
-    "List-Unsubscribe",
-    "List-Id",
-    "List-Post",
-    "Precedence",
-    "Auto-Submitted",
-    "X-Auto-Response-Suppress",
-)
 
 /**
  * Reduces a parsed message to the facts the classifier is allowed to see.

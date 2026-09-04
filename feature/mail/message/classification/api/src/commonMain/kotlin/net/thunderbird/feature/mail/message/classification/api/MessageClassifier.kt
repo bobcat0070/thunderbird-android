@@ -1,6 +1,23 @@
 package net.thunderbird.feature.mail.message.classification.api
 
 /**
+ * The headers a classifier reads.
+ *
+ * Declared here rather than at each place evidence is built, because it is the classifier that decides what
+ * it needs to see. Everything that has to carry headers for classification - a backend deciding what to fetch,
+ * the store deciding what to keep, a later pass rebuilding evidence from stored mail - reads the list from
+ * one place, so adding a rule that needs a new header cannot leave a producer behind.
+ */
+val CLASSIFICATION_HEADERS: List<String> = listOf(
+    "List-Unsubscribe",
+    "List-Id",
+    "List-Post",
+    "Precedence",
+    "Auto-Submitted",
+    "X-Auto-Response-Suppress",
+)
+
+/**
  * The facts a classifier is allowed to look at.
  *
  * Deliberately a plain value rather than a parsed message: classification is a pure decision over evidence, so

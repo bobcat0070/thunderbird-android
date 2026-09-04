@@ -64,6 +64,9 @@ fun SQLiteDatabase.createMessage(
     messagePartId: Long = 0L,
     encryptionType: String? = null,
     newMessage: Boolean = false,
+    classification: String? = null,
+    classificationSignal: String? = null,
+    classifierVersion: Int? = null,
 ): Long {
     val values = ContentValues().apply {
         put("deleted", if (deleted) 1 else 0)
@@ -92,6 +95,11 @@ fun SQLiteDatabase.createMessage(
         put("message_part_id", messagePartId)
         put("encryption_type", encryptionType)
         put("new_message", if (newMessage) 1 else 0)
+        // Named only when asked for, because this helper is also used to populate databases at schema
+        // versions from before these columns existed, where naming one fails the whole insert.
+        classification?.let { put("classification", it) }
+        classificationSignal?.let { put("classification_signal", it) }
+        classifierVersion?.let { put("classifier_version", it) }
     }
 
     return insert("messages", null, values)
@@ -132,6 +140,7 @@ fun SQLiteDatabase.readMessages(): List<MessageEntry> {
                 accountId = cursor.getStringOrNull("account_id"),
                 classification = cursor.getStringOrNull("classification"),
                 classificationSignal = cursor.getStringOrNull("classification_signal"),
+                classifierVersion = cursor.getIntOrNull("classifier_version"),
             )
         }
     }
@@ -168,6 +177,7 @@ data class MessageEntry(
     val accountId: String? = null,
     val classification: String? = null,
     val classificationSignal: String? = null,
+    val classifierVersion: Int? = null,
 )
 
 fun SQLiteDatabase.createMessagePart(
