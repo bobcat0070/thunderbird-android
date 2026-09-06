@@ -18,6 +18,12 @@ import net.thunderbird.legacy.logging.Log
 private const val BATCH_SIZE = 200
 
 /**
+ * Higher than any classifier version, so a forced pass matches every stored message rather than only those
+ * behind the current rules.
+ */
+private const val EVERY_VERSION = Int.MAX_VALUE
+
+/**
  * Applies the current rules to mail that was classified by older ones.
  *
  * Classification happens once, when a message is saved, because that is the only point at which the full
@@ -59,6 +65,45 @@ class MessageReclassifier(
         Log.i("Re-classified %d stored messages against classifier version %d", updated, CLASSIFIER_VERSION)
 
         return updated
+    }
+
+    /**
+     * Re-classifies every stored message, whatever version decided it.
+     *
+     * For when the reader has taught the app something and wants it applied to the mail already in front of
+     * them, rather than waiting for the rules themselves to change. Every message is already at the current
+     * version, so this cannot page by version the way the automatic pass does - each row it wrote would match
+     * again on the next batch - and walks the mailbox by message id instead.
+     *
+     * @return how many messages were re-classified.
+     */
+    fun reclassifyEverything(): Int {
+        val updated = accountManager.getAccounts().sumOf { account ->
+            runCatching { reclassifyAll(messageStoreManager.getMessageStore(account)) }.getOrElse { error ->
+                Log.e(error, "Could not re-classify stored messages for account %s", account.uuid)
+                0
+            }
+        }
+
+        tracker.recordPass(CLASSIFIER_VERSION)
+        Log.i("Re-classified %d stored messages on request", updated)
+
+        return updated
+    }
+
+    private fun reclassifyAll(messageStore: MessageStore): Int {
+        var total = 0
+        var afterMessageId = 0L
+
+        while (true) {
+            val batch = messageStore.getMessagesToReclassify(EVERY_VERSION, BATCH_SIZE, afterMessageId)
+            if (batch.isEmpty()) break
+
+            total += messageStore.setClassifications(verdictsFor(batch), CLASSIFIER_VERSION)
+            afterMessageId = batch.last().messageId
+        }
+
+        return total
     }
 
     private fun reclassify(messageStore: MessageStore): Int {

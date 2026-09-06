@@ -117,6 +117,37 @@ class MessageReclassifierTest {
         verify(tracker).recordPass(CLASSIFIER_VERSION)
     }
 
+    @Test
+    fun `re-classifying everything should cover mail already at the current version`() {
+        // The point of the button: the reader has taught the app something and wants it applied now, not when
+        // the rules next change.
+        messageStore.keepPendingAfterWrite = true
+        messageStore.pending = listOf(evidenceFor(messageId = 1), evidenceFor(messageId = 2))
+
+        assertThat(reclassifier().reclassifyEverything()).isEqualTo(2)
+    }
+
+    @Test
+    fun `re-classifying everything should not run forever`() {
+        // Every row it writes still matches the version filter, so paging by version would hand back the same
+        // batch for ever. It walks by message id instead.
+        messageStore.keepPendingAfterWrite = true
+        messageStore.pending = (1L..BATCH_SIZE + 30L).map { evidenceFor(messageId = it) }
+
+        assertThat(reclassifier().reclassifyEverything()).isEqualTo(BATCH_SIZE + 30)
+
+        assertThat(messageStore.reads).isEqualTo(3)
+    }
+
+    @Test
+    fun `re-classifying everything should ignore whether a pass was needed`() {
+        whenever(tracker.isPassNeeded(any())).doReturn(false)
+        messageStore.keepPendingAfterWrite = true
+        messageStore.pending = listOf(evidenceFor(messageId = 1))
+
+        assertThat(reclassifier().reclassifyEverything()).isEqualTo(1)
+    }
+
     private fun reclassifier(): MessageReclassifier {
         val account = mock<LegacyAccountDto>()
         val accountManager = mock<LegacyAccountDtoManager> {
@@ -151,19 +182,25 @@ private class FakeMessageStore(
 ) : MessageStore by delegate {
     var pending: List<StoredClassificationEvidence> = emptyList()
     var refuseWrites = false
+    var keepPendingAfterWrite = false
     var failReads = false
     var reads = 0
     var wasRead = false
     val written = mutableMapOf<Long, MessageClassification>()
     var writtenVersion: Int? = null
 
-    override fun getMessagesToReclassify(classifierVersion: Int, limit: Int): List<StoredClassificationEvidence> {
+    override fun getMessagesToReclassify(
+        classifierVersion: Int,
+        limit: Int,
+        afterMessageId: Long,
+    ): List<StoredClassificationEvidence> {
         wasRead = true
         if (failReads) throw IllegalStateException("database unavailable")
 
         reads++
 
-        return pending.take(limit)
+        // Mirrors the store: a forced pass walks by id, an automatic one relies on the version advancing.
+        return pending.filter { it.messageId > afterMessageId }.take(limit)
     }
 
     override fun setClassifications(
@@ -174,7 +211,12 @@ private class FakeMessageStore(
 
         written += classifications
         writtenVersion = classifierVersion
-        pending = pending.filterNot { it.messageId in classifications }
+
+        // Only the automatic pass narrows what is left; a forced pass rewrites rows that still match, which
+        // is exactly why it has to page by id instead.
+        if (!keepPendingAfterWrite) {
+            pending = pending.filterNot { it.messageId in classifications }
+        }
 
         return classifications.size
     }

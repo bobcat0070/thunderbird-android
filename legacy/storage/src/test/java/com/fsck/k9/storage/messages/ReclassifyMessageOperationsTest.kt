@@ -143,7 +143,9 @@ class ReclassifyMessageOperationsTest : RobolectricTest() {
     fun `the limit should bound a batch`() {
         repeat(times = 5) { storeMessage(classifierVersion = null) }
 
-        assertThat(reclassifyMessageOperations.getMessagesToReclassify(CURRENT_VERSION, limit = 2)).hasSize(2)
+        val page = reclassifyMessageOperations.getMessagesToReclassify(CURRENT_VERSION, 2, afterMessageId = 0)
+
+        assertThat(page).hasSize(2)
     }
 
     @Test
@@ -188,7 +190,24 @@ class ReclassifyMessageOperationsTest : RobolectricTest() {
     private fun packed(vararg addresses: String): String =
         Address.pack(addresses.map { Address(it) }.toTypedArray())
 
-    private fun toReclassify() = reclassifyMessageOperations.getMessagesToReclassify(CURRENT_VERSION, limit = 100)
+    @Test
+    fun `paging by id should return only what follows`() {
+        // How a forced pass walks the mailbox: every row it writes still matches the version filter, so it
+        // cannot page by version.
+        val first = storeMessage(classifierVersion = null)
+        val second = storeMessage(classifierVersion = null)
+
+        val page = reclassifyMessageOperations.getMessagesToReclassify(
+            CURRENT_VERSION,
+            limit = 100,
+            afterMessageId = first,
+        )
+
+        assertThat(page.map { it.messageId }).isEqualTo(listOf(second))
+    }
+
+    private fun toReclassify() =
+        reclassifyMessageOperations.getMessagesToReclassify(CURRENT_VERSION, limit = 100, afterMessageId = 0)
 
     @Suppress("LongParameterList")
     private fun storeMessage(

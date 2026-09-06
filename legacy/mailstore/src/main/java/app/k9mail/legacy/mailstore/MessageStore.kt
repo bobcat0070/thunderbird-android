@@ -128,8 +128,15 @@ interface MessageStore {
      *
      * @param limit how many to return, so a large mailbox is worked through in batches instead of being read
      *   into memory at once.
+     * @param afterMessageId return only messages past this id, lowest first. A pass that re-classifies mail
+     *   already at the current version cannot page by version - every row it writes would match again - so it
+     *   walks by id instead.
      */
-    fun getMessagesToReclassify(classifierVersion: Int, limit: Int): List<StoredClassificationEvidence>
+    fun getMessagesToReclassify(
+        classifierVersion: Int,
+        limit: Int,
+        afterMessageId: Long = 0,
+    ): List<StoredClassificationEvidence>
 
     /**
      * Write new classifications onto stored messages, by database id.

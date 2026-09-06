@@ -28,6 +28,7 @@ private const val TO_RECLASSIFY_QUERY =
         " WHERE messages.deleted = 0 AND messages.empty = 0" +
         " AND IFNULL(messages.classifier_version, 0) < CAST(? AS INTEGER)" +
         " AND message_parts.header IS NOT NULL" +
+        " AND messages.id > ?" +
         " ORDER BY messages.id" +
         " LIMIT ?"
 
@@ -46,11 +47,15 @@ private const val COLUMN_HEADER = 4
  */
 internal class ReclassifyMessageOperations(private val lockableDatabase: LockableDatabase) {
 
-    fun getMessagesToReclassify(classifierVersion: Int, limit: Int): List<StoredClassificationEvidence> {
+    fun getMessagesToReclassify(
+        classifierVersion: Int,
+        limit: Int,
+        afterMessageId: Long,
+    ): List<StoredClassificationEvidence> {
         return lockableDatabase.execute(false) { database ->
             database.rawQuery(
                 TO_RECLASSIFY_QUERY,
-                arrayOf(classifierVersion.toString(), limit.toString()),
+                arrayOf(classifierVersion.toString(), afterMessageId.toString(), limit.toString()),
             ).use { cursor ->
                 buildList {
                     while (cursor.moveToNext()) {

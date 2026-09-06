@@ -133,6 +133,10 @@
     <string name="learned_rules_images_summary">Images load without asking</string>
     <string name="learned_rules_anyone_at">Anyone at %1$s</string>
     <string name="learned_rules_uncategorised">Uncategorised</string>
+    <string name="learned_rules_apply_category">Apply to existing mail</string>
+    <string name="learned_rules_reclassify_title">Re-sort mail I already have</string>
+    <string name="learned_rules_reclassify_summary">Run the categories over every message on this device, using everything you have taught.</string>
+    <string name="learned_rules_reclassify_running">Sorting\u2026</string>
     <string name="learned_rules_empty">Nothing taught yet. Correcting a message category, or allowing a sender remote images, will show up here.</string>
     <string name="learned_rules_forget_title">Forget this?</string>
     <string name="learned_rules_forget_message">%1$s will go back to being handled automatically.</string>
@@ -154,6 +158,10 @@
     <string name="classify_as_notification">Notification</string>
     <string name="classify_as_newsletter">Newsletter or promotion</string>
     <string name="classify_apply_to_domain">Apply to everyone at %1$s</string>
+    <plurals name="learned_rules_reclassify_result">
+        <item quantity="one">Re-sorted %1$d message</item>
+        <item quantity="other">Re-sorted %1$d messages</item>
+    </plurals>
     <plurals name="classify_message_result">
         <item quantity="one">Reclassified %1$d message</item>
         <item quantity="other">Reclassified %1$d messages</item>

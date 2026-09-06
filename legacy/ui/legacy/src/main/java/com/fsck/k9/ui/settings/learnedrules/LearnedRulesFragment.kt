@@ -5,10 +5,15 @@ import androidx.preference.Preference
 import androidx.preference.PreferenceCategory
 import androidx.preference.PreferenceFragmentCompat
 import androidx.preference.PreferenceScreen
+import androidx.lifecycle.lifecycleScope
+import com.fsck.k9.mailstore.MessageReclassifier
 import com.fsck.k9.ui.R
 import com.fsck.k9.ui.messageview.RemoteImageScope
 import com.fsck.k9.ui.messageview.RemoteImageSenderStore
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import net.thunderbird.feature.mail.message.classification.api.ClassificationOverrideStore
 import net.thunderbird.feature.mail.message.classification.api.MessageClass
 import net.thunderbird.feature.mail.message.classification.api.RuleScope
@@ -25,6 +30,7 @@ import com.fsck.k9.ui.base.R as BaseR
 class LearnedRulesFragment : PreferenceFragmentCompat() {
     private val classificationOverrideStore: ClassificationOverrideStore by inject()
     private val remoteImageSenderStore: RemoteImageSenderStore by inject()
+    private val messageReclassifier: MessageReclassifier by inject()
 
     override fun onCreatePreferences(savedInstanceState: Bundle?, rootKey: String?) {
         preferenceScreen = preferenceManager.createPreferenceScreen(requireContext())
@@ -45,6 +51,54 @@ class LearnedRulesFragment : PreferenceFragmentCompat() {
                     title = getString(R.string.learned_rules_empty)
                     isSelectable = false
                 },
+            )
+        }
+
+        addReclassifyAction(screen)
+    }
+
+    /**
+     * Applies everything taught so far to the mail already in the mailbox.
+     *
+     * Corrections normally reach stored mail only when the rules themselves change, which is right for an
+     * automatic pass and useless to someone who has just taught the app several things and wants to see the
+     * result. This is that button.
+     */
+    private fun addReclassifyAction(screen: PreferenceScreen) {
+        screen.addPreference(
+            PreferenceCategory(requireContext()).apply {
+                title = getString(R.string.learned_rules_apply_category)
+                isPersistent = false
+            },
+        )
+
+        screen.addPreference(
+            Preference(requireContext()).apply {
+                title = getString(R.string.learned_rules_reclassify_title)
+                summary = getString(R.string.learned_rules_reclassify_summary)
+                isPersistent = false
+                setOnPreferenceClickListener {
+                    reclassifyNow(this)
+                    true
+                }
+            },
+        )
+    }
+
+    private fun reclassifyNow(preference: Preference) {
+        // Disabled while it runs, because a mailbox takes a moment to walk and a second tap would start a
+        // second walk over the same messages.
+        preference.isEnabled = false
+        preference.summary = getString(R.string.learned_rules_reclassify_running)
+
+        lifecycleScope.launch {
+            val updated = withContext(Dispatchers.IO) { messageReclassifier.reclassifyEverything() }
+
+            preference.isEnabled = true
+            preference.summary = resources.getQuantityString(
+                R.plurals.learned_rules_reclassify_result,
+                updated,
+                updated,
             )
         }
     }
