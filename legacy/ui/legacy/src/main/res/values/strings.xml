@@ -137,6 +137,16 @@
     <string name="learned_rules_forget_title">Forget this?</string>
     <string name="learned_rules_forget_message">%1$s will go back to being handled automatically.</string>
     <string name="learned_rules_forget_action">Forget</string>
+    <string name="message_details_classification_unknown">Not categorised</string>
+    <string name="message_details_classification_reason_mailing_list">It comes from a mailing list</string>
+    <string name="message_details_classification_reason_auto_submitted">The sender marked it as sent automatically</string>
+    <string name="message_details_classification_reason_no_replies">The sender said it will not read replies</string>
+    <string name="message_details_classification_reason_bulk">It carries an unsubscribe link</string>
+    <string name="message_details_classification_reason_no_reply_sender">It comes from a do-not-reply address</string>
+    <string name="message_details_classification_reason_contact">The sender is in your contacts</string>
+    <string name="message_details_classification_reason_correspondence">You have written to this sender</string>
+    <string name="message_details_classification_reason_taught">You chose this for this sender</string>
+    <string name="message_details_classification_reason_none">Nothing indicated what this is</string>
     <string name="classify_action">Classify message</string>
     <string name="classify_message_title">What kind of mail is this?</string>
     <string name="classify_message_description">Thunderbird will use this to sort future mail from %1$s.</string>

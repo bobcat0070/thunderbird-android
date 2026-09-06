@@ -4,6 +4,7 @@ import android.net.Uri
 import com.fsck.k9.mail.Address
 import com.fsck.k9.view.MessageCryptoDisplayStatus
 import net.thunderbird.feature.mail.folder.api.FolderType
+import net.thunderbird.feature.mail.message.classification.api.MessageClassification
 
 data class MessageDetailsUi(
     val date: String?,
@@ -15,6 +16,7 @@ data class MessageDetailsUi(
     val cc: List<Participant>,
     val bcc: List<Participant>,
     val folder: FolderInfoUi?,
+    val classification: MessageClassification?,
 )
 
 data class CryptoDetails(

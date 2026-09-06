@@ -90,6 +90,7 @@ internal class MessageDetailsViewModel(
                     cc = messageDetails.cc.toParticipants(account),
                     bcc = messageDetails.bcc.toParticipants(account),
                     folder = folder?.toFolderInfo(),
+                    classification = messageDetails.classification,
                 )
 
                 val messageDetailsAppearance = MessageDetailsAppearance(

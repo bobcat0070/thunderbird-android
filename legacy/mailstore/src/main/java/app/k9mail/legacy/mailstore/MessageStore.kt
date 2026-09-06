@@ -111,6 +111,13 @@ interface MessageStore {
     ): Int
 
     /**
+     * Retrieve what kind of mail a stored message was decided to be, and the evidence that decided it.
+     *
+     * @return the stored verdict, or `null` when the message is gone or predates classification entirely.
+     */
+    fun getClassification(folderId: Long, messageServerId: String): MessageClassification?
+
+    /**
      * Retrieve stored messages that were classified by rules older than [classifierVersion].
      *
      * The evidence is rebuilt from what was kept when the message was saved, so improved rules can be applied

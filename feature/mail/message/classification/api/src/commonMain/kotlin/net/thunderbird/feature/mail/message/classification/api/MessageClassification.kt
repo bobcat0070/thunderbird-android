@@ -80,6 +80,12 @@ enum class ClassificationSignal {
 }
 
 /**
+ * @return the signal stored under [name], or [ClassificationSignal.NONE] when it is missing or unrecognised.
+ */
+fun classificationSignalOrNone(name: String?): ClassificationSignal =
+    ClassificationSignal.entries.firstOrNull { it.name == name } ?: ClassificationSignal.NONE
+
+/**
  * A verdict and the reason for it.
  */
 data class MessageClassification(

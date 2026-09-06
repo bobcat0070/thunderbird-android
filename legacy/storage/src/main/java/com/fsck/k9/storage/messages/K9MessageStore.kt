@@ -117,6 +117,10 @@ class K9MessageStore(
         )
     }
 
+    override fun getClassification(folderId: Long, messageServerId: String): MessageClassification? {
+        return retrieveMessageOperations.getClassification(folderId, messageServerId)
+    }
+
     override fun getMessagesToReclassify(classifierVersion: Int, limit: Int): List<StoredClassificationEvidence> {
         return reclassifyMessageOperations.getMessagesToReclassify(classifierVersion, limit)
     }

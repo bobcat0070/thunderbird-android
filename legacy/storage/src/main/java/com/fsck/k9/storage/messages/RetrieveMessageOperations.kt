@@ -9,6 +9,9 @@ import com.fsck.k9.mailstore.LockableDatabase
 import com.fsck.k9.mailstore.MessageNotFoundException
 import java.util.Date
 import net.thunderbird.core.common.mail.Flag
+import net.thunderbird.feature.mail.message.classification.api.MessageClassification
+import net.thunderbird.feature.mail.message.classification.api.classificationSignalOrNone
+import net.thunderbird.feature.mail.message.classification.api.messageClassOrUnknown
 import net.thunderbird.feature.mail.message.list.LocalMessageUidPrefixProvider
 
 internal class RetrieveMessageOperations(
@@ -171,6 +174,23 @@ internal class RetrieveMessageOperations(
                 } else {
                     null
                 }
+            }
+        }
+    }
+
+    fun getClassification(folderId: Long, messageServerId: String): MessageClassification? {
+        return lockableDatabase.execute(false) { database ->
+            database.rawQuery(
+                "SELECT classification, classification_signal FROM messages" +
+                    " WHERE folder_id = ? AND uid = ?",
+                arrayOf(folderId.toString(), messageServerId),
+            ).use { cursor ->
+                if (!cursor.moveToFirst() || cursor.isNull(0)) return@execute null
+
+                MessageClassification(
+                    messageClass = messageClassOrUnknown(cursor.getString(0)),
+                    signal = classificationSignalOrNone(cursor.getString(1)),
+                )
             }
         }
     }

@@ -29,6 +29,9 @@ import com.fsck.k9.contacts.ContactPictureLoader
 import com.fsck.k9.mail.Address
 import com.fsck.k9.mailstore.CryptoResultAnnotation
 import com.fsck.k9.ui.R
+import net.thunderbird.feature.mail.message.classification.api.ClassificationSignal
+import net.thunderbird.feature.mail.message.classification.api.MessageClass
+import net.thunderbird.feature.mail.message.classification.api.MessageClassification
 import com.fsck.k9.ui.base.extensions.withArguments
 import com.fsck.k9.ui.observe
 import com.mikepenz.fastadapter.FastAdapter
@@ -181,6 +184,7 @@ class MessageDetailsFragment : ToolbarBottomSheetDialogFragment() {
             addParticipants(details.bcc, R.string.message_details_bcc_section_title, appearance)
 
             addFolderName(details.folder)
+            addClassification(details.classification)
         }
 
         // Use list index as stable identifier. This means changes to the list may only update existing items or add
@@ -190,6 +194,48 @@ class MessageDetailsFragment : ToolbarBottomSheetDialogFragment() {
         }
 
         itemAdapter.setNewList(items)
+    }
+
+    /**
+     * Says what kind of mail this is and what decided it.
+     *
+     * Left out when nothing was decided: a message the classifier could not place was not filed anywhere
+     * surprising either, so there is no question to answer.
+     */
+    private fun MutableList<GenericItem>.addClassification(classification: MessageClassification?) {
+        if (classification != null && classification.messageClass != MessageClass.UNKNOWN) {
+            add(
+                ClassificationItem(
+                    categoryLabel = getString(categoryLabel(classification.messageClass)),
+                    reasonLabel = getString(reasonLabel(classification.signal)),
+                ),
+            )
+        } else {
+            add(EmptyItem())
+        }
+    }
+
+    private fun categoryLabel(messageClass: MessageClass): Int = when (messageClass) {
+        MessageClass.HUMAN -> R.string.classify_as_human
+        MessageClass.NOTIFICATION -> R.string.classify_as_notification
+        MessageClass.NEWSLETTER -> R.string.classify_as_newsletter
+        MessageClass.UNKNOWN -> R.string.message_details_classification_unknown
+    }
+
+    /**
+     * The evidence in the reader terms rather than the header that carried it. "It carries an unsubscribe
+     * link" is checkable by anyone; "BULK_HEADER" is not.
+     */
+    private fun reasonLabel(signal: ClassificationSignal): Int = when (signal) {
+        ClassificationSignal.MAILING_LIST -> R.string.message_details_classification_reason_mailing_list
+        ClassificationSignal.AUTO_SUBMITTED -> R.string.message_details_classification_reason_auto_submitted
+        ClassificationSignal.AUTO_RESPONSE_SUPPRESSED -> R.string.message_details_classification_reason_no_replies
+        ClassificationSignal.BULK_HEADER -> R.string.message_details_classification_reason_bulk
+        ClassificationSignal.NO_REPLY_SENDER -> R.string.message_details_classification_reason_no_reply_sender
+        ClassificationSignal.KNOWN_CONTACT -> R.string.message_details_classification_reason_contact
+        ClassificationSignal.PRIOR_CORRESPONDENCE -> R.string.message_details_classification_reason_correspondence
+        ClassificationSignal.USER_OVERRIDE -> R.string.message_details_classification_reason_taught
+        ClassificationSignal.NONE -> R.string.message_details_classification_reason_none
     }
 
     private fun MutableList<GenericItem>.addCryptoStatus(details: MessageDetailsUi) {

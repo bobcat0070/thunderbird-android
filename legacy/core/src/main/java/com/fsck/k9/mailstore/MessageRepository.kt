@@ -34,6 +34,7 @@ class MessageRepository(private val messageStoreManager: MessageStoreManager) {
             to = toAddresses,
             cc = ccAddresses,
             bcc = bccAddresses,
+            classification = messageStore.getClassification(messageReference.folderId, messageReference.uid),
         )
     }
 
