@@ -133,6 +133,12 @@
             android:title="@string/account_setup_incoming_subscribed_folders_only_label"
             />
 
+        <MultiSelectListPreference
+            android:key="pinned_move_folders"
+            android:summary="@string/account_settings_pinned_move_folders_summary"
+            android:title="@string/account_settings_pinned_move_folders_label"
+            />
+
         <com.fsck.k9.ui.settings.account.FolderListPreference
             android:key="archive_folder"
             app:useSimpleSummaryProvider="true"

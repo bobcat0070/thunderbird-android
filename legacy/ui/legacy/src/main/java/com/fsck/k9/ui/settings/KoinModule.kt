@@ -2,6 +2,7 @@ package com.fsck.k9.ui.settings
 
 import com.fsck.k9.helper.NamedThreadFactory
 import com.fsck.k9.ui.settings.account.AccountSettingsDataStoreFactory
+import com.fsck.k9.ui.settings.account.PinnedFolderStore
 import com.fsck.k9.ui.settings.account.AccountSettingsViewModel
 import com.fsck.k9.ui.settings.account.getSystemVibrator
 import com.fsck.k9.ui.settings.export.SettingsExportViewModel
@@ -43,8 +44,10 @@ val settingsUiModule = module {
             notificationChannelManager = get(),
             notificationController = get(),
             messagingController = get(),
+            pinnedFolderStore = get(),
         )
     }
+    single { PinnedFolderStore(context = get()) }
     factory { getSystemVibrator(context = get()) }
 
     viewModel {

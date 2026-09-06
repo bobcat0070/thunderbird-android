@@ -15,6 +15,7 @@ class AccountSettingsDataStoreFactory(
     private val notificationChannelManager: NotificationChannelManager,
     private val notificationController: NotificationController,
     private val messagingController: MessagingController,
+    private val pinnedFolderStore: PinnedFolderStore,
 ) {
     fun create(account: LegacyAccountDto): AccountSettingsDataStore {
         return AccountSettingsDataStore(
@@ -25,6 +26,7 @@ class AccountSettingsDataStoreFactory(
             notificationChannelManager,
             notificationController,
             messagingController,
+            pinnedFolderStore,
         )
     }
 }

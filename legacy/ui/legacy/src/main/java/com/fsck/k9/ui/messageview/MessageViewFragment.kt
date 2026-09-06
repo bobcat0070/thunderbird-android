@@ -61,6 +61,8 @@ import com.fsck.k9.mailstore.authenticationResultsHeaderName
 import com.fsck.k9.mailstore.hasDmarcPass
 import com.fsck.k9.mailstore.MessageViewInfo
 import com.fsck.k9.provider.RawMessageProvider
+import org.koin.android.ext.android.get
+import org.koin.core.parameter.parametersOf
 import com.fsck.k9.ui.R
 import com.fsck.k9.ui.base.extensions.withArguments
 import com.fsck.k9.ui.choosefolder.ChooseFolderActivity
@@ -134,6 +136,13 @@ class MessageViewFragment :
     private val appNameProvider: AppNameProvider by inject()
     private val messageReaderViewModel: MessageReaderViewContract.ViewModel<Part> by viewModel()
     private val logger: Logger by inject()
+    private val pinnedFolderMenu: PinnedFolderMenu by lazy {
+        PinnedFolderMenu(
+            pinnedFolderStore = get(),
+            folderRepository = get(),
+            folderNameFormatter = get { parametersOf(requireContext()) },
+        )
+    }
     private val replayAllStrategy: ReplyActionStrategy<LegacyAccountDto, Message> by inject()
 
     private val createDocumentLauncher: ActivityResultLauncher<CreateDocumentResultContract.Input> =
@@ -468,6 +477,13 @@ class MessageViewFragment :
         }
 
         menu.findItem(R.id.move_to_drafts).isVisible = isOutbox
+        pinnedFolderMenu.addTo(
+            menu = menu,
+            account = account,
+            currentFolderId = messageReference.folderId,
+            title = moveToTitle(::getString),
+            onFolderChosen = ::onRefile,
+        )
         menu.findItem(R.id.unsubscribe).isVisible = canMessageBeUnsubscribed()
         menu.findItem(R.id.classify).isVisible = senderAddress() != null
         menu.findItem(R.id.show_headers).isVisible = true

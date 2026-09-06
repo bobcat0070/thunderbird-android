@@ -133,6 +133,9 @@
     <string name="learned_rules_images_summary">Images load without asking</string>
     <string name="learned_rules_anyone_at">Anyone at %1$s</string>
     <string name="learned_rules_uncategorised">Uncategorised</string>
+    <string name="account_settings_pinned_move_folders_label">Move shortcuts</string>
+    <string name="account_settings_pinned_move_folders_summary">Folders to offer as one tap when reading a message</string>
+    <string name="message_view_move_to_pinned">Move to %1$s</string>
     <string name="unsubscribe_unavailable">This message has no unsubscribe link</string>
     <string name="learned_rules_apply_category">Apply to existing mail</string>
     <string name="learned_rules_reclassify_title">Re-sort mail I already have</string>

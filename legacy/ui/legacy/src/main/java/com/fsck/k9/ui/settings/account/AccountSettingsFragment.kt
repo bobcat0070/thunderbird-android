@@ -31,6 +31,8 @@ import com.fsck.k9.fragment.ConfirmationDialogFragment.ConfirmationDialogFragmen
 import com.fsck.k9.notification.NotificationChannelManager
 import com.fsck.k9.notification.NotificationChannelManager.ChannelType
 import com.fsck.k9.notification.NotificationSettingsUpdater
+import androidx.preference.MultiSelectListPreference
+import app.k9mail.legacy.ui.folder.FolderNameFormatter
 import com.fsck.k9.ui.R
 import com.fsck.k9.ui.base.extensions.withArguments
 import com.fsck.k9.ui.endtoend.AutocryptKeyTransferActivity
@@ -62,6 +64,7 @@ class AccountSettingsFragment : PreferenceFragmentCompat(), ConfirmationDialogFr
     private val accountRemover: BackgroundAccountRemover by inject()
     private val notificationChannelManager: NotificationChannelManager by inject()
     private val notificationSettingsUpdater: NotificationSettingsUpdater by inject()
+    private val folderNameFormatter: FolderNameFormatter by inject { parametersOf(requireContext()) }
     private val vibrator: Vibrator by inject()
     private val appNameProvider: AppNameProvider by inject()
 
@@ -443,9 +446,24 @@ class AccountSettingsFragment : PreferenceFragmentCompat(), ConfirmationDialogFr
         }
     }
 
+    /**
+     * Offers every folder as a move shortcut.
+     *
+     * Not limited to the special folders the other pickers here deal with: the whole point is the folder this
+     * particular reader files into, which is usually one the app has no name for.
+     */
+    private fun setPinnedFolders(folders: List<RemoteFolder>) {
+        val preference = findPreference<MultiSelectListPreference>(PINNED_MOVE_FOLDERS) ?: return
+
+        preference.entries = folders.map { folderNameFormatter.displayName(it) }.toTypedArray()
+        preference.entryValues = folders.map { it.id.toString() }.toTypedArray()
+        preference.isEnabled = true
+    }
+
     private fun loadFolders(account: LegacyAccountDto) {
         viewModel.getFolders(account).observe(this@AccountSettingsFragment) { remoteFolderInfo ->
             if (remoteFolderInfo != null) {
+                setPinnedFolders(remoteFolderInfo.folders)
                 setFolders(PREFERENCE_AUTO_SELECT_FOLDER, remoteFolderInfo.folders)
                 setFolders(PREFERENCE_ARCHIVE_FOLDER, remoteFolderInfo, FolderType.ARCHIVE)
                 setFolders(PREFERENCE_DRAFTS_FOLDER, remoteFolderInfo, FolderType.DRAFTS)

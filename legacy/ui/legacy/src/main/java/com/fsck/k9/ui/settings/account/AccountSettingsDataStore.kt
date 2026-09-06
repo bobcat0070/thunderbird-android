@@ -17,6 +17,8 @@ import net.thunderbird.feature.mail.folder.api.SpecialFolderSelection
 import net.thunderbird.feature.notification.NotificationLight
 import net.thunderbird.feature.notification.NotificationVibration
 
+const val PINNED_MOVE_FOLDERS = "pinned_move_folders"
+
 class AccountSettingsDataStore(
     private val preferences: Preferences,
     private val executorService: ExecutorService,
@@ -25,8 +27,27 @@ class AccountSettingsDataStore(
     private val notificationChannelManager: NotificationChannelManager,
     private val notificationController: NotificationController,
     private val messagingController: MessagingController,
+    private val pinnedFolderStore: PinnedFolderStore,
 ) : PreferenceDataStore() {
     private var notificationSettingsChanged = false
+
+    override fun getStringSet(key: String, defValues: Set<String>?): Set<String>? {
+        return when (key) {
+            PINNED_MOVE_FOLDERS -> pinnedFolderStore.pinnedFolderValues(account.uuid)
+            else -> defValues
+        }
+    }
+
+    override fun putStringSet(key: String, values: Set<String>?) {
+        when (key) {
+            PINNED_MOVE_FOLDERS -> {
+                val folderIds = values.orEmpty().mapNotNullTo(mutableSetOf()) { it.toLongOrNull() }
+                pinnedFolderStore.setPinnedFolderIds(account.uuid, folderIds)
+            }
+
+            else -> Unit
+        }
+    }
 
     override fun getBoolean(key: String, defValue: Boolean): Boolean {
         return when (key) {
