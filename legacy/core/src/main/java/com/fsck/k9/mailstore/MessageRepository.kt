@@ -3,10 +3,14 @@ package com.fsck.k9.mailstore
 import app.k9mail.legacy.mailstore.MessageStoreManager
 import app.k9mail.legacy.message.controller.MessageReference
 import com.fsck.k9.mail.Address
+import com.fsck.k9.helper.ListUnsubscribeHelper
+import com.fsck.k9.helper.UnsubscribeUri
 import com.fsck.k9.mail.Header
 import com.fsck.k9.mail.internet.MimeUtility
 import org.apache.james.mime4j.dom.field.DateTimeField
 import org.apache.james.mime4j.field.DefaultFieldParser
+
+private const val LIST_UNSUBSCRIBE_HEADER = "List-Unsubscribe"
 
 class MessageRepository(private val messageStoreManager: MessageStoreManager) {
     fun getHeaders(messageReference: MessageReference): List<Header> {
@@ -36,6 +40,23 @@ class MessageRepository(private val messageStoreManager: MessageStoreManager) {
             bcc = bccAddresses,
             classification = messageStore.getClassification(messageReference.folderId, messageReference.uid),
         )
+    }
+
+    /**
+     * @return where to go to leave this sender's list, or `null` when the message names nowhere.
+     *
+     * Reads the stored headers rather than the message body, so triaging from the list costs a database read
+     * and never a fetch.
+     */
+    fun getUnsubscribeUri(messageReference: MessageReference): UnsubscribeUri? {
+        val messageStore = messageStoreManager.getMessageStore(messageReference.accountUuid)
+        val headers = messageStore.getHeaders(
+            messageReference.folderId,
+            messageReference.uid,
+            setOf(LIST_UNSUBSCRIBE_HEADER),
+        )
+
+        return ListUnsubscribeHelper.getPreferredListUnsubscribeUri(headers.map { it.value })
     }
 
     private fun List<Header>.firstHeaderOrNull(name: String): String? {

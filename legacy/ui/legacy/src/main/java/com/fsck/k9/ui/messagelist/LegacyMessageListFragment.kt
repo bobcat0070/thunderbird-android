@@ -64,6 +64,11 @@ import com.fsck.k9.mail.AuthType
 import com.fsck.k9.mailstore.LocalStoreProvider
 import com.fsck.k9.search.getLegacyAccounts
 import com.fsck.k9.ui.BuildConfig
+import com.fsck.k9.activity.MessageCompose
+import com.fsck.k9.helper.HttpsUnsubscribeUri
+import com.fsck.k9.helper.MailtoUnsubscribeUri
+import com.fsck.k9.helper.UnsubscribeUri
+import com.fsck.k9.mailstore.MessageRepository
 import com.fsck.k9.ui.R
 import com.fsck.k9.ui.choosefolder.ChooseFolderActivity
 import com.fsck.k9.ui.choosefolder.ChooseFolderResultContract
@@ -84,6 +89,7 @@ import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import net.jcip.annotations.GuardedBy
 import net.thunderbird.core.android.account.Expunge
 import net.thunderbird.core.android.account.LegacyAccount
@@ -168,6 +174,7 @@ class LegacyMessageListFragment :
     private val folderNameFormatter: FolderNameFormatter by inject { parametersOf(requireContext()) }
     private val messagingController: MessagingControllerWrapper by inject()
     private val messagingControllerRegistry: MessagingControllerRegistry by inject()
+    private val messageRepository: MessageRepository by inject()
     private val accountManager: LegacyAccountManager by inject()
     private val connectivityManager: ConnectivityManager by inject()
     private val localStoreProvider: LocalStoreProvider by inject()
@@ -1998,6 +2005,47 @@ class LegacyMessageListFragment :
             return adapter.getItemById(viewHolder.uniqueId)
         }
 
+    /**
+     * Unsubscribes from the selected message without opening it.
+     *
+     * The list is where bulk mail is triaged, and until now the only way to leave a mailing list was to open
+     * the message and find the action in an overflow menu. The header this needs is already stored with every
+     * message, so this costs a database read rather than a fetch.
+     */
+    private fun onUnsubscribeSelected() {
+        val messageReference = adapter.selectedMessages.singleOrNull()?.messageReference ?: return
+
+        viewLifecycleOwner.lifecycleScope.launch {
+            val unsubscribeUri = withContext(Dispatchers.IO) {
+                runCatching { messageRepository.getUnsubscribeUri(messageReference) }.getOrNull()
+            }
+
+            if (unsubscribeUri == null) {
+                Toast.makeText(activity, R.string.unsubscribe_unavailable, Toast.LENGTH_SHORT).show()
+                return@launch
+            }
+
+            startUnsubscribe(messageReference, unsubscribeUri)
+        }
+    }
+
+    private fun startUnsubscribe(messageReference: MessageReference, unsubscribeUri: UnsubscribeUri) {
+        // Matches what the message view does, so unsubscribing means the same thing wherever it is started.
+        val intent = when (unsubscribeUri) {
+            is MailtoUnsubscribeUri -> Intent(requireContext(), MessageCompose::class.java).apply {
+                action = Intent.ACTION_VIEW
+                data = unsubscribeUri.uri
+                putExtra(MessageCompose.EXTRA_ACCOUNT, messageReference.accountUuid)
+            }
+
+            is HttpsUnsubscribeUri -> Intent(Intent.ACTION_VIEW, unsubscribeUri.uri)
+
+            else -> error("Unknown UnsubscribeUri - $unsubscribeUri")
+        }
+
+        startActivity(intent)
+    }
+
     private val selectedMessages: List<MessageReference>
         get() = adapter.selectedMessages.map { it.messageReference }
 
@@ -2627,7 +2675,23 @@ class LegacyMessageListFragment :
                 }
             }
 
+            menu.findItem(R.id.unsubscribe).isVisible = isSelectionUnsubscribable()
+
             return true
+        }
+
+        /**
+         * Whether to offer unsubscribing for what is selected.
+         *
+         * Offered for a single message the classifier called a newsletter. That is a cheap test - the class is
+         * already on the row - where the real one is not: knowing for certain means reading the message
+         * headers, which is a database read per selected row and would run on every tap of a checkbox. The
+         * exact check happens when the action is used, and says so plainly if there turns out to be no link.
+         */
+        private fun isSelectionUnsubscribable(): Boolean {
+            val selected = adapter.selectedMessages.singleOrNull() ?: return false
+
+            return selected.classification == MessageClass.NEWSLETTER
         }
 
         private val accountUuidsForSelected: Set<String>
@@ -2752,6 +2816,11 @@ class LegacyMessageListFragment :
                 R.id.select_all -> {
                     selectAll()
                     false
+                }
+
+                R.id.unsubscribe -> {
+                    onUnsubscribeSelected()
+                    true
                 }
 
                 R.id.archive -> {

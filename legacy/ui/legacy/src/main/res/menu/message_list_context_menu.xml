@@ -63,6 +63,13 @@
         android:icon="@drawable/ic_report"
         />
     <item
+        android:id="@+id/unsubscribe"
+        android:title="@string/unsubscribe_action"
+        android:visible="false"
+        app:showAsAction="never"
+        />
+
+    <item
         android:id="@+id/select_all"
         android:icon="@drawable/ic_select_all"
         app:showAsAction="never"

@@ -12,7 +12,14 @@ object ListUnsubscribeHelper {
     // As K-9 Mail is an email client, we prefer a mailto: unsubscribe method
     // but if none is found, a https URL is acceptable too
     fun getPreferredListUnsubscribeUri(message: Message): UnsubscribeUri? {
-        val headerValues = message.getHeader(LIST_UNSUBSCRIBE_HEADER)
+        return getPreferredListUnsubscribeUri(message.getHeader(LIST_UNSUBSCRIBE_HEADER).toList())
+    }
+
+    /**
+     * The same choice made from the raw header values, for callers that have the stored headers of a message
+     * rather than the message itself - triaging from the list, where nothing has been fetched.
+     */
+    fun getPreferredListUnsubscribeUri(headerValues: List<String>): UnsubscribeUri? {
         if (headerValues.isEmpty()) {
             return null
         }
