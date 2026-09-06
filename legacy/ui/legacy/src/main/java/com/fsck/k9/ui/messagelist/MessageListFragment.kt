@@ -144,6 +144,7 @@ import net.thunderbird.components.ui.bolt.atom.icon.Icons
 import net.thunderbird.components.ui.bolt.theme.BoltTheme
 import net.thunderbird.core.ui.contract.mvi.observeWithoutEffect
 import net.thunderbird.core.ui.theme.api.FeatureThemeProvider
+import net.thunderbird.feature.account.AccountId
 import net.thunderbird.feature.account.AccountIdFactory
 import net.thunderbird.feature.account.UnifiedAccountId
 import net.thunderbird.feature.account.avatar.AvatarMonogramCreator
@@ -835,21 +836,34 @@ class MessageListFragment :
     }
 
     private fun onRemoteSearchRequested() {
-        val folderId = currentFolder!!.databaseId
         val queryString = localSearch.remoteSearchArguments
 
         isRemoteSearch = true
 
-        val account = this.account ?: return
+        val folderId = currentFolder?.databaseId
+        val singleAccount = this.account
 
-        remoteSearchFuture = messagingController.searchRemoteMessages(
-            account.id,
-            folderId,
-            queryString,
-            null,
-            null,
-            activityListener,
-        )
+        // One folder of one account is searched directly, because that is the cheaper request and the user
+        // standing in a folder is asking about that folder. Everything else - the unified inbox, a search
+        // across accounts, a search that names no folder - fans out over every folder the server holds.
+        remoteSearchFuture = if (isSingleFolderMode && folderId != null && singleAccount != null) {
+            messagingController.searchRemoteMessages(
+                singleAccount.id,
+                folderId,
+                queryString,
+                null,
+                null,
+                activityListener,
+            )
+        } else {
+            messagingController.searchRemoteMessagesEverywhere(
+                searchableAccountIds,
+                queryString,
+                null,
+                null,
+                activityListener,
+            )
+        }
 
         invalidateMenu()
     }
@@ -1827,11 +1841,25 @@ class MessageListFragment :
         }
     }
 
+    /**
+     * Whether the server can be asked about this search.
+     *
+     * Deliberately not limited to a single folder or a single account. Both of those limits used to be here, and
+     * between them they turned the server search off in the two places people most want it: the unified inbox,
+     * which names no folder, and any search for something that has since been filed away.
+     */
     private val isRemoteSearchAllowed: Boolean
-        get() = isManualSearch &&
-            !isRemoteSearch &&
-            isSingleFolderMode &&
-            (account?.id?.let { messagingController.isPushCapable(it) } == true)
+        get() = isManualSearch && !isRemoteSearch && searchableAccountIds.isNotEmpty()
+
+    /**
+     * The accounts this search covers whose server can be searched, which is not all of them - POP3 cannot.
+     */
+    private val searchableAccountIds: List<AccountId>
+        get() {
+            val inScope = accounts.map { it.id }.takeIf { it.isNotEmpty() } ?: listOfNotNull(account?.id)
+
+            return inScope.filter { messagingController.isRemoteSearchSupported(it) }
+        }
 
     fun onSearchRequested(query: String): Boolean {
         val folderId = currentFolder?.databaseId

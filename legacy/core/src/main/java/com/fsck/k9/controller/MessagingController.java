@@ -118,6 +118,13 @@ import static net.thunderbird.core.common.mail.Flag.X_REMOTE_COPY_STARTED;
  * removed from the queue once the activity is no longer active.
  */
 public class MessagingController implements MessagingControllerRegistry, MessagingControllerMailChecker {
+
+    /**
+     * Stands in for a folder id when a remote search covers many folders rather than one. The listener reports
+     * progress against a folder, and a search that spans a mailbox has no single one to name.
+     */
+    private static final long NO_SINGLE_FOLDER = -1L;
+
     public static final Set<Flag> SYNC_FLAGS = EnumSet.of(Flag.SEEN, Flag.FLAGGED, Flag.ANSWERED, Flag.FORWARDED);
 
     private static final long FOLDER_LIST_STALENESS_THRESHOLD = 30 * 60 * 1000L;
@@ -472,39 +479,8 @@ public class MessagingController implements MessagingControllerRegistry, Messagi
 
         List<String> extraResults = new ArrayList<>();
         try {
-            LocalStore localStore = localStoreProvider.getInstance(account);
-
-            LocalFolder localFolder = localStore.getFolder(folderId);
-            if (!localFolder.exists()) {
-                throw new MessagingException("Folder not found");
-            }
-
-            localFolder.open();
-            String folderServerId = localFolder.getServerId();
-
-            Backend backend = getBackend(account);
-
-            boolean performFullTextSearch = account.isRemoteSearchFullText();
-            List<String> messageServerIds = backend.search(folderServerId, query, requiredFlags, forbiddenFlags,
-                performFullTextSearch);
-
-            Log.i("Remote search got %d results", messageServerIds.size());
-
-            // There's no need to fetch messages already completely downloaded
-            messageServerIds = localFolder.extractNewMessages(messageServerIds);
-
-            if (listener != null) {
-                listener.remoteSearchServerQueryComplete(folderId, messageServerIds.size(),
-                    account.getRemoteSearchNumResults());
-            }
-
-            int resultLimit = account.getRemoteSearchNumResults();
-            if (resultLimit > 0 && messageServerIds.size() > resultLimit) {
-                extraResults = messageServerIds.subList(resultLimit, messageServerIds.size());
-                messageServerIds = messageServerIds.subList(0, resultLimit);
-            }
-
-            loadSearchResultsSynchronous(account, messageServerIds, localFolder);
+            extraResults = searchRemoteFolderSynchronous(account, folderId, query, requiredFlags, forbiddenFlags,
+                listener);
         } catch (Exception e) {
             if (Thread.currentThread().isInterrupted()) {
                 Log.i(e, "Caught exception on aborted remote search; safe to ignore.");
@@ -521,6 +497,160 @@ public class MessagingController implements MessagingControllerRegistry, Messagi
             }
         }
 
+    }
+
+    /**
+     * Searches one folder on the server and downloads what it finds.
+     *
+     * @return the results beyond the account result limit, which the user can ask for separately.
+     */
+    private List<String> searchRemoteFolderSynchronous(LegacyAccountDto account, long folderId, String query,
+        Set<Flag> requiredFlags, Set<Flag> forbiddenFlags, MessagingListener listener) throws MessagingException {
+
+        List<String> extraResults = new ArrayList<>();
+
+        LocalStore localStore = localStoreProvider.getInstance(account);
+
+        LocalFolder localFolder = localStore.getFolder(folderId);
+        if (!localFolder.exists()) {
+            throw new MessagingException("Folder not found");
+        }
+
+        localFolder.open();
+        String folderServerId = localFolder.getServerId();
+
+        Backend backend = getBackend(account);
+
+        boolean performFullTextSearch = account.isRemoteSearchFullText();
+        List<String> messageServerIds = backend.search(folderServerId, query, requiredFlags, forbiddenFlags,
+            performFullTextSearch);
+
+        Log.i("Remote search got %d results", messageServerIds.size());
+
+        // There is no need to fetch messages already completely downloaded
+        messageServerIds = localFolder.extractNewMessages(messageServerIds);
+
+        if (listener != null) {
+            listener.remoteSearchServerQueryComplete(folderId, messageServerIds.size(),
+                account.getRemoteSearchNumResults());
+        }
+
+        int resultLimit = account.getRemoteSearchNumResults();
+        if (resultLimit > 0 && messageServerIds.size() > resultLimit) {
+            extraResults = messageServerIds.subList(resultLimit, messageServerIds.size());
+            messageServerIds = messageServerIds.subList(0, resultLimit);
+        }
+
+        loadSearchResultsSynchronous(account, messageServerIds, localFolder);
+
+        return extraResults;
+    }
+
+    /**
+     * Searches the server across whole accounts rather than one folder of one account.
+     *
+     * A search started from the unified inbox names no folder and no single account, and mail worth finding is
+     * rarely still sitting in the inbox. Both are the same problem: the query has to be run everywhere it could
+     * match rather than only where the user happens to be standing.
+     *
+     * Folders are searched one at a time and their results saved as each finishes, so matches appear in the list
+     * while the rest is still running. A folder that cannot be searched does not end the run - a mailbox with one
+     * folder the server refuses should still return everything else.
+     *
+     * @param accountUuids the accounts to search, or empty for every account.
+     */
+    public Future<?> searchRemoteMessagesEverywhere(List<String> accountUuids, String query, Set<Flag> requiredFlags,
+        Set<Flag> forbiddenFlags, MessagingListener listener) {
+        Log.i("searchRemoteMessagesEverywhere (accounts = %d, query = %s)", accountUuids.size(), query);
+
+        return threadPool.submit(() ->
+            searchRemoteMessagesEverywhereSynchronous(accountUuids, query, requiredFlags, forbiddenFlags, listener)
+        );
+    }
+
+    @VisibleForTesting
+    void searchRemoteMessagesEverywhereSynchronous(List<String> accountUuids, String query, Set<Flag> requiredFlags,
+        Set<Flag> forbiddenFlags, MessagingListener listener) {
+
+        if (listener != null) {
+            listener.remoteSearchStarted(NO_SINGLE_FOLDER);
+        }
+
+        int resultLimit = 0;
+        try {
+            for (LegacyAccountDto account : accountsToSearch(accountUuids)) {
+                resultLimit = account.getRemoteSearchNumResults();
+
+                for (long folderId : searchableFolderIds(account)) {
+                    if (Thread.currentThread().isInterrupted()) {
+                        return;
+                    }
+
+                    try {
+                        searchRemoteFolderSynchronous(account, folderId, query, requiredFlags, forbiddenFlags,
+                            listener);
+                    } catch (Exception e) {
+                        // Reported but not fatal: the folders that can be searched still are.
+                        Log.e(e, "Remote search failed for account %s, folder %d", account.getUuid(), folderId);
+                    }
+                }
+            }
+        } catch (Exception e) {
+            if (Thread.currentThread().isInterrupted()) {
+                Log.i(e, "Caught exception on aborted remote search; safe to ignore.");
+            } else {
+                Log.e(e, "Could not complete remote search");
+                if (listener != null) {
+                    listener.remoteSearchFailed(null, e.getMessage());
+                }
+            }
+        } finally {
+            if (listener != null) {
+                listener.remoteSearchFinished(NO_SINGLE_FOLDER, 0, resultLimit, Collections.emptyList());
+            }
+        }
+    }
+
+    /**
+     * @return the accounts named, or every account when none are, keeping only those whose server can be searched.
+     */
+    private List<LegacyAccountDto> accountsToSearch(List<String> accountUuids) {
+        List<LegacyAccountDto> accounts = new ArrayList<>();
+
+        for (LegacyAccountDto account : preferences.getAccounts()) {
+            boolean wanted = accountUuids.isEmpty() || accountUuids.contains(account.getUuid());
+            if (wanted && isRemoteSearchSupported(account)) {
+                accounts.add(account);
+            }
+        }
+
+        return accounts;
+    }
+
+    /**
+     * @return the folders of the account that exist on the server. The Outbox and anything else held only on the
+     *   device has nothing for the server to search.
+     */
+    private List<Long> searchableFolderIds(LegacyAccountDto account) throws MessagingException {
+        List<Long> folderIds = new ArrayList<>();
+
+        for (LocalFolder folder : localStoreProvider.getInstance(account).getPersonalNamespaces(false)) {
+            if (!folder.isLocalOnly()) {
+                folderIds.add(folder.getDatabaseId());
+            }
+        }
+
+        return folderIds;
+    }
+
+    /**
+     * Whether this account server can be asked to search at all.
+     *
+     * Push capability stands in for it: the protocols that can search are the ones that can push, and the one that
+     * cannot - POP3 - offers neither.
+     */
+    public boolean isRemoteSearchSupported(LegacyAccountDto account) {
+        return isPushCapable(account);
     }
 
     public void loadSearchResults(LegacyAccountDto account, long folderId, List<String> messageServerIds,

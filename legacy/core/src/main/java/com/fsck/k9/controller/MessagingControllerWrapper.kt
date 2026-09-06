@@ -62,6 +62,33 @@ class MessagingControllerWrapper(
         listener,
     )
 
+    /**
+     * Searches the server across whole accounts rather than one folder of one account.
+     *
+     * @param ids the accounts to search, or empty for every account.
+     */
+    fun searchRemoteMessagesEverywhere(
+        ids: List<AccountId>,
+        query: String?,
+        requiredFlags: Set<Flag>?,
+        forbiddenFlags: Set<Flag>?,
+        listener: MessagingListener,
+    ): Future<*>? = messagingController.searchRemoteMessagesEverywhere(
+        ids.map { it.toString() },
+        query,
+        requiredFlags,
+        forbiddenFlags,
+        listener,
+    )
+
+    /**
+     * Whether this account server can be asked to search at all.
+     */
+    fun isRemoteSearchSupported(id: AccountId): Boolean {
+        val account = getAccountDtoOrNull(id) ?: return false
+        return messagingController.isRemoteSearchSupported(account)
+    }
+
     fun expunge(id: AccountId, folderId: Long) {
         val account = getAccountDtoOrThrow(id)
         messagingController.expunge(account, folderId)

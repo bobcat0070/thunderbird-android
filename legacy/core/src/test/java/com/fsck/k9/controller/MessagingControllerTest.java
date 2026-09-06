@@ -2,6 +2,7 @@ package com.fsck.k9.controller;
 
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
@@ -61,6 +62,9 @@ import org.robolectric.RuntimeEnvironment;
 import org.robolectric.shadows.ShadowLog;
 
 import static java.util.Collections.emptyList;
+import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.nullable;
 import static org.mockito.ArgumentMatchers.eq;
@@ -69,6 +73,7 @@ import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
@@ -79,6 +84,8 @@ public class MessagingControllerTest extends K9RobolectricTest {
     private static final long FOLDER_ID = 23;
     private static final String FOLDER_NAME = "Folder";
     private static final long SENT_FOLDER_ID = 10;
+    private static final long ARCHIVE_FOLDER_ID = 24;
+    private static final String ARCHIVE_FOLDER_NAME = "Archive";
     private static final int MAXIMUM_SMALL_MESSAGE_SIZE = 1000;
 
     private MessagingController controller;
@@ -440,6 +447,101 @@ public class MessagingControllerTest extends K9RobolectricTest {
         account.setEmail("user@host.com");
     }
 
+    @Test
+    public void searchRemoteMessagesEverywhere_shouldSearchEveryFolderOfTheAccount() throws Exception {
+        // The point of the feature: mail worth finding is rarely still in the folder the user is standing in.
+        setupRemoteSearch();
+        LocalFolder archive = configureExtraFolder(ARCHIVE_FOLDER_ID, ARCHIVE_FOLDER_NAME);
+        when(localStore.getPersonalNamespaces(false)).thenReturn(Arrays.asList(localFolder, archive));
+
+        controller.searchRemoteMessagesEverywhereSynchronous(Collections.<String>emptyList(), "query", reqFlags,
+            forbiddenFlags, listener);
+
+        verify(backend).search(FOLDER_NAME, "query", reqFlags, forbiddenFlags, false);
+        verify(backend).search(ARCHIVE_FOLDER_NAME, "query", reqFlags, forbiddenFlags, false);
+    }
+
+    @Test
+    public void searchRemoteMessagesEverywhere_shouldSkipFoldersThatOnlyExistOnTheDevice() throws Exception {
+        // The Outbox has nothing for a server to search.
+        setupRemoteSearch();
+        LocalFolder outbox = configureExtraFolder(ARCHIVE_FOLDER_ID, ARCHIVE_FOLDER_NAME);
+        when(outbox.isLocalOnly()).thenReturn(true);
+        when(localStore.getPersonalNamespaces(false)).thenReturn(Arrays.asList(localFolder, outbox));
+
+        controller.searchRemoteMessagesEverywhereSynchronous(Collections.<String>emptyList(), "query", reqFlags,
+            forbiddenFlags, listener);
+
+        verify(backend, never()).search(eq(ARCHIVE_FOLDER_NAME), anyString(), nullable(Set.class),
+            nullable(Set.class), anyBoolean());
+    }
+
+    @Test
+    public void searchRemoteMessagesEverywhere_shouldKeepGoingAfterAFolderFails() throws Exception {
+        // One folder the server refuses must not cost the user every other folder.
+        setupRemoteSearch();
+        LocalFolder archive = configureExtraFolder(ARCHIVE_FOLDER_ID, ARCHIVE_FOLDER_NAME);
+        when(localStore.getPersonalNamespaces(false)).thenReturn(Arrays.asList(archive, localFolder));
+        when(backend.search(eq(ARCHIVE_FOLDER_NAME), anyString(), nullable(Set.class), nullable(Set.class),
+            anyBoolean())).thenThrow(new MessagingException("nope"));
+
+        controller.searchRemoteMessagesEverywhereSynchronous(Collections.<String>emptyList(), "query", reqFlags,
+            forbiddenFlags, listener);
+
+        verify(backend).search(FOLDER_NAME, "query", reqFlags, forbiddenFlags, false);
+    }
+
+    @Test
+    public void searchRemoteMessagesEverywhere_shouldSkipAccountsWhoseServerCannotSearch() throws Exception {
+        // POP3 can neither push nor search, and asking it would only produce an error the user cannot act on.
+        setupRemoteSearch();
+        when(backend.isPushCapable()).thenReturn(false);
+
+        controller.searchRemoteMessagesEverywhereSynchronous(Collections.<String>emptyList(), "query", reqFlags,
+            forbiddenFlags, listener);
+
+        verify(backend, never()).search(anyString(), anyString(), nullable(Set.class), nullable(Set.class),
+            anyBoolean());
+    }
+
+    @Test
+    public void searchRemoteMessagesEverywhere_shouldNotSearchAnAccountItWasNotAsked() throws Exception {
+        setupRemoteSearch();
+
+        controller.searchRemoteMessagesEverywhereSynchronous(Collections.singletonList("some-other-account"),
+            "query", reqFlags, forbiddenFlags, listener);
+
+        verify(backend, never()).search(anyString(), anyString(), nullable(Set.class), nullable(Set.class),
+            anyBoolean());
+    }
+
+    @Test
+    public void searchRemoteMessagesEverywhere_shouldReportStartAndFinishOnce() throws Exception {
+        // The progress indicator is driven by these, so one per folder would leave it stuck on.
+        setupRemoteSearch();
+        LocalFolder archive = configureExtraFolder(ARCHIVE_FOLDER_ID, ARCHIVE_FOLDER_NAME);
+        when(localStore.getPersonalNamespaces(false)).thenReturn(Arrays.asList(localFolder, archive));
+
+        controller.searchRemoteMessagesEverywhereSynchronous(Collections.<String>emptyList(), "query", reqFlags,
+            forbiddenFlags, listener);
+
+        verify(listener, times(1)).remoteSearchStarted(anyLong());
+        verify(listener, times(1)).remoteSearchFinished(anyLong(), anyInt(), anyInt(),
+            ArgumentMatchers.<String>anyList());
+    }
+
+    private LocalFolder configureExtraFolder(long folderId, String serverId) throws MessagingException {
+        LocalFolder folder = mock(LocalFolder.class);
+        when(folder.exists()).thenReturn(true);
+        when(folder.getDatabaseId()).thenReturn(folderId);
+        when(folder.getServerId()).thenReturn(serverId);
+        when(folder.extractNewMessages(ArgumentMatchers.<String>anyList())).thenReturn(
+            Collections.<String>emptyList());
+        when(localStore.getFolder(folderId)).thenReturn(folder);
+
+        return folder;
+    }
+
     private void configureLocalStore() throws MessagingException {
         when(localStore.getFolder(FOLDER_NAME)).thenReturn(localFolder);
         when(localStore.getFolder(FOLDER_ID)).thenReturn(localFolder);
@@ -448,6 +550,8 @@ public class MessagingControllerTest extends K9RobolectricTest {
         when(localFolder.getServerId()).thenReturn(FOLDER_NAME);
         when(localStore.getPersonalNamespaces(false)).thenReturn(Collections.singletonList(localFolder));
         when(localStoreProvider.getInstance(account)).thenReturn(localStore);
+        when(localFolder.isLocalOnly()).thenReturn(false);
+        when(backend.isPushCapable()).thenReturn(true);
     }
 
     private void removeAccountsFromPreferences() {
