@@ -1,6 +1,8 @@
 package com.fsck.k9.ui.messageview
 
 import android.view.Menu
+import android.view.MenuItem
+import app.k9mail.core.ui.legacy.designsystem.atom.icon.Icons
 import app.k9mail.legacy.mailstore.FolderRepository
 import app.k9mail.legacy.ui.folder.FolderNameFormatter
 import com.fsck.k9.ui.R
@@ -12,6 +14,23 @@ import net.thunderbird.feature.mail.folder.api.RemoteFolder
  * The group the pinned items live under, so a previous set can be cleared without touching the fixed items.
  */
 private const val PINNED_FOLDER_GROUP = 1
+
+/**
+ * Sorts the pinned actions after the fixed ones the toolbar always shows - delete, unread, archive - and ahead
+ * of spam, move and copy, which carry a higher order for the purpose. Filing into a folder chosen on purpose
+ * is worth more toolbar room than the generic move it replaces.
+ */
+private const val PINNED_FOLDER_ORDER = 50
+
+/**
+ * How many pinned folders are given a place in the toolbar outright.
+ *
+ * "If room" is not enough: the toolbar hands its action slots out in menu order, and by the time it reaches an
+ * item added at runtime the budget is gone, so a pinned folder always fell into the overflow - which is the
+ * menu it exists to avoid. Two is what fits beside delete and unread without crowding them; anything further
+ * takes its chances with the room that is left.
+ */
+private const val PINNED_FOLDERS_ALWAYS_SHOWN = 2
 
 /**
  * Adds one menu item per folder the reader has pinned, for filing a message without a folder picker.
@@ -42,10 +61,26 @@ internal class PinnedFolderMenu(
     ) {
         menu.removeGroup(PINNED_FOLDER_GROUP)
 
+        var shownInToolbar = 0
+
         for (folder in pinnedFolders(account)) {
             if (folder.id == currentFolderId) continue
 
-            menu.add(PINNED_FOLDER_GROUP, Menu.NONE, Menu.NONE, title(folderNameFormatter.displayName(folder)))
+            val showAsAction = if (shownInToolbar < PINNED_FOLDERS_ALWAYS_SHOWN) {
+                shownInToolbar++
+                MenuItem.SHOW_AS_ACTION_ALWAYS
+            } else {
+                MenuItem.SHOW_AS_ACTION_IF_ROOM
+            }
+
+            menu.add(
+                PINNED_FOLDER_GROUP,
+                Menu.NONE,
+                PINNED_FOLDER_ORDER,
+                title(folderNameFormatter.displayName(folder)),
+            )
+                .setIcon(Icons.Outlined.DriveFileMove)
+                .setShowAsActionFlags(showAsAction)
                 .setOnMenuItemClickListener {
                     onFolderChosen(folder.id)
                     true
