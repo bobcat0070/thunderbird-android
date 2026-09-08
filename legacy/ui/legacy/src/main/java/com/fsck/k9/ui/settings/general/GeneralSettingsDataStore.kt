@@ -15,6 +15,7 @@ import net.thunderbird.core.preference.GeneralSettingsManager
 import net.thunderbird.core.preference.LockScreenNotificationVisibility
 import net.thunderbird.core.preference.SplitViewMode
 import net.thunderbird.core.preference.SubTheme
+import net.thunderbird.core.preference.display.visualSettings.DisplayVisualSettings
 import net.thunderbird.core.preference.display.visualSettings.message.list.MessageListDateTimeFormat
 import net.thunderbird.core.preference.notification.NotificationPreference
 import net.thunderbird.core.preference.websiteicon.WebsiteIconSettings
@@ -58,6 +59,7 @@ class GeneralSettingsDataStore(
             "gravatar_enabled" -> config.gravatar.isEnabled
             "bimi_enabled" -> config.bimi.isEnabled
             "website_icon_enabled" -> config.websiteIcon.isEnabled
+            "messageview_sender_authentication" -> visualSettings.isMessageViewSenderAuthenticationVisible
             "widget_show_personal" -> config.widget.showPersonal
             "widget_show_notifications" -> config.widget.showNotifications
             "widget_show_newsletters" -> config.widget.showNewsletters
@@ -104,6 +106,9 @@ class GeneralSettingsDataStore(
             "gravatar_enabled" -> setGravatarEnabled(value)
             "bimi_enabled" -> setBimiEnabled(value)
             "website_icon_enabled" -> updateWebsiteIconSettings { it.copy(isEnabled = value) }
+            "messageview_sender_authentication" -> updateVisualSettings {
+                it.copy(isMessageViewSenderAuthenticationVisible = value)
+            }
             "widget_show_personal" -> updateWidgetSettings { it.copy(showPersonal = value) }
             "widget_show_notifications" -> updateWidgetSettings { it.copy(showNotifications = value) }
             "widget_show_newsletters" -> updateWidgetSettings { it.copy(showNewsletters = value) }
@@ -525,6 +530,13 @@ class GeneralSettingsDataStore(
                     ),
                 ),
             )
+        }
+    }
+
+    private fun updateVisualSettings(transform: (DisplayVisualSettings) -> DisplayVisualSettings) {
+        skipSaveSettings = true
+        generalSettingsManager.update { settings ->
+            settings.copy(display = settings.display.copy(visualSettings = transform(settings.display.visualSettings)))
         }
     }
 

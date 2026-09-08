@@ -343,6 +343,13 @@
                 android:title="@string/global_settings_website_icon_label"
                 />
 
+            <CheckBoxPreference
+                android:dependency="messagelist_show_contact_picture"
+                android:key="messageview_sender_authentication"
+                android:summary="@string/global_settings_sender_authentication_summary"
+                android:title="@string/global_settings_sender_authentication_label"
+                />
+
             <EditTextPreference
                 android:dependency="gravatar_enabled"
                 android:key="gravatar_api_key"

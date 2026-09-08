@@ -92,6 +92,14 @@
     <string name="unsubscribe_action">Unsubscribe</string>
     <string name="show_headers_action">Show headers</string>
     <string name="message_view_delivered_to">Delivered to %1$s</string>
+    <string name="message_view_mark_source_bimi_verified">Verified BIMI</string>
+    <string name="message_view_mark_source_bimi">BIMI</string>
+    <string name="message_view_mark_source_bimi_unverified">Unverified BIMI</string>
+    <string name="message_view_mark_source_gravatar">Gravatar</string>
+    <string name="message_view_mark_source_website_icon">Site icon</string>
+    <string name="message_view_mark_source_contact_photo">Contact photo</string>
+    <!-- Separates the picture source from the authentication checks, e.g. "Gravatar, DKIM, SPF, DMARC". -->
+    <string name="message_view_mark_separator">", "</string>
     <string name="message_view_mark_verified">Verified brand</string>
     <string name="message_view_mark_common">Verified logo</string>
     <string name="message_view_mark_self_asserted">Unverified logo</string>
@@ -120,6 +128,8 @@
     <string name="global_settings_gravatar_summary">When a sender has no picture on this device, look one up on gravatar.com. This tells Gravatar which senders you have mail from.</string>
     <string name="global_settings_gravatar_api_key_label">Gravatar API key</string>
     <string name="global_settings_gravatar_api_key_summary">Optional. Raises the rate limit when many different senders are shown.</string>
+    <string name="global_settings_sender_authentication_label">Show sender authentication</string>
+    <string name="global_settings_sender_authentication_summary">Name the source of the sender picture and which checks the receiving server reported, striking through any that failed or did not match the From domain</string>
     <string name="global_settings_website_icon_label">Website icons</string>
     <string name="global_settings_website_icon_summary">For senders with no verified logo, show the icon their website uses. This sends the sender domain to an icon service run by Google, which then knows who sends you mail. Icons found this way are marked as unverified.</string>
     <string name="global_settings_notification_category">Notify me about</string>

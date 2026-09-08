@@ -14,6 +14,7 @@ const val DISPLAY_SETTINGS_DEFAULT_MESSAGE_VIEW_DELETE_ACTION_VISIBLE = true
 const val DISPLAY_SETTINGS_DEFAULT_MESSAGE_VIEW_MOVE_ACTION_VISIBLE = false
 const val DISPLAY_SETTINGS_DEFAULT_MESSAGE_VIEW_COPY_ACTION_VISIBLE = false
 const val DISPLAY_SETTINGS_DEFAULT_MESSAGE_VIEW_SPAM_ACTION_VISIBLE = false
+const val DISPLAY_SETTINGS_DEFAULT_MESSAGE_VIEW_SENDER_AUTHENTICATION_VISIBLE = false
 
 data class DisplayVisualSettings(
     val animationPreference: AnimationPreference = DISPLAY_SETTINGS_DEFAULT_ANIMATION_PREFERENCE,
@@ -27,4 +28,14 @@ data class DisplayVisualSettings(
     val isMessageViewMoveActionVisible: Boolean = DISPLAY_SETTINGS_DEFAULT_MESSAGE_VIEW_MOVE_ACTION_VISIBLE,
     val isMessageViewCopyActionVisible: Boolean = DISPLAY_SETTINGS_DEFAULT_MESSAGE_VIEW_COPY_ACTION_VISIBLE,
     val isMessageViewSpamActionVisible: Boolean = DISPLAY_SETTINGS_DEFAULT_MESSAGE_VIEW_SPAM_ACTION_VISIBLE,
+
+    /**
+     * Whether the message view spells out where the sender's picture came from and which authentication
+     * checks the receiving server reported, instead of the one-word caption.
+     *
+     * Off by default: it is detail for someone who wants to judge a message for themselves, and a row of
+     * acronyms under every sender is noise to everybody else.
+     */
+    val isMessageViewSenderAuthenticationVisible: Boolean =
+        DISPLAY_SETTINGS_DEFAULT_MESSAGE_VIEW_SENDER_AUTHENTICATION_VISIBLE,
 )

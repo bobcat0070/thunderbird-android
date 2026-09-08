@@ -74,6 +74,21 @@ class GravatarLoader(
         }
     }
 
+    /**
+     * @return whether a Gravatar would be shown for this address, without fetching one.
+     *
+     * Answered from the cache alone, so asking never causes a lookup. The message view uses it to name where
+     * the picture beside the sender came from; a caption that went to the network could arrive disagreeing
+     * with the picture already drawn.
+     */
+    fun hasCachedGravatarFor(emailAddress: String): Boolean {
+        if (!generalSettingsManager.getConfig().gravatar.isEnabled) return false
+
+        val address = emailAddress.trim().lowercase()
+
+        return cache.get(CACHE_PREFIX + address)?.isNotEmpty() == true
+    }
+
     private fun decode(bytes: ByteArray): Bitmap? = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
 
     private fun fetch(address: String, size: Int, apiKey: String): Bitmap? {

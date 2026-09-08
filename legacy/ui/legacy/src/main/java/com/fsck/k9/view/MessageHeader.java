@@ -1,10 +1,14 @@
 package com.fsck.k9.view;
 
 
+import java.util.Collections;
 import java.util.List;
 
 import android.content.Context;
 import android.content.res.ColorStateList;
+import android.text.SpannableStringBuilder;
+import android.text.Spanned;
+import android.text.style.StrikethroughSpan;
 import android.util.AttributeSet;
 import android.view.View;
 import android.view.View.OnClickListener;
@@ -27,13 +31,16 @@ import app.k9mail.legacy.di.DI;
 import com.fsck.k9.FontSizes;
 import com.fsck.k9.K9;
 import com.fsck.k9.activity.misc.ContactPicture;
+import app.k9mail.core.android.common.contact.ContactRepository;
 import com.fsck.k9.contacts.ContactPictureLoader;
+import com.fsck.k9.contacts.GravatarLoader;
 import com.fsck.k9.ui.messageview.DeliveryAddressExtractor;
 import com.fsck.k9.contacts.WebsiteIconLoader;
 import com.fsck.k9.contacts.bimi.BimiLogoLoader;
 import com.fsck.k9.contacts.bimi.BimiRecordKt;
 import com.fsck.k9.contacts.bimi.CachedMark;
 import com.fsck.k9.contacts.bimi.MarkTrust;
+import com.fsck.k9.mailstore.AuthenticationOutcome;
 import com.fsck.k9.mailstore.SenderAuthenticationKt;
 import com.fsck.k9.helper.ClipboardManager;
 import com.fsck.k9.helper.MessageHelper;
@@ -51,6 +58,7 @@ import com.google.android.material.chip.Chip;
 import com.google.android.material.textview.MaterialTextView;
 import net.thunderbird.core.android.account.LegacyAccountDto;
 import net.thunderbird.core.common.mail.Flag;
+import net.thunderbird.core.preference.GeneralSettingsManager;
 import net.thunderbird.core.preference.display.visualSettings.message.list.MessageListDateTimeFormat;
 import net.thunderbird.core.preference.display.visualSettings.message.list.MessageListPreferencesManager;
 import net.thunderbird.feature.mail.message.reader.api.domain.ReplyAction;
@@ -248,21 +256,29 @@ public class MessageHeader extends LinearLayout implements OnClickListener, OnLo
      * The badge on the avatar is small and symbolic; a reader deciding whether to trust a message deserves
      * the claim in words. Looked up off the main thread and only for mail that passed DMARC, because that is
      * the same gate the logo itself is behind.
+     *
+     * With the sender authentication setting on, the one-word caption is replaced by the picture's source and
+     * the checks the receiving server reported - see {@link #showSenderAuthentication}.
      */
-    private void showMarkVerification(Address fromAddress, boolean isSenderAuthenticated) {
+    private void showMarkVerification(Address fromAddress, boolean isSenderAuthenticated, Message message) {
         markVerificationView.setVisibility(View.GONE);
+        currentSenderDomain = null;
 
-        String address = fromAddress.getAddress();
-        if (!isSenderAuthenticated || address == null) {
+        String domain = senderDomain(fromAddress);
+        if (domain == null) {
             return;
         }
 
-        int atIndex = address.lastIndexOf('@');
-        if (atIndex < 0 || atIndex == address.length() - 1) {
+        if (isSenderAuthenticationVisible()) {
+            showSenderAuthentication(fromAddress, domain, message);
             return;
         }
 
-        final String domain = address.substring(atIndex + 1).toLowerCase(Locale.ROOT);
+        if (!isSenderAuthenticated) {
+            return;
+        }
+
+        currentSenderDomain = domain;
         markVerificationExecutor.execute(() -> {
             Integer label = labelForDomain(domain);
             if (label == null) {
@@ -278,8 +294,129 @@ public class MessageHeader extends LinearLayout implements OnClickListener, OnLo
                 }
             });
         });
+    }
 
+    /**
+     * Spells out where the picture beside the sender came from and what the receiving server said it checked,
+     * as one line of the shape "Gravatar, DKIM, SPF, DMARC" with a line through anything that did not pass.
+     *
+     * The one-word caption says how much a logo is worth but not why, and for the weakest tier - a picture
+     * anyone can publish - that is exactly the message where the reader most needs the working shown. A check
+     * is struck through when the server reported a failure and also when it passed for a domain unrelated to
+     * the one in From, because a pass that did not line up is how a lookalike sender collects green ticks.
+     *
+     * Nothing is shown when no server reported anything: that is not the same as everything failing, and
+     * three struck-through checks would say it was.
+     */
+    private void showSenderAuthentication(Address fromAddress, String domain, Message message) {
+        List<AuthenticationOutcome> outcomes =
+            SenderAuthenticationKt.authenticationOutcomes(authenticationResults(message), domain);
+        if (outcomes.isEmpty()) {
+            return;
+        }
+
+        String address = fromAddress.getAddress();
         currentSenderDomain = domain;
+
+        markVerificationExecutor.execute(() -> {
+            Integer source = sourceLabel(domain, address);
+
+            post(() -> {
+                if (domain.equals(currentSenderDomain)) {
+                    markVerificationView.setText(authenticationLine(source, outcomes));
+                    markVerificationView.setVisibility(View.VISIBLE);
+                }
+            });
+        });
+    }
+
+    private CharSequence authenticationLine(Integer source, List<AuthenticationOutcome> outcomes) {
+        SpannableStringBuilder line = new SpannableStringBuilder();
+        String separator = getContext().getString(R.string.message_view_mark_separator);
+
+        if (source != null) {
+            line.append(getContext().getString(source));
+        }
+
+        for (AuthenticationOutcome outcome : outcomes) {
+            if (line.length() > 0) {
+                line.append(separator);
+            }
+
+            int start = line.length();
+            line.append(outcome.getMethod().getLabel());
+
+            if (!outcome.getPassed()) {
+                line.setSpan(new StrikethroughSpan(), start, line.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+            }
+        }
+
+        return line;
+    }
+
+    /**
+     * @return what the picture beside this sender actually is, or null when it is the drawn initial, which
+     *   claims nothing and needs no name.
+     *
+     * Asked in the same order the picture itself is chosen, so the name matches what is on screen. Everything
+     * after the contact photo is answered from a cache, so building the line never causes a lookup of its own.
+     */
+    private Integer sourceLabel(String domain, String address) {
+        if (address != null && DI.get(ContactRepository.class).getPhotoUri(address) != null) {
+            return R.string.message_view_mark_source_contact_photo;
+        }
+
+        CachedMark mark = DI.get(BimiLogoLoader.class).markFor(domain, BimiRecordKt.BIMI_DEFAULT_SELECTOR);
+        if (mark != null) {
+            return sourceLabelFor(mark.getTrust());
+        }
+
+        if (address != null && DI.get(GravatarLoader.class).hasCachedGravatarFor(address)) {
+            return R.string.message_view_mark_source_gravatar;
+        }
+
+        if (DI.get(WebsiteIconLoader.class).hasCachedIconFor(domain)) {
+            return R.string.message_view_mark_source_website_icon;
+        }
+
+        return null;
+    }
+
+    private int sourceLabelFor(MarkTrust trust) {
+        switch (trust) {
+            case VERIFIED:
+                return R.string.message_view_mark_source_bimi_verified;
+            case COMMON:
+                return R.string.message_view_mark_source_bimi;
+            default:
+                return R.string.message_view_mark_source_bimi_unverified;
+        }
+    }
+
+    private boolean isSenderAuthenticationVisible() {
+        return DI.get(GeneralSettingsManager.class)
+            .getConfig()
+            .getDisplay()
+            .getVisualSettings()
+            .isMessageViewSenderAuthenticationVisible();
+    }
+
+    private String senderDomain(Address fromAddress) {
+        if (fromAddress == null) {
+            return null;
+        }
+
+        String address = fromAddress.getAddress();
+        if (address == null) {
+            return null;
+        }
+
+        int atIndex = address.lastIndexOf('@');
+        if (atIndex < 0 || atIndex == address.length() - 1) {
+            return null;
+        }
+
+        return address.substring(atIndex + 1).toLowerCase(Locale.ROOT);
     }
 
     /**
@@ -320,12 +457,13 @@ public class MessageHeader extends LinearLayout implements OnClickListener, OnLo
      * message list: without it a lookalike domain gets a bank's logo drawn beside its mail.
      */
     private boolean isSenderAuthenticated(Message message) {
-        String[] headers = message.getHeader(SenderAuthenticationKt.authenticationResultsHeaderName());
-        if (headers == null) {
-            return false;
-        }
+        return SenderAuthenticationKt.hasDmarcPass(authenticationResults(message));
+    }
 
-        return SenderAuthenticationKt.hasDmarcPass(Arrays.asList(headers));
+    private List<String> authenticationResults(Message message) {
+        String[] headers = message.getHeader(SenderAuthenticationKt.authenticationResultsHeaderName());
+
+        return headers == null ? Collections.emptyList() : Arrays.asList(headers);
     }
 
     public String createMessageForSubject() {
@@ -352,13 +490,17 @@ public class MessageHeader extends LinearLayout implements OnClickListener, OnLo
             fromAddress = fromAddresses[0];
         }
 
+        // The header is recycled, and the line below leaves it hidden unless it has something to say, so it
+        // is reset here for the paths that never reach it at all.
+        markVerificationView.setVisibility(View.GONE);
+
         if (messageListPreferencesManager.getConfig().isShowContactPicture()) {
             contactPictureView.setVisibility(View.VISIBLE);
             if (fromAddress != null) {
                 ContactPictureLoader contactsPictureLoader = ContactPicture.getContactPictureLoader();
                 boolean senderAuthenticated = isSenderAuthenticated(message);
                 contactsPictureLoader.setContactPicture(contactPictureView, fromAddress, senderAuthenticated);
-                showMarkVerification(fromAddress, senderAuthenticated);
+                showMarkVerification(fromAddress, senderAuthenticated, message);
             } else {
                 contactPictureView.setImageResource(Icons.Outlined.AccountCircle);
             }
