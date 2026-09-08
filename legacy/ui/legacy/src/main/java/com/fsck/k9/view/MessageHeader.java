@@ -28,6 +28,7 @@ import com.fsck.k9.FontSizes;
 import com.fsck.k9.K9;
 import com.fsck.k9.activity.misc.ContactPicture;
 import com.fsck.k9.contacts.ContactPictureLoader;
+import com.fsck.k9.ui.messageview.DeliveryAddressExtractor;
 import com.fsck.k9.contacts.WebsiteIconLoader;
 import com.fsck.k9.contacts.bimi.BimiLogoLoader;
 import com.fsck.k9.contacts.bimi.BimiRecordKt;
@@ -72,6 +73,7 @@ public class MessageHeader extends LinearLayout implements OnClickListener, OnLo
     private ImageView starView;
     private ImageView contactPictureView;
     private MaterialTextView markVerificationView;
+    private MaterialTextView deliveredToView;
 
     /**
      * One thread: these lookups are cached and infrequent, and serialising them keeps a burst of header
@@ -112,6 +114,7 @@ public class MessageHeader extends LinearLayout implements OnClickListener, OnLo
         starView = findViewById(R.id.flagged);
         contactPictureView = findViewById(R.id.contact_picture);
         markVerificationView = findViewById(R.id.mark_verification);
+        deliveredToView = findViewById(R.id.delivered_to);
         fromView = findViewById(R.id.from);
         cryptoStatusIcon = findViewById(R.id.crypto_status_icon);
         recipientNamesView = findViewById(R.id.recipients);
@@ -220,6 +223,23 @@ public class MessageHeader extends LinearLayout implements OnClickListener, OnLo
         clipboardManager.setText("subject", subject);
 
         Toast.makeText(getContext(), createMessageForSubject(), Toast.LENGTH_LONG).show();
+    }
+
+    /**
+     * Says which of the reader's addresses the message arrived on, when it was not the usual one.
+     *
+     * Silent for ordinary mail, so the line is a signal rather than a permanent label: seeing it at all means
+     * this message came in by a plus address, an alias or a forward.
+     */
+    private void showDeliveryAddress(Message message, LegacyAccountDto account) {
+        String deliveryAddress = DeliveryAddressExtractor.INSTANCE.extractDeliveryAddress(message, account);
+
+        if (deliveryAddress == null) {
+            deliveredToView.setVisibility(View.GONE);
+        } else {
+            deliveredToView.setText(getContext().getString(R.string.message_view_delivered_to, deliveryAddress));
+            deliveredToView.setVisibility(View.VISIBLE);
+        }
     }
 
     /**
@@ -345,6 +365,10 @@ public class MessageHeader extends LinearLayout implements OnClickListener, OnLo
         } else {
             contactPictureView.setVisibility(View.GONE);
         }
+
+        // Outside the contact-picture branch above: which address a message arrived on has nothing to do with
+        // whether sender pictures are switched on.
+        showDeliveryAddress(message, account);
 
         CharSequence from = messageHelper.getSenderDisplayName(fromAddress);
         fromView.setText(from);

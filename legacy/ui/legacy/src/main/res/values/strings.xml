@@ -91,6 +91,7 @@
     <string name="copy_action">Copy</string>
     <string name="unsubscribe_action">Unsubscribe</string>
     <string name="show_headers_action">Show headers</string>
+    <string name="message_view_delivered_to">Delivered to %1$s</string>
     <string name="message_view_mark_verified">Verified brand</string>
     <string name="message_view_mark_common">Verified logo</string>
     <string name="message_view_mark_self_asserted">Unverified logo</string>

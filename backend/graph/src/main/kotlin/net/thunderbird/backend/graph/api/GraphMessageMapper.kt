@@ -65,6 +65,11 @@ private val RETAINED_HEADERS = setOf(
     "return-path",
     // Carries the receiving server's DMARC verdict, which gates whether a sender's brand logo may be shown.
     "authentication-results",
+    // Which of the reader's addresses the message was actually delivered to. For anything reaching a mailbox
+    // by an alias or a forward, this is the only place the answer survives - the To header names whoever the
+    // sender wrote to, which for a forwarded or blind-copied message is somebody else entirely.
+    "delivered-to",
+    "x-original-to",
 )
 
 /**

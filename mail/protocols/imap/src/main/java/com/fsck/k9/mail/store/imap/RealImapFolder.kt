@@ -598,6 +598,8 @@ internal class RealImapFolder(
                     // second round trip per message.
                     "list-id precedence auto-submitted x-auto-response-suppress " +
                     "authentication-results " +
+                    // Which address the message was delivered to, for mail arriving by an alias or a forward.
+                    "delivered-to x-original-to " +
                     K9MailLib.IDENTITY_HEADER + " " + K9MailLib.CHAT_HEADER + ")]",
             )
         }
