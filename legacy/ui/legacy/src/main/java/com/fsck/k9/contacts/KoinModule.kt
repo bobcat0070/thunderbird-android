@@ -2,6 +2,7 @@ package com.fsck.k9.contacts
 
 import com.fsck.k9.contacts.bimi.BimiLogoLoader
 import com.fsck.k9.contacts.bimi.CertificateRevocationChecker
+import com.fsck.k9.contacts.bimi.DnsTxtLookup
 import net.thunderbird.core.logging.Logger
 import com.fsck.k9.contacts.bimi.PlatformDnsTxtLookup
 import com.fsck.k9.contacts.bimi.VmcValidator
@@ -40,12 +41,20 @@ val contactsModule = module {
             logger = get(),
         )
     }
+    // Declared in its own right rather than built inside the loader below: it is an interface with a
+    // platform implementation, which is what the graph is for, and a dependency constructed inside another
+    // definition's lambda is invisible to it - nothing else can reuse it, and the dependency-tree test
+    // cannot see that it was ever supplied.
+    single<DnsTxtLookup> { PlatformDnsTxtLookup(executor = Executors.newCachedThreadPool()) }
     single {
         BimiLogoLoader(
             generalSettingsManager = get(),
-            dnsTxtLookup = PlatformDnsTxtLookup(executor = Executors.newCachedThreadPool()),
+            dnsTxtLookup = get(),
             httpClient = get(named("gravatarHttpClient")),
             cache = get(),
+            // Built here rather than declared, because its trust anchors are a Set and a bare generic
+            // collection is not a type the graph can name - any other Set definition would collide with it.
+            // The dependency-tree test is told this parameter is supplied by hand.
             vmcValidator = VmcValidator(
                 trustAnchors = loadMvaRoots(androidContext()),
                 onRejected = { reason -> get<Logger>().debug("VmcValidator") { reason } },

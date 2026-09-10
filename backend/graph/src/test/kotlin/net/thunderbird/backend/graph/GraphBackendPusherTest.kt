@@ -241,7 +241,7 @@ class GraphBackendPusherTest {
             errors++
         }
 
-        override fun onPushNotSupported() = Unit
+        override suspend fun onPushNotSupported() = Unit
     }
 
     private class CountingPowerManager : PowerManager {

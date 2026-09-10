@@ -1,5 +1,6 @@
 package com.fsck.k9.contacts.bimi
 
+import android.annotation.SuppressLint
 import android.net.DnsResolver
 import android.os.Build
 import android.os.CancellationSignal
@@ -26,6 +27,13 @@ interface DnsTxtLookup {
 
 class PlatformDnsTxtLookup(private val executor: Executor) : DnsTxtLookup {
 
+    /**
+     * The resolver takes any DNS record type, but its type parameter is annotated with an `IntDef` naming
+     * only A, AAAA and HTTPS, so lint rejects TXT as an invalid constant. The annotation is the narrow thing
+     * here, not the call: `rawQuery` is documented to take a record type and TXT is an ordinary one, which is
+     * how this resolves BIMI records on a real device.
+     */
+    @SuppressLint("WrongConstant")
     @Suppress("ReturnCount")
     override fun txtRecords(name: String): List<String> {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) return emptyList()

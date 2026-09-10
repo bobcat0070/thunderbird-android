@@ -877,6 +877,7 @@ class RealImapFolderTest {
                 "(date subject from content-type to cc bcc reply-to message-id references in-reply-to " +
                 "list-post list-unsubscribe sender list-id precedence auto-submitted " +
                 "x-auto-response-suppress authentication-results " +
+                "delivered-to x-original-to " +
                 "X-K9mail-Identity Chat-Version)])",
             false,
         )
