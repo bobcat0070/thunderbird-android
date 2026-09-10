@@ -62,7 +62,6 @@ dependencies {
     implementation(libs.androidx.constraintlayout)
     implementation(libs.androidx.localbroadcastmanager)
     implementation(libs.androidx.swiperefreshlayout)
-    implementation(libs.ckchangelog.core)
     implementation(projects.library.tokenAutoComplete)
     implementation(libs.safeContentResolver)
     implementation(libs.searchPreference)

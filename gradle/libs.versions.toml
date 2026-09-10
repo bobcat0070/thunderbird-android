@@ -58,13 +58,12 @@ apacheHttpclient5 = "5.6.4"
 appAuth = "0.11.1"
 assertk = "0.28.1"
 circleImageView = "3.1.0"
-ckchangelog = "2.0.0-beta02"
 clikt = "5.1.0"
 commonsIo = "2.22.0"
 dependencyCheckPlugin = "0.61.0"
 dependencyGuardPlugin = "0.5.0"
 detektPlugin = "2.0.0-alpha.6"
-detektPluginCompose = "0.6.4"
+detektPluginCompose = "0.6.6"
 fastAdapter = "5.7.0"
 forkhandlesBom = "2.25.6.0"
 glide = "4.16.0"
@@ -93,7 +92,7 @@ konsist = "0.17.3"
 kotlinBom = "2.4.10"
 kotlinKsp = "2.3.11"
 kotlinpoet = "2.3.0"
-kotlinxCollectionsImmutable = "0.5.1"
+kotlinxCollectionsImmutable = "0.5.2"
 kotlinxCoroutines = "1.11.0"
 kotlinxDateTime = "0.8.0"
 kotlinxIoCore = "0.9.1"
@@ -119,7 +118,7 @@ preferencesFix = "1.1.0"
 robolectric = "4.17-beta-4"
 safeContentResolver = "1.0.0"
 searchPreference = "2.7.3"
-spotlessPlugin = "8.10.0"
+spotlessPlugin = "8.10.1"
 tbMobileComponents = "0.1.0-SNAPSHOT"
 timber = "5.0.1"
 turbine = "1.2.1"
@@ -218,7 +217,6 @@ apache-httpclient5 = { module = "org.apache.httpcomponents.client5:httpclient5",
 appauth = { module = "net.openid:appauth", version.ref = "appAuth" }
 assertk = { module = "com.willowtreeapps.assertk:assertk-jvm", version.ref = "assertk" }
 circleImageView = { module = "de.hdodenhof:circleimageview", version.ref = "circleImageView" }
-ckchangelog-core = { module = "de.cketti.library.changelog:ckchangelog-core", version.ref = "ckchangelog" }
 clikt = { module = "com.github.ajalt.clikt:clikt", version.ref = "clikt" }
 commons-io = { module = "commons-io:commons-io", version.ref = "commonsIo" }
 detekt-plugin-compose = { module = "io.nlopez.compose.rules:detekt", version.ref = "detektPluginCompose" }
