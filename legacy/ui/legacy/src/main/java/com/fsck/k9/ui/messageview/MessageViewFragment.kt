@@ -139,7 +139,7 @@ class MessageViewFragment :
     private val pinnedFolderMenu: PinnedFolderMenu by lazy {
         PinnedFolderMenu(
             pinnedFolderStore = get(),
-            folderRepository = get(),
+            remoteFolderQueryRepository = get(),
             folderNameFormatter = get { parametersOf(requireContext()) },
         )
     }

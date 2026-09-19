@@ -8,6 +8,7 @@ import assertk.assertThat
 import assertk.assertions.isEqualTo
 import assertk.assertions.isFalse
 import assertk.assertions.isTrue
+import kotlinx.coroutines.Dispatchers
 import net.thunderbird.core.android.account.LegacyAccountDto
 import net.thunderbird.core.android.account.LegacyAccountDtoManager
 import net.thunderbird.feature.mail.message.classification.api.CLASSIFIER_VERSION
@@ -154,7 +155,11 @@ class MessageReclassifierTest {
             on { getAccounts() } doReturn listOf(account)
         }
         val messageStoreManager = mock<MessageStoreManager> {
-            on { getMessageStore(account) } doAnswer { ListenableMessageStore(messageStore) }
+            on { getMessageStore(account) } doAnswer {
+                // No main dispatcher exists in a JVM test, and the store's default one would throw on
+                // construction - which the pass swallows per account, so every test would see nothing.
+                ListenableMessageStore(messageStore, mainImmediateDispatcher = Dispatchers.Unconfined)
+            }
         }
 
         return MessageReclassifier(

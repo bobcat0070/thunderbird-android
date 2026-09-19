@@ -3,12 +3,14 @@ package com.fsck.k9.ui.messageview
 import android.view.Menu
 import android.view.MenuItem
 import app.k9mail.core.ui.legacy.designsystem.atom.icon.Icons
-import app.k9mail.legacy.mailstore.FolderRepository
 import app.k9mail.legacy.ui.folder.FolderNameFormatter
 import com.fsck.k9.ui.R
 import com.fsck.k9.ui.settings.account.PinnedFolderStore
+import kotlinx.coroutines.runBlocking
+import net.thunderbird.components.core.outcome.fold
 import net.thunderbird.core.android.account.LegacyAccountDto
 import net.thunderbird.feature.mail.folder.api.RemoteFolder
+import net.thunderbird.feature.mail.folder.api.data.repository.RemoteFolderQueryRepository
 
 /**
  * The group the pinned items live under, so a previous set can be cleared without touching the fixed items.
@@ -43,7 +45,7 @@ private const val PINNED_FOLDERS_ALWAYS_SHOWN = 2
  */
 internal class PinnedFolderMenu(
     private val pinnedFolderStore: PinnedFolderStore,
-    private val folderRepository: FolderRepository,
+    private val remoteFolderQueryRepository: RemoteFolderQueryRepository,
     private val folderNameFormatter: FolderNameFormatter,
 ) {
 
@@ -93,8 +95,12 @@ internal class PinnedFolderMenu(
         val pinnedIds = pinnedFolderStore.pinnedFolderIds(account.uuid)
         if (pinnedIds.isEmpty()) return emptyList()
 
+        // Blocking, as the read it replaces was: the menu is built synchronously, and this is one indexed query
+        // over the folder table, run only when the reader has pinned something.
         return try {
-            folderRepository.getRemoteFolders(account.id).filter { it.id in pinnedIds }
+            runBlocking { remoteFolderQueryRepository.getAllByAccountId(account.id) }
+                .fold(onSuccess = { folders -> folders }, onFailure = { emptyList() })
+                .filter { it.id in pinnedIds }
         } catch (e: Exception) {
             // A folder list that cannot be read costs the shortcuts and nothing else; the picker still works.
             emptyList()
