@@ -80,7 +80,7 @@ abstract class PrintVersionInfoTask : DefaultTask() {
     }
 
     private fun readManifestApplicationLabel(manifest: File): String? {
-        val document = DocumentBuilderFactory.newInstance()
+        val document = secureDocumentBuilderFactory()
             .apply { isNamespaceAware = true }
             .newDocumentBuilder()
             .parse(manifest)
@@ -95,7 +95,7 @@ abstract class PrintVersionInfoTask : DefaultTask() {
     }
 
     private fun readStringResource(stringResourceFile: File, resourceName: String): String? {
-        val xmlDocument = DocumentBuilderFactory.newInstance().newDocumentBuilder().parse(stringResourceFile)
+        val xmlDocument = secureDocumentBuilderFactory().newDocumentBuilder().parse(stringResourceFile)
         val xPath = XPathFactory.newInstance().newXPath()
         val expression = "/resources/string[@name='$resourceName']/text()"
         val value = xPath.evaluate(expression, xmlDocument, XPathConstants.STRING) as String
@@ -105,4 +105,16 @@ abstract class PrintVersionInfoTask : DefaultTask() {
     private companion object {
         val STRING_RESOURCE_REGEX = "^@string/([A-Za-z0-9_]+)$".toRegex()
     }
+}
+
+/**
+ * Android manifests and string resources never need a DTD, so refusing one rules out external entity
+ * resolution entirely rather than relying on the parser's defaults.
+ */
+private fun secureDocumentBuilderFactory(): DocumentBuilderFactory = DocumentBuilderFactory.newInstance().apply {
+    setFeature("http://apache.org/xml/features/disallow-doctype-decl", true)
+    setFeature("http://xml.org/sax/features/external-general-entities", false)
+    setFeature("http://xml.org/sax/features/external-parameter-entities", false)
+    isXIncludeAware = false
+    isExpandEntityReferences = false
 }

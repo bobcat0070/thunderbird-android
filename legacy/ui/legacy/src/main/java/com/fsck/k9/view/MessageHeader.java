@@ -270,7 +270,7 @@ public class MessageHeader extends LinearLayout implements OnClickListener, OnLo
         }
 
         if (isSenderAuthenticationVisible()) {
-            showSenderAuthentication(fromAddress, domain, message);
+            showSenderAuthentication(fromAddress, domain, isSenderAuthenticated, message);
             return;
         }
 
@@ -308,7 +308,8 @@ public class MessageHeader extends LinearLayout implements OnClickListener, OnLo
      * Nothing is shown when no server reported anything: that is not the same as everything failing, and
      * three struck-through checks would say it was.
      */
-    private void showSenderAuthentication(Address fromAddress, String domain, Message message) {
+    private void showSenderAuthentication(Address fromAddress, String domain, boolean isSenderAuthenticated,
+        Message message) {
         List<AuthenticationOutcome> outcomes =
             SenderAuthenticationKt.authenticationOutcomes(authenticationResults(message), domain);
         if (outcomes.isEmpty()) {
@@ -319,7 +320,7 @@ public class MessageHeader extends LinearLayout implements OnClickListener, OnLo
         currentSenderDomain = domain;
 
         markVerificationExecutor.execute(() -> {
-            Integer source = sourceLabel(domain, address);
+            Integer source = sourceLabel(domain, address, isSenderAuthenticated);
 
             post(() -> {
                 if (domain.equals(currentSenderDomain)) {
@@ -358,24 +359,27 @@ public class MessageHeader extends LinearLayout implements OnClickListener, OnLo
      * @return what the picture beside this sender actually is, or null when it is the drawn initial, which
      *   claims nothing and needs no name.
      *
-     * Asked in the same order the picture itself is chosen, so the name matches what is on screen. Everything
-     * after the contact photo is answered from a cache, so building the line never causes a lookup of its own.
+     * Asked in the same order the picture itself is chosen, and behind the same DMARC gate, so the name matches
+     * what is on screen. Without the gate a message merely claiming a domain would be captioned with that
+     * domain's verified mark - and looking the mark up would send a lookup for a domain the sender never proved.
      */
-    private Integer sourceLabel(String domain, String address) {
+    private Integer sourceLabel(String domain, String address, boolean isSenderAuthenticated) {
         if (address != null && DI.get(ContactRepository.class).getPhotoUri(address) != null) {
             return R.string.message_view_mark_source_contact_photo;
         }
 
-        CachedMark mark = DI.get(BimiLogoLoader.class).markFor(domain, BimiRecordKt.BIMI_DEFAULT_SELECTOR);
-        if (mark != null) {
-            return sourceLabelFor(mark.getTrust());
+        if (isSenderAuthenticated) {
+            CachedMark mark = DI.get(BimiLogoLoader.class).markFor(domain, BimiRecordKt.BIMI_DEFAULT_SELECTOR);
+            if (mark != null) {
+                return sourceLabelFor(mark.getTrust());
+            }
         }
 
         if (address != null && DI.get(GravatarLoader.class).hasCachedGravatarFor(address)) {
             return R.string.message_view_mark_source_gravatar;
         }
 
-        if (DI.get(WebsiteIconLoader.class).hasCachedIconFor(domain)) {
+        if (isSenderAuthenticated && DI.get(WebsiteIconLoader.class).hasCachedIconFor(domain)) {
             return R.string.message_view_mark_source_website_icon;
         }
 
@@ -456,8 +460,8 @@ public class MessageHeader extends LinearLayout implements OnClickListener, OnLo
      * place that already holds the headers. It gates the brand indicator for the same reason it does in the
      * message list: without it a lookalike domain gets a bank's logo drawn beside its mail.
      */
-    private boolean isSenderAuthenticated(Message message) {
-        return SenderAuthenticationKt.hasDmarcPass(authenticationResults(message));
+    private boolean isSenderAuthenticated(Message message, Address fromAddress) {
+        return SenderAuthenticationKt.hasDmarcPass(authenticationResults(message), senderDomain(fromAddress));
     }
 
     private List<String> authenticationResults(Message message) {
@@ -498,7 +502,7 @@ public class MessageHeader extends LinearLayout implements OnClickListener, OnLo
             contactPictureView.setVisibility(View.VISIBLE);
             if (fromAddress != null) {
                 ContactPictureLoader contactsPictureLoader = ContactPicture.getContactPictureLoader();
-                boolean senderAuthenticated = isSenderAuthenticated(message);
+                boolean senderAuthenticated = isSenderAuthenticated(message, fromAddress);
                 contactsPictureLoader.setContactPicture(contactPictureView, fromAddress, senderAuthenticated);
                 showMarkVerification(fromAddress, senderAuthenticated, message);
             } else {

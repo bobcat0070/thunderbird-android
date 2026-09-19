@@ -40,6 +40,7 @@ class SaveMessageDataCreator(
         )
         val isSenderAuthenticated = hasDmarcPass(
             message.getHeader(authenticationResultsHeaderName()).orEmpty().toList(),
+            senderDomainOf(senderAddress),
         )
 
         val encryptionResult = encryptionExtractor.extractEncryption(message)

@@ -3,9 +3,13 @@ package com.fsck.k9.mailstore
 /**
  * The header the receiving server writes to record what it checked.
  *
- * A message may carry several, one per hop. Only the ones added by the server that delivered to this mailbox
- * can be trusted, but a client cannot tell those apart from ones a sender fabricated further upstream, so the
- * result is treated as a hint that unlocks a brand logo and never as proof of anything on its own.
+ * A message may carry several, one per hop, and a sender can write as many as they like before the message
+ * ever reaches a real server. Only the topmost one - the last added, by the server that delivered to this
+ * mailbox - is read. Anything further down is either an upstream hop's verdict or something the sender
+ * fabricated, and a client cannot tell those apart.
+ *
+ * This still assumes the delivering server writes the header at all. One that does not leaves the sender's
+ * own header on top, so the result remains a hint that unlocks a brand logo and never proof on its own.
  */
 private const val AUTHENTICATION_RESULTS = "Authentication-Results"
 
@@ -17,21 +21,43 @@ private const val AUTHENTICATION_RESULTS = "Authentication-Results"
  */
 private const val PASS = "pass"
 
-private val DMARC_RESULT = Regex("""\bdmarc=([a-z]+)""", RegexOption.IGNORE_CASE)
-
 /**
- * Whether the receiving server reported that this message passed DMARC.
+ * Whether the receiving server reported that this message passed DMARC for the domain the reader sees.
  *
  * DMARC passing is what ties the From domain to a sender authorised by that domain, which is the only reason
  * it is safe to show that domain's logo. Without it a brand indicator says nothing about who actually sent
  * the message.
  *
- * @param headerValues every `Authentication-Results` header on the message.
+ * The verdict must name [fromDomain] as the domain it judged. A pass for some other From address - an
+ * upstream hop's verdict on a message that was later rewritten, or a header the sender wrote about their own
+ * domain - is not a pass for this one.
+ *
+ * @param headerValues every `Authentication-Results` header on the message, in the order they appear.
+ * @param fromDomain the domain of the address shown as the sender.
  */
-fun hasDmarcPass(headerValues: List<String>): Boolean {
-    return headerValues.any { value ->
-        DMARC_RESULT.find(value)?.groupValues?.get(1)?.lowercase() == PASS
+fun hasDmarcPass(headerValues: List<String>, fromDomain: String?): Boolean {
+    val domain = fromDomain?.trim()?.lowercase()?.takeIf { it.isNotEmpty() } ?: return false
+
+    return trustedSpecs(headerValues).any { spec ->
+        spec.method == DMARC_METHOD && spec.result == PASS && spec.properties["header.from"]?.domainPart() == domain
     }
+}
+
+/**
+ * @return the domain part of [address], lower-cased, or `null` when there is none.
+ */
+fun senderDomainOf(address: String?): String? =
+    address?.substringAfterLast('@', missingDelimiterValue = "")?.trim()?.lowercase()?.takeIf { it.isNotEmpty() }
+
+private const val DMARC_METHOD = "dmarc"
+
+/**
+ * The clauses of the one header that can be trusted: the topmost, written by the delivering server.
+ */
+private fun trustedSpecs(headerValues: List<String>): List<MethodSpec> {
+    val topmost = headerValues.firstOrNull() ?: return emptyList()
+
+    return stripComments(topmost).split(';').mapNotNull { chunk -> chunk.toMethodSpec() }
 }
 
 /**
@@ -72,13 +98,16 @@ data class AuthenticationOutcome(
  * at - which is exactly how a lookalike sender collects a row of green ticks. So a mechanism only counts here
  * when its own domain also lines up with the From domain, which is the same comparison DMARC makes.
  *
- * @param headerValues every `Authentication-Results` header on the message.
+ * Only the topmost header is read, for the same reason as in [hasDmarcPass]: a header lower down may have
+ * been written by the sender, and ticks it hands out are worth nothing.
+ *
+ * @param headerValues every `Authentication-Results` header on the message, in the order they appear.
  * @param fromDomain the domain of the address shown as the sender.
  * @return one outcome per mechanism, or nothing at all when no server reported anything - which is not the
  *   same as everything failing and should not be shown as though it were.
  */
 fun authenticationOutcomes(headerValues: List<String>, fromDomain: String?): List<AuthenticationOutcome> {
-    val specs = headerValues.flatMap { value -> methodSpecs(value) }
+    val specs = trustedSpecs(headerValues)
     if (specs.isEmpty()) return emptyList()
 
     val domain = fromDomain?.trim()?.lowercase()?.takeIf { it.isNotEmpty() }
@@ -100,9 +129,6 @@ private class MethodSpec(
 private val METHOD_RESULT = Regex("""^\s*([a-z][a-z0-9-]*)\s*=\s*([a-z]+)""", RegexOption.IGNORE_CASE)
 
 private val PROPERTY = Regex("""\b([a-z]+\.[a-z-]+)\s*=\s*([^\s;]+)""", RegexOption.IGNORE_CASE)
-
-private fun methodSpecs(headerValue: String): List<MethodSpec> =
-    stripComments(headerValue).split(';').mapNotNull { chunk -> chunk.toMethodSpec() }
 
 private fun String.toMethodSpec(): MethodSpec? {
     // The first chunk is the name of the server that did the checking and carries no "=", so it drops out here.
@@ -154,10 +180,10 @@ private fun MethodSpec.passes(method: AuthenticationMethod, fromDomain: String?)
     val identity = authenticatedIdentity(method)?.domainPart()
 
     return when {
-        // DMARC is itself the alignment check, so a server reporting a pass has already made this comparison
-        // and a clause that names no From address of its own is taken at its word.
-        identity == null -> method == AuthenticationMethod.DMARC
-        fromDomain == null -> false
+        identity == null || fromDomain == null -> false
+        // DMARC's verdict is about one exact From domain, so it must be this one - the same test the logo is
+        // gated on, so the line never shows a tick the logo was refused for.
+        method == AuthenticationMethod.DMARC -> identity == fromDomain
         else -> isAligned(fromDomain, identity)
     }
 }
@@ -197,4 +223,4 @@ private fun isAligned(fromDomain: String, authenticatedDomain: String): Boolean 
  * Properties are sometimes a bare domain and sometimes a whole address, and either is acceptable in the
  * header, so both are reduced to the domain before comparing.
  */
-private fun String.domainPart(): String = substringAfterLast('@').trim('<', '>', '"')
+private fun String.domainPart(): String = substringAfterLast('@').trim('<', '>', '"').lowercase()

@@ -59,6 +59,7 @@ import com.fsck.k9.mailstore.LocalMessage
 import com.fsck.k9.mailstore.MessageClassificationTeacher
 import com.fsck.k9.mailstore.authenticationResultsHeaderName
 import com.fsck.k9.mailstore.hasDmarcPass
+import com.fsck.k9.mailstore.senderDomainOf
 import com.fsck.k9.mailstore.MessageViewInfo
 import com.fsck.k9.provider.RawMessageProvider
 import org.koin.android.ext.android.get
@@ -622,7 +623,10 @@ class MessageViewFragment :
     private fun isSenderAuthenticated(): Boolean {
         val message = this.message ?: return false
 
-        return hasDmarcPass(message.getHeader(authenticationResultsHeaderName()).orEmpty().toList())
+        return hasDmarcPass(
+            message.getHeader(authenticationResultsHeaderName()).orEmpty().toList(),
+            senderDomainOf(senderAddress()),
+        )
     }
 
     private fun senderAddress(): String? = message?.from?.firstOrNull()?.address?.takeIf { it.isNotBlank() }

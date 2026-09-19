@@ -31,6 +31,10 @@ val contactsModule = module {
         OkHttpClient.Builder()
             .connectTimeout(GRAVATAR_TIMEOUT_SECONDS, TimeUnit.SECONDS)
             .readTimeout(GRAVATAR_TIMEOUT_SECONDS, TimeUnit.SECONDS)
+            // Sender-chosen URLs pass through this client, so it must neither reach the local network nor let
+            // an https URL be redirected to plain http, which would undo the https-only check on BIMI records.
+            .dns(PublicAddressDns())
+            .followSslRedirects(false)
             .build()
     }
     single {
