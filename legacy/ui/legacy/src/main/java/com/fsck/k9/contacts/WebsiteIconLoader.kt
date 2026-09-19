@@ -5,6 +5,7 @@ import android.graphics.BitmapFactory
 import java.security.MessageDigest
 import net.thunderbird.core.logging.Logger
 import net.thunderbird.core.preference.GeneralSettingsManager
+import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.OkHttpClient
 import okhttp3.Request
 
@@ -67,6 +68,17 @@ private const val MAX_LOOKUPS = 3
 private const val REQUESTED_SIZE = 128
 
 /**
+ * An icon is 128 pixels square; anything past this is not an icon, whoever sent it.
+ */
+private const val MAX_ICON_BYTES = 512 * 1024
+
+/**
+ * What a host name may contain. The domain comes from a From header, and a character outside this set -
+ * which the address grammar does allow - is not a website that could have an icon.
+ */
+private val HOST_NAME = Regex("""^[a-z0-9-]+(\.[a-z0-9-]+)+$""")
+
+/**
  * Falls back to the icon of the sender domain's website.
  *
  * Most senders publish no brand indicator, and their website has an icon: this is what closes the gap between
@@ -96,7 +108,7 @@ class WebsiteIconLoader(
         if (!isEnabled()) return null
 
         val domain = senderDomain.trim().lowercase()
-        if (domain.isEmpty()) return null
+        if (!HOST_NAME.matches(domain)) return null
 
         cache.get(CACHE_PREFIX + domain)?.let { cached ->
             return if (cached.isEmpty()) null else decode(cached)
@@ -203,8 +215,14 @@ class WebsiteIconLoader(
 
     @Suppress("ReturnCount")
     private fun fetch(domain: String): FetchResult {
-        val url = "$baseUrl?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=https://$domain" +
-            "&size=$REQUESTED_SIZE"
+        // Built rather than concatenated, so the domain can only ever be the value of its own parameter.
+        val url = baseUrl.toHttpUrl().newBuilder()
+            .addQueryParameter("client", "SOCIAL")
+            .addQueryParameter("type", "FAVICON")
+            .addEncodedQueryParameter("fallback_opts", "TYPE,SIZE,URL")
+            .addQueryParameter("url", "https://$domain")
+            .addQueryParameter("size", REQUESTED_SIZE.toString())
+            .build()
         val request = Request.Builder()
             .url(url)
             .header("User-Agent", USER_AGENT)
@@ -228,7 +246,8 @@ class WebsiteIconLoader(
                 return FetchResult.Unavailable
             }
 
-            val bytes = response.body.bytes()
+            if (response.body.contentLength() > MAX_ICON_BYTES) return FetchResult.Unavailable
+            val bytes = response.body.byteStream().readAtMost(MAX_ICON_BYTES) ?: return FetchResult.Unavailable
             if (bytes.isPlaceholder()) {
                 // Remembered, because "this domain has no icon" is a real answer and the common one.
                 cache.putMiss(CACHE_PREFIX + domain)
@@ -259,4 +278,20 @@ private fun ByteArray.sha256(): String {
     val digest = MessageDigest.getInstance("SHA-256").digest(this)
 
     return digest.joinToString(separator = "") { byte -> "%02x".format(byte) }
+}
+
+/**
+ * @return the stream's bytes, or `null` when it holds more than [limit].
+ */
+private fun java.io.InputStream.readAtMost(limit: Int): ByteArray? {
+    val buffer = ByteArray(limit + 1)
+    var read = 0
+
+    while (read < buffer.size) {
+        val count = read(buffer, read, buffer.size - read)
+        if (count == -1) break
+        read += count
+    }
+
+    return if (read > limit) null else buffer.copyOf(read)
 }

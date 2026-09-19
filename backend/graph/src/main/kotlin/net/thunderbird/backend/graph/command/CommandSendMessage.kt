@@ -4,6 +4,7 @@ import com.fsck.k9.mail.Message
 import java.io.ByteArrayOutputStream
 import net.thunderbird.backend.graph.api.GraphApiClient
 import net.thunderbird.backend.graph.api.GraphMessage
+import net.thunderbird.backend.graph.api.pathSegment
 import net.thunderbird.core.common.exception.MessagingException
 import okio.ByteString.Companion.toByteString
 
@@ -38,7 +39,7 @@ internal class CommandSendMessage(
      * @return the server id Graph assigned to the created message.
      */
     fun uploadMessage(folderServerId: String, message: Message): String? {
-        val url = client.url("me/mailFolders/$folderServerId/messages")
+        val url = client.url("me/mailFolders/${pathSegment(folderServerId)}/messages")
         val response = client.postMime(url, message.toBase64Mime())
 
         return client.json.decodeFromString<GraphMessage>(response).id

@@ -20,6 +20,9 @@ import com.fsck.k9.mail.Message
 import com.fsck.k9.mail.Part
 import com.fsck.k9.mailstore.AttachmentViewInfo
 import com.fsck.k9.mailstore.MessageViewInfo
+import com.fsck.k9.mailstore.authenticationResultsHeaderName
+import com.fsck.k9.mailstore.hasDmarcPass
+import com.fsck.k9.mailstore.senderDomainOf
 import com.fsck.k9.ui.R
 import com.fsck.k9.ui.helper.SizeFormatter
 import com.fsck.k9.ui.messageview.MessageContainerView.OnRenderingFinishedListener
@@ -354,8 +357,12 @@ class MessageTopView(
      */
     private fun isTrustedSender(message: Message): Boolean {
         val senderAddress = getSenderEmailAddress(message)?.address ?: return false
+        val isSenderAuthenticated = hasDmarcPass(
+            message.getHeader(authenticationResultsHeaderName()).orEmpty().toList(),
+            senderDomainOf(senderAddress),
+        )
 
-        return remoteImageSenderStore.isTrusted(senderAddress)
+        return remoteImageSenderStore.isTrusted(senderAddress, isSenderAuthenticated)
     }
 
     private fun shouldShowPicturesFromSender(showPicturesSetting: ShowPictures, message: Message): Boolean {

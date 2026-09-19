@@ -214,7 +214,7 @@ class BimiLogoLoader(
  * hundred kilobytes of PNG can describe a bitmap of gigabytes. The BIMI SVG Tiny Portable/Secure profile has
  * no raster images, so a mark carrying one is out of profile anyway.
  */
-private val IMAGE_ELEMENT = Regex("""<\s*(?:[a-z0-9_.-]+:)?image\b""", RegexOption.IGNORE_CASE)
+private val IMAGE_ELEMENT = Regex("""<\s*(?:[a-z0-9_.-]+:)?image""", RegexOption.IGNORE_CASE)
 
 /**
  * A document type declaration is where entities are defined, and entity expansion is the other way a small

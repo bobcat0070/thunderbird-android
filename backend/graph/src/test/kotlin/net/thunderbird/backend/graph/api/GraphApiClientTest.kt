@@ -131,6 +131,39 @@ class GraphApiClientTest {
         assertThat(request.path).isEqualTo("/v1.0/me/mailFolders/inbox/messages?%24select=id")
     }
 
+    @Test
+    fun `a server ID containing a slash should stay one path segment`() {
+        val testSubject = createTestSubject()
+
+        val url = testSubject.url("me/messages/${pathSegment("AAMk/AD+x=")}/\$value")
+
+        assertThat(url.encodedPath).isEqualTo("/v1.0/me/messages/AAMk%2FAD+x=/\$value")
+    }
+
+    @Test
+    fun `a dot-segment ID should be refused`() {
+        // URL resolution removes a dot segment however it is encoded, so the only safe answer is to refuse it.
+        assertFailsWith<MessagingException> { pathSegment("..") }
+    }
+
+    @Test
+    fun `a link to another host should be refused`() {
+        // The access token goes to whatever URL is requested.
+        val testSubject = createTestSubject()
+
+        assertFailsWith<MessagingException> {
+            testSubject.absoluteUrl("https://attacker.example/v1.0/me/messages?\$skiptoken=x")
+        }
+    }
+
+    @Test
+    fun `a link to the Graph host should be followed`() {
+        val testSubject = createTestSubject()
+        val link = "${server.url("/v1.0/")}me/messages?\$skiptoken=x"
+
+        assertThat(testSubject.absoluteUrl(link).toString()).isEqualTo(link)
+    }
+
     private fun createTestSubject(
         tokenProvider: FakeOAuth2TokenProvider = FakeOAuth2TokenProvider(),
     ): GraphApiClient {

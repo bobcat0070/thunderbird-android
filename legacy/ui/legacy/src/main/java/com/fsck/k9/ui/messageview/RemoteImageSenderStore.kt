@@ -35,14 +35,22 @@ class RemoteImageSenderStore(context: Context) {
 
     /**
      * @return whether remote images should load for [emailAddress] without asking.
+     *
+     * @param isSenderAuthenticated whether the message passed DMARC for this address's domain. A domain-wide
+     *   decision only applies when it did: anyone can write an address at a trusted domain into From, and
+     *   without the check a spoofed message would get its tracking images loaded on the strength of mail the
+     *   user actually trusted. A single trusted address is honoured either way, as a contact is, because a
+     *   person's own small domain often publishes no DMARC policy at all.
      */
-    fun isTrusted(emailAddress: String): Boolean {
+    @Suppress("ReturnCount")
+    fun isTrusted(emailAddress: String, isSenderAuthenticated: Boolean): Boolean {
         val address = emailAddress.trim().lowercase()
         if (address.isEmpty()) return false
+        if (address in read(KEY_SENDERS)) return true
 
-        val domain = address.emailDomainOrNull()
+        val domain = address.emailDomainOrNull() ?: return false
 
-        return address in read(KEY_SENDERS) || (domain != null && domain in read(KEY_DOMAINS))
+        return isSenderAuthenticated && domain in read(KEY_DOMAINS)
     }
 
     /**

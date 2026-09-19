@@ -5,6 +5,7 @@ import com.fsck.k9.mail.MessageDownloadState
 import com.fsck.k9.mail.internet.MimeMessage
 import net.thunderbird.backend.graph.api.GraphApiClient
 import net.thunderbird.backend.graph.api.GraphMessage
+import net.thunderbird.backend.graph.api.pathSegment
 import net.thunderbird.backend.graph.api.toEnvelopeMessage
 
 /**
@@ -34,7 +35,7 @@ internal class CommandDownloadMessage(
      * Downloads the raw MIME content of a message and parses it.
      */
     fun fetchFullMessage(messageServerId: String): MimeMessage {
-        val url = client.url("me/messages/$messageServerId/\$value")
+        val url = client.url("me/messages/${pathSegment(messageServerId)}/\$value")
 
         val message = client.getStream(url) { inputStream ->
             MimeMessage.parseMimeMessage(inputStream, false)
@@ -45,7 +46,7 @@ internal class CommandDownloadMessage(
     }
 
     private fun fetchEnvelope(messageServerId: String): MimeMessage {
-        val url = client.url("me/messages/$messageServerId") {
+        val url = client.url("me/messages/${pathSegment(messageServerId)}") {
             addQueryParameter("\$select", MESSAGE_ENVELOPE_SELECT)
         }
 

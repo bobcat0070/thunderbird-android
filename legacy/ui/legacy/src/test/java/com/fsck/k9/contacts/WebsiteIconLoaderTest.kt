@@ -64,6 +64,23 @@ class WebsiteIconLoaderTest : RobolectricTest() {
     }
 
     @Test
+    fun `should not ask about a domain that is not a host name`() {
+        // The address grammar allows characters no host name has, and they must never reach the query.
+        val testSubject = loaderFor(WebsiteIconSettings(isEnabled = true))
+
+        assertThat(testSubject.loadIcon("example.com&url=https://other.example")).isNull()
+        assertThat(server.requestCount).isEqualTo(0)
+    }
+
+    @Test
+    fun `should refuse an icon larger than an icon can be`() {
+        server.enqueue(MockResponse.Builder().body(Buffer().write(ByteArray(600 * 1024))).build())
+        val testSubject = loaderFor(WebsiteIconSettings(isEnabled = true))
+
+        assertThat(testSubject.loadIcon("example.com")).isNull()
+    }
+
+    @Test
     fun `should decode a returned icon`() {
         server.enqueue(imageResponse())
         val testSubject = loaderFor(WebsiteIconSettings(isEnabled = true))
@@ -129,7 +146,8 @@ class WebsiteIconLoaderTest : RobolectricTest() {
         assertThat(testSubject.loadIcon("email.example.com")).isNotNull()
 
         assertThat(server.takeRequest().target).contains("email.example.com")
-        assertThat(server.takeRequest().target).contains("https://example.com")
+        // Encoded, because the domain is a parameter value rather than part of the URL's own syntax.
+        assertThat(server.takeRequest().target).contains("url=https%3A%2F%2Fexample.com")
     }
 
     @Test

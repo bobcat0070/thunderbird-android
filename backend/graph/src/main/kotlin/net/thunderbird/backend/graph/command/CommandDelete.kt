@@ -5,6 +5,7 @@ import net.thunderbird.backend.graph.api.GraphCollection
 import net.thunderbird.backend.graph.api.GraphMessage
 import net.thunderbird.backend.graph.api.batchExecute
 import net.thunderbird.backend.graph.api.graphBatchItem
+import net.thunderbird.backend.graph.api.pathSegment
 
 private const val DELETE_PAGE_SIZE = 100
 private const val MAX_DELETE_PASSES = 100
@@ -44,7 +45,7 @@ internal class CommandDelete(
     }
 
     private fun fetchMessageIdPage(folderServerId: String): List<String> {
-        val url = client.url("me/mailFolders/$folderServerId/messages") {
+        val url = client.url("me/mailFolders/${pathSegment(folderServerId)}/messages") {
             addQueryParameter("\$select", "id")
             addQueryParameter("\$top", DELETE_PAGE_SIZE.toString())
         }

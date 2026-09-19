@@ -4,6 +4,7 @@ import net.thunderbird.backend.graph.api.FLAG_STATUS_FLAGGED
 import net.thunderbird.backend.graph.api.GraphApiClient
 import net.thunderbird.backend.graph.api.GraphCollection
 import net.thunderbird.backend.graph.api.GraphMessage
+import net.thunderbird.backend.graph.api.pathSegment
 import net.thunderbird.backend.graph.api.toFlags
 import net.thunderbird.core.common.mail.Flag
 
@@ -42,7 +43,7 @@ internal class CommandSearch(
         // Single quotes terminate an OData string literal and are escaped by doubling them.
         val escapedMessageId = messageId.replace("'", "''")
 
-        val url = client.url("me/mailFolders/$folderServerId/messages") {
+        val url = client.url("me/mailFolders/${pathSegment(folderServerId)}/messages") {
             addQueryParameter("\$select", "id")
             addQueryParameter("\$filter", "internetMessageId eq '$escapedMessageId'")
             addQueryParameter("\$top", "1")
@@ -58,7 +59,7 @@ internal class CommandSearch(
         // Graph expects the search term as a quoted string; embedded quotes would end it early.
         val sanitizedQuery = query.replace("\"", " ")
 
-        val url = client.url("me/mailFolders/$folderServerId/messages") {
+        val url = client.url("me/mailFolders/${pathSegment(folderServerId)}/messages") {
             addQueryParameter("\$select", "id,isRead,isDraft,flag")
             addQueryParameter("\$search", "\"$sanitizedQuery\"")
             addQueryParameter("\$top", SEARCH_RESULT_LIMIT.toString())
@@ -74,7 +75,7 @@ internal class CommandSearch(
     ): List<GraphMessage> {
         val filter = buildFilter(requiredFlags, forbiddenFlags)
 
-        val url = client.url("me/mailFolders/$folderServerId/messages") {
+        val url = client.url("me/mailFolders/${pathSegment(folderServerId)}/messages") {
             addQueryParameter("\$select", "id,isRead,isDraft,flag")
             addQueryParameter("\$orderby", "receivedDateTime desc")
             addQueryParameter("\$top", SEARCH_RESULT_LIMIT.toString())

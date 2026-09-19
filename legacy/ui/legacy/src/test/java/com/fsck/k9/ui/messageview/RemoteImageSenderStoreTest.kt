@@ -15,28 +15,28 @@ class RemoteImageSenderStoreTest : RobolectricTest() {
     @Test
     fun `an unknown sender should not be trusted`() {
         // The absence of an entry is the safe answer, so a lost store asks again rather than loading silently.
-        assertThat(testSubject.isTrusted("stranger@example.com")).isFalse()
+        assertThat(testSubject.isTrusted("stranger@example.com", isSenderAuthenticated = true)).isFalse()
     }
 
     @Test
     fun `a trusted sender should be trusted`() {
         testSubject.trust("sam@example.com", RemoteImageScope.SENDER)
 
-        assertThat(testSubject.isTrusted("sam@example.com")).isTrue()
+        assertThat(testSubject.isTrusted("sam@example.com", isSenderAuthenticated = true)).isTrue()
     }
 
     @Test
     fun `trust should ignore case`() {
         testSubject.trust("Sam@Example.COM", RemoteImageScope.SENDER)
 
-        assertThat(testSubject.isTrusted("sam@example.com")).isTrue()
+        assertThat(testSubject.isTrusted("sam@example.com", isSenderAuthenticated = true)).isTrue()
     }
 
     @Test
     fun `trusting one sender should not trust their domain`() {
         testSubject.trust("sam@example.com", RemoteImageScope.SENDER)
 
-        assertThat(testSubject.isTrusted("someone-else@example.com")).isFalse()
+        assertThat(testSubject.isTrusted("someone-else@example.com", isSenderAuthenticated = true)).isFalse()
     }
 
     @Test
@@ -44,15 +44,15 @@ class RemoteImageSenderStoreTest : RobolectricTest() {
         // Why the domain option exists: shops rotate the local part, so a sender rule never matches twice.
         testSubject.trust("news-8f21@shop.com", RemoteImageScope.DOMAIN)
 
-        assertThat(testSubject.isTrusted("news-9c04@shop.com")).isTrue()
+        assertThat(testSubject.isTrusted("news-9c04@shop.com", isSenderAuthenticated = true)).isTrue()
     }
 
     @Test
     fun `a trusted domain should not cover a lookalike domain`() {
         testSubject.trust("news@shop.com", RemoteImageScope.DOMAIN)
 
-        assertThat(testSubject.isTrusted("news@notshop.com")).isFalse()
-        assertThat(testSubject.isTrusted("news@shop.com.evil.test")).isFalse()
+        assertThat(testSubject.isTrusted("news@notshop.com", isSenderAuthenticated = true)).isFalse()
+        assertThat(testSubject.isTrusted("news@shop.com.evil.test", isSenderAuthenticated = true)).isFalse()
     }
 
     @Test
@@ -61,7 +61,7 @@ class RemoteImageSenderStoreTest : RobolectricTest() {
 
         testSubject.forget("sam@example.com", RemoteImageScope.SENDER)
 
-        assertThat(testSubject.isTrusted("sam@example.com")).isFalse()
+        assertThat(testSubject.isTrusted("sam@example.com", isSenderAuthenticated = true)).isFalse()
     }
 
     @Test
@@ -71,19 +71,19 @@ class RemoteImageSenderStoreTest : RobolectricTest() {
 
         testSubject.forget("sam@example.com", RemoteImageScope.SENDER)
 
-        assertThat(testSubject.isTrusted("sam@example.com")).isTrue()
+        assertThat(testSubject.isTrusted("sam@example.com", isSenderAuthenticated = true)).isTrue()
     }
 
     @Test
     fun `an address with no domain should never be trusted`() {
         testSubject.trust("not-an-address", RemoteImageScope.DOMAIN)
 
-        assertThat(testSubject.isTrusted("not-an-address")).isFalse()
+        assertThat(testSubject.isTrusted("not-an-address", isSenderAuthenticated = true)).isFalse()
     }
 
     @Test
     fun `a blank address should not be trusted`() {
-        assertThat(testSubject.isTrusted("   ")).isFalse()
+        assertThat(testSubject.isTrusted("   ", isSenderAuthenticated = true)).isFalse()
     }
 
     @Test
@@ -113,5 +113,20 @@ class RemoteImageSenderStoreTest : RobolectricTest() {
         testSubject.forget("sam@example.com", RemoteImageScope.SENDER)
 
         assertThat(testSubject.trusted()).isEmpty()
+    }
+
+    @Test
+    fun `a trusted domain should not apply to mail that did not pass DMARC`() {
+        // Anyone can write an address at the shop's domain into From.
+        testSubject.trust("news@shop.com", RemoteImageScope.DOMAIN)
+
+        assertThat(testSubject.isTrusted("news@shop.com", isSenderAuthenticated = false)).isFalse()
+    }
+
+    @Test
+    fun `a trusted address should apply whether or not DMARC passed`() {
+        testSubject.trust("sam@example.com", RemoteImageScope.SENDER)
+
+        assertThat(testSubject.isTrusted("sam@example.com", isSenderAuthenticated = false)).isTrue()
     }
 }

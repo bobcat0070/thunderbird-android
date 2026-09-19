@@ -9,6 +9,7 @@ import net.thunderbird.backend.graph.api.GraphCollection
 import net.thunderbird.backend.graph.api.GraphMessage
 import net.thunderbird.backend.graph.api.batchExecute
 import net.thunderbird.backend.graph.api.graphBatchItem
+import net.thunderbird.backend.graph.api.pathSegment
 import net.thunderbird.core.common.mail.Flag
 
 private const val FLAG_STATUS_NOT_FLAGGED = "notFlagged"
@@ -45,7 +46,7 @@ internal class CommandSetFlag(
     }
 
     private fun fetchUnreadMessageIds(folderServerId: String): List<String> {
-        var url = client.url("me/mailFolders/$folderServerId/messages") {
+        var url = client.url("me/mailFolders/${pathSegment(folderServerId)}/messages") {
             addQueryParameter("\$select", "id")
             addQueryParameter("\$filter", "isRead eq false")
             addQueryParameter("\$top", UNREAD_PAGE_SIZE.toString())

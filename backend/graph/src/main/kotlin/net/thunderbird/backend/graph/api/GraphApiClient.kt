@@ -66,18 +66,32 @@ internal class GraphApiClient(
 
     /**
      * Resolves a Graph path (e.g. "me/mailFolders") against the configured base URL.
+     *
+     * The path is taken as already encoded, so any server ID in it must be passed through [pathSegment]: an ID
+     * containing "/" would otherwise address a different resource from the one intended.
      */
     fun url(path: String, block: HttpUrl.Builder.() -> Unit = {}): HttpUrl {
         return baseHttpUrl.newBuilder()
-            .addPathSegments(path)
+            .addEncodedPathSegments(path)
             .apply(block)
             .build()
     }
 
     /**
      * Parses an absolute URL, as returned by Graph in @odata.nextLink and @odata.deltaLink.
+     *
+     * Refused unless it points at the same host as every other request, because the access token is attached
+     * to whatever URL is requested. A link is stored between syncs, so this holds even for one that did not
+     * arrive in the response being processed.
      */
-    fun absoluteUrl(url: String): HttpUrl = url.toHttpUrl()
+    fun absoluteUrl(url: String): HttpUrl {
+        val parsed = url.toHttpUrl()
+        if (parsed.scheme != baseHttpUrl.scheme || parsed.host != baseHttpUrl.host || parsed.port != baseHttpUrl.port) {
+            throw MessagingException("Refusing to follow a Microsoft Graph link to another host", true, null)
+        }
+
+        return parsed
+    }
 
     /**
      * @param headers extra request headers, e.g. `Prefer: odata.maxpagesize` to control the page size of a
@@ -166,6 +180,23 @@ internal class GraphApiClient(
             }
         }
     }
+}
+
+private val SEGMENT_ENCODER = "https://graph.invalid/".toHttpUrl()
+
+/**
+ * Encodes one server ID as a single path segment for [GraphApiClient.url], so an ID containing "/" addresses
+ * the resource it names rather than a different one.
+ *
+ * A dot segment is refused rather than encoded, because URL resolution removes it whichever form it is written
+ * in. No Graph ID is "." or "..", so this can only be a response that is not worth following.
+ */
+internal fun pathSegment(value: String): String {
+    if (value.trim() == "." || value.trim() == "..") {
+        throw MessagingException("Refusing a Microsoft Graph identifier that is a path reference", true, null)
+    }
+
+    return SEGMENT_ENCODER.newBuilder().addPathSegment(value).build().encodedPathSegments.last()
 }
 
 private fun Response.isThrottled(): Boolean {

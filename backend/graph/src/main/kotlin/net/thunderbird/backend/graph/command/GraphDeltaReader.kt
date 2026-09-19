@@ -5,6 +5,7 @@ import java.util.Date
 import net.thunderbird.backend.graph.api.GraphApiClient
 import net.thunderbird.backend.graph.api.GraphCollection
 import net.thunderbird.backend.graph.api.GraphMessage
+import net.thunderbird.backend.graph.api.pathSegment
 import net.thunderbird.backend.graph.api.receivedDate
 import okhttp3.HttpUrl
 
@@ -73,7 +74,7 @@ internal class GraphDeltaReader(
         // The later of the two bounds satisfies both the configured sync window and the visible message count.
         val windowStart = listOfNotNull(earliestPollDate, findWindowStart(folderServerId, visibleLimit)).maxOrNull()
 
-        val url = client.url("me/mailFolders/$folderServerId/messages/delta") {
+        val url = client.url("me/mailFolders/${pathSegment(folderServerId)}/messages/delta") {
             addQueryParameter("\$select", MESSAGE_ENVELOPE_SELECT)
             addQueryParameter("\$orderby", "receivedDateTime desc")
 
@@ -92,7 +93,7 @@ internal class GraphDeltaReader(
      *   date bound at all.
      */
     private fun findWindowStart(folderServerId: String, visibleLimit: Int): Date? {
-        val url = client.url("me/mailFolders/$folderServerId/messages") {
+        val url = client.url("me/mailFolders/${pathSegment(folderServerId)}/messages") {
             addQueryParameter("\$select", "receivedDateTime")
             addQueryParameter("\$orderby", "receivedDateTime desc")
             addQueryParameter("\$top", visibleLimit.toString())
