@@ -2,12 +2,18 @@ package com.fsck.k9.contacts
 
 import android.graphics.Bitmap
 import android.graphics.Canvas
+import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.Rect
 import com.fsck.k9.mail.Address
 
 /**
  * Draw a `Bitmap` containing the "contact letter" obtained by [ContactLetterExtractor].
+ *
+ * Drawn as a disc on a transparent square rather than filling the square. The shape is what tells a reader
+ * which kind of picture they are looking at - a round tile is initials the app made up, a square is a real
+ * picture from somewhere - so it is baked into the bitmap, where it travels to every place the picture is
+ * shown, notifications included, instead of being left to whichever view happens to display it.
  */
 class ContactLetterBitmapCreator(
     private val letterExtractor: ContactLetterExtractor,
@@ -17,7 +23,15 @@ class ContactLetterBitmapCreator(
         val canvas = Canvas(bitmap)
 
         val backgroundColor = calcUnknownContactColor(address)
-        bitmap.eraseColor(backgroundColor)
+        bitmap.eraseColor(Color.TRANSPARENT)
+
+        val radius = pictureSizeInPx / 2f
+        canvas.drawCircle(
+            radius,
+            radius,
+            radius,
+            Paint(Paint.ANTI_ALIAS_FLAG).apply { color = backgroundColor },
+        )
 
         val letter = letterExtractor.extractContactLetter(address)
 

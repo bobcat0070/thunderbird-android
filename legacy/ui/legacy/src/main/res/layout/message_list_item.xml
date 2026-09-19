@@ -33,8 +33,11 @@
         app:srcCompat="@drawable/ic_check"
         />
 
-    <de.hdodenhof.circleimageview.CircleImageView
+    <!-- Not a circle-cropping view: a logo is shown square, whole, with its verification badge in the
+         corner. The initials tile arrives already round, so the shape itself says which one this is. -->
+    <androidx.appcompat.widget.AppCompatImageView
         android:id="@+id/contact_picture"
+        android:scaleType="centerCrop"
         android:layout_width="@dimen/messageListContactPictureSize"
         android:layout_height="@dimen/messageListContactPictureSize"
         android:layout_marginStart="@dimen/messageListHorizontalPadding"
