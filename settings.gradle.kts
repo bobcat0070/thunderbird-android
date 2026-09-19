@@ -43,6 +43,12 @@ dependencyResolutionManagement {
                 includeGroup("com.github.cketti")
             }
         }
+        maven(url = "https://central.sonatype.com/repository/maven-snapshots/") {
+            mavenContent {
+                snapshotsOnly()
+                includeGroupAndSubgroups("net.thunderbird.components")
+            }
+        }
         mavenCentral()
     }
 }
@@ -119,6 +125,7 @@ include(
 include(
     ":feature:mail:account:api",
     ":feature:mail:folder:api",
+    ":feature:mail:message:api",
     ":feature:mail:message:composer:api",
     ":feature:mail:message:composer:internal",
     ":feature:mail:message:list:api",
@@ -198,7 +205,6 @@ include(
     ":core:mail:mailserver",
     ":core:preference:api",
     ":core:preference:impl",
-    ":core:outcome",
     ":core:testing",
     ":core:validation",
 )
@@ -287,6 +293,8 @@ include(
 include(
     ":library:html-cleaner",
     ":library:token-auto-complete",
+    ":library:pii-safe:annotations",
+    ":library:pii-safe:compiler-plugin",
 )
 
 include(

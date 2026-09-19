@@ -7,9 +7,9 @@ import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.withContext
+import net.thunderbird.components.core.outcome.Outcome
 import net.thunderbird.core.android.account.LegacyAccountManager
 import net.thunderbird.core.logging.Logger
-import net.thunderbird.core.outcome.Outcome
 import net.thunderbird.feature.account.AccountId
 import net.thunderbird.feature.mail.folder.api.Folder
 import net.thunderbird.feature.mail.folder.api.FolderDetails
@@ -17,7 +17,6 @@ import net.thunderbird.feature.mail.folder.api.OutboxFolderManager
 import net.thunderbird.feature.mail.folder.api.data.FolderError
 import net.thunderbird.feature.mail.folder.api.data.repository.FolderDetailsRepository
 import net.thunderbird.feature.mail.folder.api.data.repository.PartialUpdatableFolderDetails
-import net.thunderbird.feature.mail.folder.api.toStringPiiSafe
 
 private const val LOG_ID = "[repository][folder-details]"
 
@@ -34,7 +33,9 @@ class DefaultFolderDetailsRepository(
                 "$LOG_ID finding folder details for account '$accountId' and folder '$folderId'"
             }
             val account = accountManager.getById(accountId).firstOrNull()
-                ?: return@withContext Outcome.failure(FolderError.AccountNotFound)
+                ?: return@withContext Outcome.failure(
+                    FolderError.AccountNotFound(throwable = IllegalStateException("Account not found: $accountId")),
+                )
 
             val messageStore = messageStoreManager.getMessageStore(accountId)
             val outboxFolderId = outboxFolderManager.getOutboxFolderId(accountId)
@@ -58,7 +59,7 @@ class DefaultFolderDetailsRepository(
                 )
             }
 
-            logger.verbose { "$LOG_ID folder details = ${folderDetails?.toStringPiiSafe()}" }
+            logger.verbose { "$LOG_ID folder details = $folderDetails" }
             Outcome.success(folderDetails)
         }
 
@@ -77,7 +78,7 @@ class DefaultFolderDetailsRepository(
                 logger.error(throwable = e) {
                     "$LOG_ID Failed to update folder with id '${folderDetails.folder.id}' and account id '$accountId'"
                 }
-                Outcome.failure(FolderError.AccountNotFound)
+                Outcome.failure(FolderError.AccountNotFound(throwable = e))
             } catch (e: IllegalArgumentException) {
                 val msg = "Executed a full 'update' without all the required parameters."
                 logger.error(throwable = e) {
@@ -107,7 +108,7 @@ class DefaultFolderDetailsRepository(
                 logger.error(throwable = e) {
                     "$LOG_ID Failed to update folder with id '${partialUpdate.folderId}' and account id '$accountId'"
                 }
-                Outcome.failure(FolderError.AccountNotFound)
+                Outcome.failure(FolderError.AccountNotFound(throwable = e))
             } catch (e: IllegalArgumentException) {
                 val msg = "Executed a full 'update' without all the required parameters."
                 logger.error(throwable = e) {

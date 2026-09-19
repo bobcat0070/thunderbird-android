@@ -28,7 +28,7 @@ import net.thunderbird.core.android.account.LegacyAccountDto
 import net.thunderbird.core.android.account.LegacyAccountDtoManager
 import net.thunderbird.core.android.account.LegacyAccountManager
 import net.thunderbird.core.logging.testing.TestLogger
-import net.thunderbird.core.outcome.Outcome
+import net.thunderbird.components.core.outcome.Outcome
 import net.thunderbird.feature.account.AccountId
 import net.thunderbird.feature.account.AccountIdFactory
 import net.thunderbird.feature.account.storage.profile.AvatarDto
@@ -83,7 +83,8 @@ class DefaultFolderDetailsRepositoryTest {
         val result = testSubject.findById(unknownAccountId, REGULAR_FOLDER_ID)
 
         // Assert
-        assertThat(result).isEqualTo(Outcome.failure(FolderError.AccountNotFound))
+        assertThat(result).isInstanceOf(Outcome.Failure::class)
+        assertThat((result as Outcome.Failure).error).isInstanceOf(FolderError.AccountNotFound::class)
     }
 
     @Test
@@ -180,7 +181,8 @@ class DefaultFolderDetailsRepositoryTest {
         val result = testSubject.update(unknownAccountId, folderDetails)
 
         // Assert
-        assertThat(result).isEqualTo(Outcome.failure(FolderError.AccountNotFound))
+        assertThat(result).isInstanceOf(Outcome.Failure::class)
+        assertThat((result as Outcome.Failure).error).isInstanceOf(FolderError.AccountNotFound::class)
     }
 
     @Test
@@ -263,7 +265,8 @@ class DefaultFolderDetailsRepositoryTest {
         val result = testSubject.update(unknownAccountId, partialUpdate)
 
         // Assert
-        assertThat(result).isEqualTo(Outcome.failure(FolderError.AccountNotFound))
+        assertThat(result).isInstanceOf(Outcome.Failure::class)
+        assertThat((result as Outcome.Failure).error).isInstanceOf(FolderError.AccountNotFound::class)
     }
 
     @Test

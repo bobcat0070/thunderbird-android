@@ -1,5 +1,6 @@
 plugins {
     id(ThunderbirdPlugins.Library.kmp)
+    alias(libs.plugins.tb.piisafe)
 }
 
 kotlin {
@@ -8,9 +9,9 @@ kotlin {
     }
     sourceSets {
         commonMain.dependencies {
+            api(projects.core.architecture.api)
             implementation(projects.core.common)
             implementation(projects.core.logging.api)
-            implementation(projects.core.outcome)
             implementation(projects.feature.account.api)
             implementation(projects.feature.mail.account.api)
         }
