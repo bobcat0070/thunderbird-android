@@ -4,6 +4,8 @@ import com.fsck.k9.backend.api.Backend
 import com.fsck.k9.backend.api.BackendPusher
 import com.fsck.k9.backend.api.BackendPusherCallback
 import com.fsck.k9.backend.api.BackendStorage
+import com.fsck.k9.backend.api.DirectoryContact
+import com.fsck.k9.backend.api.DirectorySearcher
 import com.fsck.k9.backend.api.SyncConfig
 import com.fsck.k9.backend.api.SyncListener
 import com.fsck.k9.mail.BodyFactory
@@ -17,6 +19,9 @@ import net.thunderbird.backend.graph.command.CommandRefreshFolderList
 import net.thunderbird.backend.graph.command.CommandSearch
 import net.thunderbird.backend.graph.command.CommandSendMessage
 import net.thunderbird.backend.graph.command.CommandSetFlag
+import net.thunderbird.backend.graph.command.GraphContactStore
+import net.thunderbird.backend.graph.command.GraphContactSync
+import net.thunderbird.backend.graph.command.GraphContactUpdate
 import net.thunderbird.backend.graph.command.GraphSync
 import net.thunderbird.core.common.mail.Flag
 import net.thunderbird.core.logging.Logger
@@ -32,12 +37,16 @@ import net.thunderbird.feature.mail.folder.api.FolderPathDelimiter
  * Messages are identified by their Graph message id. Graph reassigns that id when a message moves between folders,
  * which is why the move and copy operations report the new ids back to the caller.
  */
+// The Backend contract alone is more methods than the rule allows; splitting them up would move them away
+// from the interface they implement rather than make anything simpler.
+@Suppress("TooManyFunctions")
 class GraphBackend internal constructor(
     backendStorage: BackendStorage,
     private val client: GraphApiClient,
     private val logger: Logger,
     private val pushSupport: GraphPushSupport?,
-) : Backend {
+    contactStore: GraphContactStore? = null,
+) : Backend, DirectorySearcher {
     private val commandRefreshFolderList = CommandRefreshFolderList(backendStorage, client)
     private val commandSync = GraphSync(backendStorage, client, logger)
     private val commandDownloadMessage = CommandDownloadMessage(backendStorage, client)
@@ -46,6 +55,7 @@ class GraphBackend internal constructor(
     private val commandDelete = CommandDelete(client)
     private val commandSendMessage = CommandSendMessage(client)
     private val commandSearch = CommandSearch(client)
+    private val commandContactSync = GraphContactSync(client, contactStore, logger)
 
     override val supportsFlags = true
 
@@ -67,7 +77,24 @@ class GraphBackend internal constructor(
      */
     override val isPushCapable = pushSupport != null
 
-    override fun refreshFolderList(): FolderPathDelimiter = commandRefreshFolderList.refreshFolderList()
+    override fun refreshFolderList(): FolderPathDelimiter {
+        // Contacts ride along with the folder refresh: it is already the point where the app has decided to talk
+        // to the server, and the store decides whether enough time has passed to ask again.
+        commandContactSync.syncIfDue()
+
+        return commandRefreshFolderList.refreshFolderList()
+    }
+
+    /**
+     * Searches the organisation's directory for people matching [query].
+     *
+     * Reached through the backend that owns the account's connection, so the search uses that account's own token.
+     */
+    override fun searchDirectory(query: String): List<DirectoryContact> {
+        return commandContactSync.searchDirectory(query).map { person ->
+            DirectoryContact(displayName = person.displayName, addresses = person.addresses)
+        }
+    }
 
     override fun sync(folderServerId: String, syncConfig: SyncConfig, listener: SyncListener) {
         commandSync.sync(folderServerId, syncConfig, listener)

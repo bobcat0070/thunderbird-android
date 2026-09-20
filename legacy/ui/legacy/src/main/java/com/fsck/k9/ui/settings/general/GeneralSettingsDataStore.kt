@@ -18,6 +18,7 @@ import net.thunderbird.core.preference.SubTheme
 import net.thunderbird.core.preference.display.visualSettings.DisplayVisualSettings
 import net.thunderbird.core.preference.display.visualSettings.message.list.MessageListDateTimeFormat
 import net.thunderbird.core.preference.notification.NotificationPreference
+import net.thunderbird.core.preference.directory.DirectorySearchSettings
 import net.thunderbird.core.preference.websiteicon.WebsiteIconSettings
 import net.thunderbird.core.preference.display.visualSettings.message.list.UiDensity
 import net.thunderbird.core.preference.interaction.PostMarkAsUnreadNavigation
@@ -59,6 +60,7 @@ class GeneralSettingsDataStore(
             "gravatar_enabled" -> config.gravatar.isEnabled
             "bimi_enabled" -> config.bimi.isEnabled
             "website_icon_enabled" -> config.websiteIcon.isEnabled
+            "directory_search_enabled" -> config.directorySearch.isEnabled
             "messageview_sender_authentication" -> visualSettings.isMessageViewSenderAuthenticationVisible
             "widget_show_personal" -> config.widget.showPersonal
             "widget_show_notifications" -> config.widget.showNotifications
@@ -106,6 +108,7 @@ class GeneralSettingsDataStore(
             "gravatar_enabled" -> setGravatarEnabled(value)
             "bimi_enabled" -> setBimiEnabled(value)
             "website_icon_enabled" -> updateWebsiteIconSettings { it.copy(isEnabled = value) }
+            "directory_search_enabled" -> updateDirectorySearchSettings { it.copy(isEnabled = value) }
             "messageview_sender_authentication" -> updateVisualSettings {
                 it.copy(isMessageViewSenderAuthenticationVisible = value)
             }
@@ -544,6 +547,13 @@ class GeneralSettingsDataStore(
         skipSaveSettings = true
         generalSettingsManager.update { settings ->
             settings.copy(websiteIcon = transform(settings.websiteIcon))
+        }
+    }
+
+    private fun updateDirectorySearchSettings(transform: (DirectorySearchSettings) -> DirectorySearchSettings) {
+        skipSaveSettings = true
+        generalSettingsManager.update { settings ->
+            settings.copy(directorySearch = transform(settings.directorySearch))
         }
     }
 

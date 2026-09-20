@@ -9,6 +9,8 @@ import app.k9mail.legacy.mailstore.folder.DefaultRemoteFolderQueryRepository
 import app.k9mail.legacy.mailstore.folder.push.DefaultPushFolderTrackingRepository
 import app.k9mail.legacy.mailstore.folder.push.DefaultPushFoldersQueryRepository
 import com.fsck.k9.mailstore.folder.DefaultOutboxFolderManager
+import com.fsck.k9.mailstore.recipients.RecipientIndex
+import com.fsck.k9.mailstore.recipients.SentMailRecipientScanner
 import com.fsck.k9.message.extractors.AttachmentCounter
 import com.fsck.k9.message.extractors.MessageFulltextCreator
 import com.fsck.k9.message.extractors.MessagePreviewCreator
@@ -94,6 +96,15 @@ val mailStoreModule = module {
             messageClassifier = get(),
             knownContacts = get(),
             knownCorrespondents = get(),
+        )
+    }
+    single { RecipientIndex(context = get()) }
+    single {
+        SentMailRecipientScanner(
+            accountManager = get(),
+            messageListRepository = get(),
+            index = get(),
+            logger = get(),
         )
     }
     single { KnownContacts(contactRepository = get()) }

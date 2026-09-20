@@ -16,4 +16,5 @@ enum class PreferenceScope {
     WIDGET,
     BIMI,
     WEBSITE_ICON,
+    DIRECTORY_SEARCH,
 }

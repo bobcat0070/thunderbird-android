@@ -130,6 +130,8 @@
     <string name="global_settings_gravatar_api_key_summary">Optional. Raises the rate limit when many different senders are shown.</string>
     <string name="global_settings_sender_authentication_label">Show sender authentication</string>
     <string name="global_settings_sender_authentication_summary">Name the source of the sender picture and which checks the receiving server reported, striking through any that failed or did not match the From domain</string>
+    <string name="global_settings_directory_search_label">Search the organisation directory</string>
+    <string name="global_settings_directory_search_summary">When addressing a message, also look up names in your organisation's directory. This sends what you type to your mail provider. People you have written to, your device contacts and your account's address book are always completed without this.</string>
     <string name="global_settings_website_icon_label">Website icons</string>
     <string name="global_settings_website_icon_summary">For senders with no verified logo, show the icon their website uses. This sends the sender domain to an icon service run by Google, which then knows who sends you mail. Icons found this way are marked as unverified.</string>
     <string name="global_settings_notification_category">Notify me about</string>

@@ -45,6 +45,7 @@ import net.thunderbird.core.preference.bimi.BimiSettings;
 import net.thunderbird.core.preference.gravatar.GravatarSettings;
 import net.thunderbird.core.preference.websiteicon.WebsiteIconSettings;
 import net.thunderbird.core.preference.widget.WidgetSettings;
+import net.thunderbird.core.preference.directory.DirectorySearchSettings;
 import net.thunderbird.core.preference.privacy.PrivacySettings;
 import org.jetbrains.annotations.NotNull;
 import org.junit.Before;
@@ -229,7 +230,8 @@ public class MessageBuilderTest extends RobolectricTest {
                 new BimiSettings(),
                 new WebsiteIconSettings(),
                 new DebuggingSettings(true,false,false),
-                new InteractionSettings()
+                new InteractionSettings(),
+                new DirectorySearchSettings()
             );
         }
 

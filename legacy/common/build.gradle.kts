@@ -33,6 +33,7 @@ dependencies {
 
     testImplementation(projects.core.logging.testing)
     testImplementation(libs.robolectric)
+    testImplementation(libs.androidx.test.core)
     testImplementation(projects.feature.account.fake)
 }
 

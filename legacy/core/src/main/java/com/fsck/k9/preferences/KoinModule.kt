@@ -30,6 +30,8 @@ import net.thunderbird.core.preference.network.NetworkSettingsPreferenceManager
 import net.thunderbird.core.preference.notification.DefaultNotificationPreferenceManager
 import net.thunderbird.core.preference.notification.NotificationPreferenceManager
 import net.thunderbird.core.preference.bimi.BimiSettingsPreferenceManager
+import net.thunderbird.core.preference.directory.DefaultDirectorySearchSettingsPreferenceManager
+import net.thunderbird.core.preference.directory.DirectorySearchSettingsPreferenceManager
 import net.thunderbird.core.preference.websiteicon.DefaultWebsiteIconSettingsPreferenceManager
 import net.thunderbird.core.preference.websiteicon.WebsiteIconSettingsPreferenceManager
 import net.thunderbird.core.preference.bimi.DefaultBimiSettingsPreferenceManager
@@ -67,6 +69,14 @@ val preferencesModule = module {
     }
     single<BimiSettingsPreferenceManager> {
         DefaultBimiSettingsPreferenceManager(
+            logger = get(),
+            storagePersister = get(),
+            storageEditor = get<Preferences>().createStorageEditor(),
+            preferenceChangeBroker = get(),
+        )
+    }
+    single<DirectorySearchSettingsPreferenceManager> {
+        DefaultDirectorySearchSettingsPreferenceManager(
             logger = get(),
             storagePersister = get(),
             storageEditor = get<Preferences>().createStorageEditor(),
@@ -211,6 +221,7 @@ val preferencesModule = module {
             widgetSettingsPreferenceManager = get(),
             bimiSettingsPreferenceManager = get(),
             websiteIconSettingsPreferenceManager = get(),
+            directorySearchSettingsPreferenceManager = get(),
             debugLogConfigurator = get(),
             platformConfigProvider = get(),
             logger = get(),

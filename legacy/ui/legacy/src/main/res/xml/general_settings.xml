@@ -344,6 +344,12 @@
                 />
 
             <CheckBoxPreference
+                android:key="directory_search_enabled"
+                android:summary="@string/global_settings_directory_search_summary"
+                android:title="@string/global_settings_directory_search_label"
+                />
+
+            <CheckBoxPreference
                 android:dependency="messagelist_show_contact_picture"
                 android:key="messageview_sender_authentication"
                 android:summary="@string/global_settings_sender_authentication_summary"

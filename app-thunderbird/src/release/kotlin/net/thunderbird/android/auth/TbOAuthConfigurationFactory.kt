@@ -103,6 +103,10 @@ class TbOAuthConfigurationFactory : OAuthConfigurationFactory {
                 "email",
                 "https://graph.microsoft.com/Mail.ReadWrite",
                 "https://graph.microsoft.com/Mail.Send",
+                // Address completion: the mailbox's own contacts, and the people the organisation's directory
+                // knows about. Both are read-only, and an account whose tenant refuses them still gets mail.
+                "https://graph.microsoft.com/Contacts.Read",
+                "https://graph.microsoft.com/People.Read",
                 "offline_access",
             ),
             authorizationEndpoint = "https://login.microsoftonline.com/common/oauth2/v2.0/authorize",

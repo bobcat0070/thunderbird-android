@@ -28,6 +28,7 @@ import com.fsck.k9.mail.ServerSettings;
 import com.fsck.k9.mailstore.LocalFolder;
 import com.fsck.k9.mailstore.LocalMessage;
 import com.fsck.k9.mailstore.LocalStore;
+import com.fsck.k9.mailstore.recipients.RecipientIndex;
 import com.fsck.k9.mailstore.LocalStoreProvider;
 import app.k9mail.legacy.mailstore.MessageStoreManager;
 import com.fsck.k9.mailstore.OutboxState;
@@ -114,6 +115,8 @@ public class MessagingControllerTest extends K9RobolectricTest {
     private NotificationController notificationController;
     @Mock
     private NotificationStrategy notificationStrategy;
+    @Mock
+    private RecipientIndex recipientIndex;
 
     private Context appContext;
     private Set<Flag> reqFlags;
@@ -166,6 +169,7 @@ public class MessagingControllerTest extends K9RobolectricTest {
             specialLocalFoldersCreator,
             noOpLocalDeleteOperationDecider,
             fakeLocalMessageUidPrefixProvider,
+            recipientIndex,
             Collections.<ControllerExtension>emptyList(),
             featureFlagProvider,
             syncLogger,

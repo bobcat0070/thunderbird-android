@@ -24,8 +24,19 @@ import androidx.loader.content.AsyncTaskLoader;
 import androidx.core.content.ContextCompat;
 
 import app.k9mail.core.android.common.database.EmptyCursor;
+import app.k9mail.legacy.di.DI;
+import com.fsck.k9.backend.BackendManager;
+import com.fsck.k9.backend.api.Backend;
+import com.fsck.k9.backend.api.DirectoryContact;
+import com.fsck.k9.backend.api.DirectorySearcher;
+import net.thunderbird.core.android.account.LegacyAccountDto;
+import net.thunderbird.core.android.account.LegacyAccountDtoManager;
+import net.thunderbird.core.preference.GeneralSettingsManager;
 import com.fsck.k9.ui.R;
 import com.fsck.k9.mail.Address;
+import com.fsck.k9.mailstore.recipients.IndexedRecipient;
+import com.fsck.k9.mailstore.recipients.RecipientIndex;
+import com.fsck.k9.mailstore.recipients.SentMailRecipientScanner;
 import com.fsck.k9.view.RecipientSelectView.Recipient;
 import com.fsck.k9.view.RecipientSelectView.RecipientCryptoStatus;
 import org.apache.james.mime4j.util.CharsetUtil;
@@ -69,6 +80,18 @@ public class RecipientLoader extends AsyncTaskLoader<List<Recipient>> {
             ContactsContract.CommonDataKinds.Email.IS_SUPER_PRIMARY + " DESC, " +
             ContactsContract.CommonDataKinds.Email.IS_PRIMARY + " DESC, " +
             ContactsContract.Contacts._ID;
+
+    /**
+     * How many learned addresses one keystroke may add. The list is a dropdown, and what does not fit on screen
+     * is not help.
+     */
+    private static final int MAX_INDEX_RESULTS = 10;
+
+    /**
+     * How much has to be typed before a query is worth sending to a provider. One or two letters match most of a
+     * directory, which is both useless as completion and more than the user meant to disclose.
+     */
+    private static final int MINIMUM_DIRECTORY_QUERY_LENGTH = 3;
 
     private static final String[] PROJECTION_NICKNAME = {
             ContactsContract.Data.CONTACT_ID,
@@ -127,6 +150,8 @@ public class RecipientLoader extends AsyncTaskLoader<List<Recipient>> {
     private final Uri lookupKeyUri;
     private final String cryptoProvider;
     private final ContentResolver contentResolver;
+    private final RecipientIndex recipientIndex = DI.get(RecipientIndex.class);
+    private final SentMailRecipientScanner sentMailRecipientScanner = DI.get(SentMailRecipientScanner.class);
 
     private List<Recipient> cachedRecipients;
     private ForceLoadContentObserver observerContact, observerKey;
@@ -179,9 +204,38 @@ public class RecipientLoader extends AsyncTaskLoader<List<Recipient>> {
         return new RecipientLoader(context) {
             @Override
             public List<Recipient> loadInBackground() {
-                return super.fillContactDataBySortOrder(maxRecipients);
+                return super.fillMostContacted(maxRecipients);
             }
         };
+    }
+
+    /**
+     * The suggestions offered before anything has been typed.
+     *
+     * The device's most contacted come first, then the people this mailbox actually writes to - which is the
+     * only source there is on a device whose contacts the app has not been given, or has not been granted.
+     */
+    private List<Recipient> fillMostContacted(int maxRecipients) {
+        List<Recipient> recipients = fillContactDataBySortOrder(maxRecipients);
+        if (recipients.size() >= maxRecipients) {
+            return recipients;
+        }
+
+        Map<String, Recipient> recipientMap = new HashMap<>();
+        for (Recipient recipient : recipients) {
+            recipientMap.put(recipient.address.getAddress(), recipient);
+        }
+
+        sentMailRecipientScanner.scanIfDue();
+        for (IndexedRecipient indexed : recipientIndex.mostUsed(maxRecipients)) {
+            if (recipients.size() >= maxRecipients) {
+                break;
+            }
+
+            addIndexedRecipient(indexed, recipients, recipientMap);
+        }
+
+        return recipients;
     }
 
     @Override
@@ -195,6 +249,8 @@ public class RecipientLoader extends AsyncTaskLoader<List<Recipient>> {
             fillContactDataFromEmailContentUri(contactUri, recipients, recipientMap);
         } else if (query != null) {
             fillContactDataFromQuery(query, recipients, recipientMap);
+            fillContactDataFromRecipientIndex(query, recipients, recipientMap);
+            fillContactDataFromDirectory(query, recipients, recipientMap);
 
             if (cryptoProvider != null) {
                 fillContactDataFromCryptoProvider(query, recipients, recipientMap);
@@ -494,6 +550,101 @@ public class RecipientLoader extends AsyncTaskLoader<List<Recipient>> {
         }
 
         cursor.close();
+    }
+
+    /**
+     * Adds the addresses the app has learned: people the user has written to, and contacts fetched from an
+     * account's own address book.
+     *
+     * Asked after the device's contacts and never before them, so a contact with a photo and a name the user
+     * chose always wins over the same address learned from mail. Addresses already in the map are skipped,
+     * which is what keeps one person from appearing twice.
+     *
+     * The scan that builds the history is kicked off here rather than on a timer: this is the moment its answer
+     * is about to be needed, and it does nothing if a recent scan already ran.
+     */
+    private void fillContactDataFromRecipientIndex(String query, List<Recipient> recipients,
+            Map<String, Recipient> recipientMap) {
+        sentMailRecipientScanner.scanIfDue();
+
+        for (IndexedRecipient indexed : recipientIndex.search(query, MAX_INDEX_RESULTS)) {
+            addIndexedRecipient(indexed, recipients, recipientMap);
+        }
+    }
+
+    private void addIndexedRecipient(IndexedRecipient indexed, List<Recipient> recipients,
+            Map<String, Recipient> recipientMap) {
+        addLearnedRecipient(indexed.getAddress(), indexed.getDisplayName(), recipients, recipientMap);
+    }
+
+    private void addLearnedRecipient(String email, String displayName, List<Recipient> recipients,
+            Map<String, Recipient> recipientMap) {
+        if (email == null || !isSupportedEmailAddress(email) || recipientMap.containsKey(email)) {
+            return;
+        }
+
+        Recipient recipient = new Recipient(new Address(email, displayName));
+        if (!recipient.isValidEmailAddress()) {
+            return;
+        }
+
+        recipients.add(recipient);
+        recipientMap.put(email, recipient);
+    }
+
+    /**
+     * Asks each account's provider about a name nothing on the device knows.
+     *
+     * Last, and only when the user has turned it on, because it is the one source here that tells somebody else
+     * what is being typed. Skipped entirely once the local sources have produced enough to fill the dropdown:
+     * there is nothing to add, and no reason to send the query anywhere.
+     *
+     * Only backends that can answer are asked - in practice the Graph backend, since a mailbox protocol has no
+     * notion of an organisation's directory. Results are not stored: they were never the user's address book,
+     * and they will be offered again as readily next time. Picking one records it like any other recipient.
+     */
+    private void fillContactDataFromDirectory(String query, List<Recipient> recipients,
+            Map<String, Recipient> recipientMap) {
+        if (recipients.size() >= MAX_INDEX_RESULTS || query.length() < MINIMUM_DIRECTORY_QUERY_LENGTH) {
+            return;
+        }
+
+        if (!DI.get(GeneralSettingsManager.class).getConfig().getDirectorySearch().isEnabled()) {
+            return;
+        }
+
+        BackendManager backendManager = DI.get(BackendManager.class);
+        for (LegacyAccountDto account : DI.get(LegacyAccountDtoManager.class).getAccounts()) {
+            DirectorySearcher searcher = directorySearcherFor(backendManager, account);
+            if (searcher == null) {
+                continue;
+            }
+
+            for (DirectoryContact contact : searcher.searchDirectory(query)) {
+                for (String address : contact.getAddresses()) {
+                    addLearnedRecipient(address, contact.getDisplayName(), recipients, recipientMap);
+                }
+            }
+        }
+    }
+
+    /**
+     * @return what can search this account's directory, or null when nothing can.
+     *
+     * An account whose backend cannot be built - one being set up, or one whose credentials have expired - is not
+     * an error here: completion carries on with what the device already knows.
+     */
+    @Nullable
+    private DirectorySearcher directorySearcherFor(BackendManager backendManager, LegacyAccountDto account) {
+        try {
+            Backend backend = backendManager.getBackend(account.getUuid());
+
+            return backend instanceof DirectorySearcher ? (DirectorySearcher) backend : null;
+        } catch (Exception e) {
+            Log.d(e, "Could not reach a backend to search its directory");
+
+            return null;
+        }
     }
 
     private void fillCryptoStatusData(Map<String, Recipient> recipientMap) {

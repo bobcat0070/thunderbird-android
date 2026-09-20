@@ -58,6 +58,7 @@ import com.fsck.k9.controller.MessagingControllerCommands.PendingSetFlag;
 import com.fsck.k9.controller.ProgressBodyFactory.ProgressListener;
 import com.fsck.k9.core.BuildConfig;
 import com.fsck.k9.helper.MutableBoolean;
+import com.fsck.k9.mail.Address;
 import com.fsck.k9.mail.AuthType;
 import com.fsck.k9.mail.AuthenticationFailedException;
 import com.fsck.k9.mail.CertificateValidationException;
@@ -68,10 +69,12 @@ import com.fsck.k9.mail.Part;
 import com.fsck.k9.mail.ServerSettings;
 import com.fsck.k9.mail.power.PowerManager;
 import com.fsck.k9.mail.power.WakeLock;
+import com.fsck.k9.mail.Message.RecipientType;
 import com.fsck.k9.mailstore.LocalFolder;
 import com.fsck.k9.mailstore.LocalMessage;
 import com.fsck.k9.mailstore.LocalStore;
 import com.fsck.k9.mailstore.LocalStoreProvider;
+import com.fsck.k9.mailstore.recipients.RecipientIndex;
 import com.fsck.k9.mailstore.MessageListCache;
 import com.fsck.k9.mailstore.OutboxState;
 import com.fsck.k9.mailstore.OutboxStateRepository;
@@ -143,6 +146,7 @@ public class MessagingController implements MessagingControllerRegistry, Messagi
     private final Thread controllerThread;
 
     private final LocalMessageUidPrefixProvider localMessageUidPrefixProvider;
+    private final RecipientIndex recipientIndex;
     private final BlockingQueue<Command> queuedCommands = new PriorityBlockingQueue<>();
     private final Set<MessagingListener> listeners = new CopyOnWriteArraySet<>();
     private final ExecutorService threadPool = Executors.newCachedThreadPool();
@@ -176,6 +180,7 @@ public class MessagingController implements MessagingControllerRegistry, Messagi
         SpecialLocalFoldersCreator specialLocalFoldersCreator,
         LocalDeleteOperationDecider localDeleteOperationDecider,
         LocalMessageUidPrefixProvider localMessageUidPrefixProvider,
+        RecipientIndex recipientIndex,
         List<ControllerExtension> controllerExtensions,
         FeatureFlagProvider featureFlagProvider,
         Logger syncDebugLogger,
@@ -193,6 +198,7 @@ public class MessagingController implements MessagingControllerRegistry, Messagi
         this.specialLocalFoldersCreator = specialLocalFoldersCreator;
         this.localDeleteOperationDecider = localDeleteOperationDecider;
         this.localMessageUidPrefixProvider = localMessageUidPrefixProvider;
+        this.recipientIndex = recipientIndex;
         this.featureFlagProvider = featureFlagProvider;
         this.syncDebugLogger = syncDebugLogger;
         this.notificationSender = new NotificationSenderCompat(notificationManager);
@@ -1612,9 +1618,39 @@ public class MessagingController implements MessagingControllerRegistry, Messagi
             OutboxStateRepository outboxStateRepository = localStore.getOutboxStateRepository();
             outboxStateRepository.initializeOutboxState(messageId);
 
+            recordRecipients(message);
+
             sendPendingMessages(account, listener);
         } catch (Exception e) {
             Log.e(e, "Error sending message");
+        }
+    }
+
+    /**
+     * Remembers who this message was addressed to, so completion offers them next time.
+     *
+     * Recorded here rather than only by scanning the sent folder, because this is immediate and works for an
+     * account whose sent mail the server does not keep. The scan counts the stored copy as well when it arrives,
+     * so mail sent from this device weighs a little more than mail sent from elsewhere - which is a reasonable
+     * thing for completion on this device to believe.
+     */
+    private void recordRecipients(Message message) {
+        long now = System.currentTimeMillis();
+
+        for (Address[] addresses : new Address[][] {
+            message.getRecipients(RecipientType.TO),
+            message.getRecipients(RecipientType.CC),
+            message.getRecipients(RecipientType.BCC),
+        }) {
+            if (addresses == null) {
+                continue;
+            }
+
+            for (Address address : addresses) {
+                if (address != null && address.getAddress() != null) {
+                    recipientIndex.recordSent(address.getAddress(), address.getPersonal(), now);
+                }
+            }
         }
     }
 

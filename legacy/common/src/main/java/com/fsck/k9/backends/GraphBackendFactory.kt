@@ -9,6 +9,7 @@ import net.thunderbird.backend.api.BackendStorageFactory
 import com.fsck.k9.mail.power.PowerManager
 import net.thunderbird.backend.graph.GraphPushSupport
 import net.thunderbird.backend.graph.createGraphBackend
+import com.fsck.k9.mailstore.recipients.RecipientIndex
 import net.thunderbird.core.android.account.LegacyAccountManager
 import net.thunderbird.core.logging.Logger
 import net.thunderbird.feature.account.AccountId
@@ -38,6 +39,7 @@ class DefaultGraphBackendFactory(
     private val logger: Logger,
     private val powerManager: PowerManager,
     private val alarmManager: AlarmManager,
+    private val recipientIndex: RecipientIndex,
 ) : GraphBackendFactory {
 
     /**
@@ -61,6 +63,11 @@ class DefaultGraphBackendFactory(
             okHttpClient = okHttpClient,
             tokenProvider = tokenProvider,
             logger = logger,
+            // The mailbox's own contacts feed the same completion index as the user's sent mail.
+            contactStore = GraphContactIndexStore(
+                accountUuid = account.uuid,
+                index = recipientIndex,
+            ),
             pushSupport = GraphPushSupport(
                 powerManager = powerManager,
                 scheduler = GraphPushAlarmScheduler(

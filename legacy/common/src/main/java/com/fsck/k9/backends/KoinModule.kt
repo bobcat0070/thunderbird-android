@@ -44,6 +44,7 @@ val backendsModule = module {
             logger = get(),
             powerManager = get(),
             alarmManager = get(),
+            recipientIndex = get(),
         )
     }
     single<Pop3BackendFactory> {

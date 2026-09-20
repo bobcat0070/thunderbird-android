@@ -9,6 +9,7 @@ import com.fsck.k9.backend.BackendManager
 import com.fsck.k9.mailstore.LocalStoreProvider
 import com.fsck.k9.mailstore.SaveMessageDataCreator
 import com.fsck.k9.mailstore.SpecialLocalFoldersCreator
+import com.fsck.k9.mailstore.recipients.RecipientIndex
 import com.fsck.k9.notification.NotificationController
 import com.fsck.k9.notification.NotificationStrategy
 import net.thunderbird.core.featureflag.FeatureFlagProvider
@@ -35,6 +36,7 @@ val controllerModule = module {
             get<SpecialLocalFoldersCreator>(),
             get<LocalDeleteOperationDecider>(),
             get<LocalMessageUidPrefixProvider>(),
+            get<RecipientIndex>(),
             get(named("controllerExtensions")),
             get<FeatureFlagProvider>(),
             get<Logger>(named("syncDebug")),
