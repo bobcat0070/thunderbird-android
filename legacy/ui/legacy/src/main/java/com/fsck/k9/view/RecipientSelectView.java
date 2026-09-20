@@ -41,6 +41,7 @@ import com.fsck.k9.activity.AlternateRecipientAdapter;
 import com.fsck.k9.activity.AlternateRecipientAdapter.AlternateRecipientListener;
 import com.fsck.k9.activity.compose.RecipientAdapter;
 import com.fsck.k9.activity.compose.RecipientLoader;
+import com.fsck.k9.activity.compose.RecipientSuggestions;
 import com.fsck.k9.helper.ClipboardManager;
 import com.fsck.k9.mail.Address;
 import com.fsck.k9.ui.R;
@@ -71,6 +72,8 @@ public class RecipientSelectView extends TokenCompleteTextView<Recipient> implem
 
     private final MessageListPreferencesManager messageListPreferencesManager =
         DI.get(MessageListPreferencesManager.class);
+
+    private final RecipientSuggestions recipientSuggestions = DI.get(RecipientSuggestions.class);
 
     private RecipientAdapter adapter;
     @Nullable
@@ -413,14 +416,16 @@ public class RecipientSelectView extends TokenCompleteTextView<Recipient> implem
             case LOADER_ID_FILTERING: {
                 String query = args != null && args.containsKey(ARG_QUERY) ? args.getString(ARG_QUERY) : "";
                 adapter.setHighlight(query);
-                return new RecipientLoader(getContext(), cryptoProvider, query);
+                return new RecipientLoader(getContext(), cryptoProvider, query, recipientSuggestions);
             }
             case LOADER_ID_ALTERNATES: {
                 Uri contactLookupUri = alternatesPopupRecipient.getContactLookupUri();
                 if (contactLookupUri != null) {
-                    return new RecipientLoader(getContext(), cryptoProvider, contactLookupUri, true);
+                    return new RecipientLoader(getContext(), cryptoProvider, contactLookupUri, true,
+                        recipientSuggestions);
                 } else {
-                    return new RecipientLoader(getContext(), cryptoProvider, alternatesPopupRecipient.address);
+                    return new RecipientLoader(getContext(), cryptoProvider, recipientSuggestions,
+                        alternatesPopupRecipient.address);
                 }
             }
         }

@@ -1,5 +1,6 @@
 package com.fsck.k9.activity.compose
 
+import app.k9mail.legacy.di.DI
 import android.Manifest
 import android.app.Activity
 import android.content.Context
@@ -66,6 +67,12 @@ class RecipientPresenter(
     private val replyToParser: ReplyToParser,
     private val draftStateHeaderParser: AutocryptDraftStateHeaderParser,
 ) {
+    /**
+     * Resolved on first use rather than taken as a parameter: every caller would have to pass the same thing,
+     * and what answers a completion query is not something a presenter's collaborators should have to know.
+     */
+    private val recipientSuggestions: RecipientSuggestions by lazy { DI.get(RecipientSuggestions::class.java) }
+
     private var isToAddressAdded: Boolean = false
     private lateinit var account: LegacyAccountDto
     private var alwaysBccAddresses: Array<Address>? = null
@@ -287,7 +294,7 @@ class RecipientPresenter(
         this.alwaysBccAddresses = alwaysBccAddresses
         if (alwaysBccAddresses.isEmpty()) return
 
-        object : RecipientLoader(context, account.openPgpProvider, *alwaysBccAddresses) {
+        object : RecipientLoader(context, account.openPgpProvider, recipientSuggestions, *alwaysBccAddresses) {
             override fun deliverResult(result: List<Recipient>?) {
                 val recipientArray = result!!.toTypedArray()
                 recipientMvpView.silentlyAddBccAddresses(*recipientArray)
@@ -497,7 +504,7 @@ class RecipientPresenter(
     }
 
     private fun addRecipientsFromAddresses(recipientType: RecipientType, vararg addresses: Address) {
-        object : RecipientLoader(context, account.openPgpProvider, *addresses) {
+        object : RecipientLoader(context, account.openPgpProvider, recipientSuggestions, *addresses) {
             override fun deliverResult(result: List<Recipient>?) {
                 val recipientArray = result!!.toTypedArray()
                 recipientMvpView.silentlyAddRecipients(recipientType, *recipientArray)
@@ -509,7 +516,7 @@ class RecipientPresenter(
     }
 
     private fun addRecipientFromContactUri(recipientType: RecipientType, uri: Uri?) {
-        object : RecipientLoader(context, account.openPgpProvider, uri, false) {
+        object : RecipientLoader(context, account.openPgpProvider, uri, false, recipientSuggestions) {
             override fun deliverResult(result: List<Recipient>?) {
                 // TODO handle multiple available mail addresses for a contact?
                 if (result!!.isEmpty()) {

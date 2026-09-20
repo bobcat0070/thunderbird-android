@@ -24,19 +24,8 @@ import androidx.loader.content.AsyncTaskLoader;
 import androidx.core.content.ContextCompat;
 
 import app.k9mail.core.android.common.database.EmptyCursor;
-import app.k9mail.legacy.di.DI;
-import com.fsck.k9.backend.BackendManager;
-import com.fsck.k9.backend.api.Backend;
-import com.fsck.k9.backend.api.DirectoryContact;
-import com.fsck.k9.backend.api.DirectorySearcher;
-import net.thunderbird.core.android.account.LegacyAccountDto;
-import net.thunderbird.core.android.account.LegacyAccountDtoManager;
-import net.thunderbird.core.preference.GeneralSettingsManager;
 import com.fsck.k9.ui.R;
 import com.fsck.k9.mail.Address;
-import com.fsck.k9.mailstore.recipients.IndexedRecipient;
-import com.fsck.k9.mailstore.recipients.RecipientIndex;
-import com.fsck.k9.mailstore.recipients.SentMailRecipientScanner;
 import com.fsck.k9.view.RecipientSelectView.Recipient;
 import com.fsck.k9.view.RecipientSelectView.RecipientCryptoStatus;
 import org.apache.james.mime4j.util.CharsetUtil;
@@ -150,14 +139,14 @@ public class RecipientLoader extends AsyncTaskLoader<List<Recipient>> {
     private final Uri lookupKeyUri;
     private final String cryptoProvider;
     private final ContentResolver contentResolver;
-    private final RecipientIndex recipientIndex = DI.get(RecipientIndex.class);
-    private final SentMailRecipientScanner sentMailRecipientScanner = DI.get(SentMailRecipientScanner.class);
+    private final RecipientSuggestions suggestions;
 
     private List<Recipient> cachedRecipients;
     private ForceLoadContentObserver observerContact, observerKey;
 
-    private RecipientLoader(Context context) {
+    private RecipientLoader(Context context, RecipientSuggestions suggestions) {
         super(context);
+        this.suggestions = suggestions;
         this.query = null;
         this.lookupKeyUri = null;
         this.addresses = null;
@@ -167,8 +156,10 @@ public class RecipientLoader extends AsyncTaskLoader<List<Recipient>> {
         this.contentResolver = context.getContentResolver();
     }
 
-    public RecipientLoader(Context context, String cryptoProvider, String query) {
+    public RecipientLoader(Context context, String cryptoProvider, String query,
+            RecipientSuggestions suggestions) {
         super(context);
+        this.suggestions = suggestions;
         this.query = query;
         this.lookupKeyUri = null;
         this.addresses = null;
@@ -178,8 +169,10 @@ public class RecipientLoader extends AsyncTaskLoader<List<Recipient>> {
         contentResolver = context.getContentResolver();
     }
 
-    public RecipientLoader(Context context, String cryptoProvider, Address... addresses) {
+    public RecipientLoader(Context context, String cryptoProvider, RecipientSuggestions suggestions,
+            Address... addresses) {
         super(context);
+        this.suggestions = suggestions;
         this.query = null;
         this.addresses = addresses;
         this.contactUri = null;
@@ -189,8 +182,10 @@ public class RecipientLoader extends AsyncTaskLoader<List<Recipient>> {
         contentResolver = context.getContentResolver();
     }
 
-    public RecipientLoader(Context context, String cryptoProvider, Uri contactUri, boolean isLookupKey) {
+    public RecipientLoader(Context context, String cryptoProvider, Uri contactUri, boolean isLookupKey,
+            RecipientSuggestions suggestions) {
         super(context);
+        this.suggestions = suggestions;
         this.query = null;
         this.addresses = null;
         this.contactUri = isLookupKey ? null : contactUri;
@@ -200,8 +195,9 @@ public class RecipientLoader extends AsyncTaskLoader<List<Recipient>> {
         contentResolver = context.getContentResolver();
     }
 
-    public static RecipientLoader getMostContactedRecipientLoader(Context context, final int maxRecipients) {
-        return new RecipientLoader(context) {
+    public static RecipientLoader getMostContactedRecipientLoader(Context context, final int maxRecipients,
+            RecipientSuggestions suggestions) {
+        return new RecipientLoader(context, suggestions) {
             @Override
             public List<Recipient> loadInBackground() {
                 return super.fillMostContacted(maxRecipients);
@@ -226,13 +222,12 @@ public class RecipientLoader extends AsyncTaskLoader<List<Recipient>> {
             recipientMap.put(recipient.address.getAddress(), recipient);
         }
 
-        sentMailRecipientScanner.scanIfDue();
-        for (IndexedRecipient indexed : recipientIndex.mostUsed(maxRecipients)) {
+        for (SuggestedRecipient suggestion : suggestions.mostUsed(maxRecipients)) {
             if (recipients.size() >= maxRecipients) {
                 break;
             }
 
-            addIndexedRecipient(indexed, recipients, recipientMap);
+            addLearnedRecipient(suggestion.getAddress(), suggestion.getDisplayName(), recipients, recipientMap);
         }
 
         return recipients;
@@ -565,16 +560,14 @@ public class RecipientLoader extends AsyncTaskLoader<List<Recipient>> {
      */
     private void fillContactDataFromRecipientIndex(String query, List<Recipient> recipients,
             Map<String, Recipient> recipientMap) {
-        sentMailRecipientScanner.scanIfDue();
-
-        for (IndexedRecipient indexed : recipientIndex.search(query, MAX_INDEX_RESULTS)) {
-            addIndexedRecipient(indexed, recipients, recipientMap);
-        }
+        addSuggestions(suggestions.search(query, MAX_INDEX_RESULTS), recipients, recipientMap);
     }
 
-    private void addIndexedRecipient(IndexedRecipient indexed, List<Recipient> recipients,
+    private void addSuggestions(List<SuggestedRecipient> suggested, List<Recipient> recipients,
             Map<String, Recipient> recipientMap) {
-        addLearnedRecipient(indexed.getAddress(), indexed.getDisplayName(), recipients, recipientMap);
+        for (SuggestedRecipient suggestion : suggested) {
+            addLearnedRecipient(suggestion.getAddress(), suggestion.getDisplayName(), recipients, recipientMap);
+        }
     }
 
     private void addLearnedRecipient(String email, String displayName, List<Recipient> recipients,
@@ -598,10 +591,6 @@ public class RecipientLoader extends AsyncTaskLoader<List<Recipient>> {
      * Last, and only when the user has turned it on, because it is the one source here that tells somebody else
      * what is being typed. Skipped entirely once the local sources have produced enough to fill the dropdown:
      * there is nothing to add, and no reason to send the query anywhere.
-     *
-     * Only backends that can answer are asked - in practice the Graph backend, since a mailbox protocol has no
-     * notion of an organisation's directory. Results are not stored: they were never the user's address book,
-     * and they will be offered again as readily next time. Picking one records it like any other recipient.
      */
     private void fillContactDataFromDirectory(String query, List<Recipient> recipients,
             Map<String, Recipient> recipientMap) {
@@ -609,42 +598,7 @@ public class RecipientLoader extends AsyncTaskLoader<List<Recipient>> {
             return;
         }
 
-        if (!DI.get(GeneralSettingsManager.class).getConfig().getDirectorySearch().isEnabled()) {
-            return;
-        }
-
-        BackendManager backendManager = DI.get(BackendManager.class);
-        for (LegacyAccountDto account : DI.get(LegacyAccountDtoManager.class).getAccounts()) {
-            DirectorySearcher searcher = directorySearcherFor(backendManager, account);
-            if (searcher == null) {
-                continue;
-            }
-
-            for (DirectoryContact contact : searcher.searchDirectory(query)) {
-                for (String address : contact.getAddresses()) {
-                    addLearnedRecipient(address, contact.getDisplayName(), recipients, recipientMap);
-                }
-            }
-        }
-    }
-
-    /**
-     * @return what can search this account's directory, or null when nothing can.
-     *
-     * An account whose backend cannot be built - one being set up, or one whose credentials have expired - is not
-     * an error here: completion carries on with what the device already knows.
-     */
-    @Nullable
-    private DirectorySearcher directorySearcherFor(BackendManager backendManager, LegacyAccountDto account) {
-        try {
-            Backend backend = backendManager.getBackend(account.getUuid());
-
-            return backend instanceof DirectorySearcher ? (DirectorySearcher) backend : null;
-        } catch (Exception e) {
-            Log.d(e, "Could not reach a backend to search its directory");
-
-            return null;
-        }
+        addSuggestions(suggestions.searchDirectory(query), recipients, recipientMap);
     }
 
     private void fillCryptoStatusData(Map<String, Recipient> recipientMap) {

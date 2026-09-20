@@ -17,10 +17,15 @@ import net.thunderbird.core.common.inject.getList
 import net.thunderbird.core.featureflag.FeatureFlagProvider
 import net.thunderbird.core.featureflag.keys.GeneratedFeatureFlagKey
 import org.koin.core.module.dsl.viewModel
+import com.fsck.k9.activity.compose.DefaultRecipientSuggestions
+import com.fsck.k9.activity.compose.RecipientSuggestions
 import org.koin.core.qualifier.named
 import org.koin.dsl.module
 
 val uiModule = module {
+    // Its collaborators are looked up when a question is asked rather than here, so building a recipient field
+    // never constructs a mail backend.
+    single<RecipientSuggestions> { DefaultRecipientSuggestions() }
     factory {
         DisplayHtmlUiFactory(
             cssClassNameProvider = get(),

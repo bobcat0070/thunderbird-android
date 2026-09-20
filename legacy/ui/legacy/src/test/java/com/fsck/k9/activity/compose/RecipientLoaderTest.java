@@ -1,6 +1,7 @@
 package com.fsck.k9.activity.compose;
 
 
+import java.util.Collections;
 import java.util.List;
 
 import android.Manifest;
@@ -34,6 +35,26 @@ import static org.mockito.Mockito.when;
 @SuppressWarnings("WeakerAccess")
 public class RecipientLoaderTest extends RobolectricTest {
     static final String CRYPTO_PROVIDER = "cryptoProvider";
+    /**
+     * These tests are about what the device's contact provider returns, so the learned sources answer nothing.
+     * What they contribute has tests of its own against the index that holds them.
+     */
+    static final RecipientSuggestions NO_SUGGESTIONS = new RecipientSuggestions() {
+        @Override
+        public List<SuggestedRecipient> search(String query, int limit) {
+            return Collections.emptyList();
+        }
+
+        @Override
+        public List<SuggestedRecipient> mostUsed(int limit) {
+            return Collections.emptyList();
+        }
+
+        @Override
+        public List<SuggestedRecipient> searchDirectory(String query) {
+            return Collections.emptyList();
+        }
+    };
     static final String[] PROJECTION = {
             ContactsContract.CommonDataKinds.Email._ID,
             ContactsContract.Contacts.DISPLAY_NAME_PRIMARY,
@@ -89,7 +110,7 @@ public class RecipientLoaderTest extends RobolectricTest {
 
     @Test
     public void queryCryptoProvider() throws Exception {
-        RecipientLoader recipientLoader = new RecipientLoader(context, CRYPTO_PROVIDER, QUERYSTRING);
+        RecipientLoader recipientLoader = new RecipientLoader(context, CRYPTO_PROVIDER, QUERYSTRING, NO_SUGGESTIONS);
 
         setupQueryCryptoProvider("%" + QUERYSTRING + "%", CONTACT_ADDRESS_1, CONTACT_ADDRESS_2);
 
@@ -103,7 +124,7 @@ public class RecipientLoaderTest extends RobolectricTest {
 
     @Test
     public void queryCryptoStatus_unavailable() throws Exception {
-        RecipientLoader recipientLoader = new RecipientLoader(context, CRYPTO_PROVIDER, CONTACT_ADDRESS_1);
+        RecipientLoader recipientLoader = new RecipientLoader(context, CRYPTO_PROVIDER, NO_SUGGESTIONS, CONTACT_ADDRESS_1);
 
         setupCryptoProviderStatus(CONTACT_ADDRESS_1, "0", "0");
 
@@ -117,7 +138,7 @@ public class RecipientLoaderTest extends RobolectricTest {
 
     @Test
     public void queryCryptoStatus_autocrypt_untrusted() throws Exception {
-        RecipientLoader recipientLoader = new RecipientLoader(context, CRYPTO_PROVIDER, CONTACT_ADDRESS_1);
+        RecipientLoader recipientLoader = new RecipientLoader(context, CRYPTO_PROVIDER, NO_SUGGESTIONS, CONTACT_ADDRESS_1);
 
         setupCryptoProviderStatus(CONTACT_ADDRESS_1, "0", "1");
 
@@ -131,7 +152,7 @@ public class RecipientLoaderTest extends RobolectricTest {
 
     @Test
     public void queryCryptoStatus_autocrypt_trusted() throws Exception {
-        RecipientLoader recipientLoader = new RecipientLoader(context, CRYPTO_PROVIDER, CONTACT_ADDRESS_1);
+        RecipientLoader recipientLoader = new RecipientLoader(context, CRYPTO_PROVIDER, NO_SUGGESTIONS, CONTACT_ADDRESS_1);
 
         setupCryptoProviderStatus(CONTACT_ADDRESS_1, "0", "2");
 
@@ -145,7 +166,7 @@ public class RecipientLoaderTest extends RobolectricTest {
 
     @Test
     public void queryCryptoStatus_withHigherUidStatus() throws Exception {
-        RecipientLoader recipientLoader = new RecipientLoader(context, CRYPTO_PROVIDER, CONTACT_ADDRESS_1);
+        RecipientLoader recipientLoader = new RecipientLoader(context, CRYPTO_PROVIDER, NO_SUGGESTIONS, CONTACT_ADDRESS_1);
 
         setupCryptoProviderStatus(CONTACT_ADDRESS_1, "2", "1");
 
@@ -223,7 +244,7 @@ public class RecipientLoaderTest extends RobolectricTest {
 
     @Test
     public void queryContactProvider() throws Exception {
-        RecipientLoader recipientLoader = new RecipientLoader(context, CRYPTO_PROVIDER, QUERYSTRING);
+        RecipientLoader recipientLoader = new RecipientLoader(context, CRYPTO_PROVIDER, QUERYSTRING, NO_SUGGESTIONS);
         setupContactProvider("%" + QUERYSTRING + "%", CONTACT_1);
 
         List<Recipient> recipients = recipientLoader.loadInBackground();
@@ -239,7 +260,7 @@ public class RecipientLoaderTest extends RobolectricTest {
         shadowApp.denyPermissions(Manifest.permission.READ_CONTACTS);
         shadowApp.denyPermissions(Manifest.permission.WRITE_CONTACTS);
 
-        RecipientLoader recipientLoader = new RecipientLoader(context, CRYPTO_PROVIDER, QUERYSTRING);
+        RecipientLoader recipientLoader = new RecipientLoader(context, CRYPTO_PROVIDER, QUERYSTRING, NO_SUGGESTIONS);
         setupContactProvider("%" + QUERYSTRING + "%", CONTACT_1);
 
         List<Recipient> recipients = recipientLoader.loadInBackground();
@@ -249,7 +270,7 @@ public class RecipientLoaderTest extends RobolectricTest {
 
     @Test
     public void queryContactProvider_ignoresRecipientWithNoEmail() throws Exception {
-        RecipientLoader recipientLoader = new RecipientLoader(context, CRYPTO_PROVIDER, QUERYSTRING);
+        RecipientLoader recipientLoader = new RecipientLoader(context, CRYPTO_PROVIDER, QUERYSTRING, NO_SUGGESTIONS);
         setupContactProvider("%" + QUERYSTRING + "%", CONTACT_NO_EMAIL);
 
         List<Recipient> recipients = recipientLoader.loadInBackground();
@@ -259,7 +280,7 @@ public class RecipientLoaderTest extends RobolectricTest {
 
     @Test
     public void queryContactProvider_sortByTimesContactedForNickname() throws Exception {
-        RecipientLoader recipientLoader = new RecipientLoader(context, null, QUERYSTRING);
+        RecipientLoader recipientLoader = new RecipientLoader(context, null, QUERYSTRING, NO_SUGGESTIONS);
         setupContactProvider("%" + QUERYSTRING + "%", CONTACT_1);
         setupNicknameContactProvider(NICKNAME_NOT_CONTACTED);
         setupContactProviderForId(NICKNAME_NOT_CONTACTED[0], CONTACT_WITH_NICKNAME_NOT_CONTACTED);
@@ -276,7 +297,7 @@ public class RecipientLoaderTest extends RobolectricTest {
         int maxTargets = 1;
         setupContactProvider(CONTACT_1, CONTACT_2);
 
-        RecipientLoader recipientLoader = RecipientLoader.getMostContactedRecipientLoader(context, maxTargets);
+        RecipientLoader recipientLoader = RecipientLoader.getMostContactedRecipientLoader(context, maxTargets, NO_SUGGESTIONS);
         List<Recipient> recipients = recipientLoader.loadInBackground();
 
         assertEquals(maxTargets, recipients.size());
@@ -289,7 +310,7 @@ public class RecipientLoaderTest extends RobolectricTest {
         int maxTargets = 5;
         setupContactProvider(CONTACT_1, CONTACT_2);
 
-        RecipientLoader recipientLoader = RecipientLoader.getMostContactedRecipientLoader(context, maxTargets);
+        RecipientLoader recipientLoader = RecipientLoader.getMostContactedRecipientLoader(context, maxTargets, NO_SUGGESTIONS);
         List<Recipient> recipients = recipientLoader.loadInBackground();
 
         assertEquals(2, recipients.size());
@@ -305,7 +326,7 @@ public class RecipientLoaderTest extends RobolectricTest {
         setupContactProvider();
 
 
-        RecipientLoader recipientLoader = RecipientLoader.getMostContactedRecipientLoader(context, maxTargets);
+        RecipientLoader recipientLoader = RecipientLoader.getMostContactedRecipientLoader(context, maxTargets, NO_SUGGESTIONS);
         List<Recipient> recipients = recipientLoader.loadInBackground();
 
         assertEquals(0, recipients.size());
