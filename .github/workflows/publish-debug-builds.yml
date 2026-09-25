@@ -1,0 +1,133 @@
+---
+name: Build - Publish debug APKs
+
+# Keeps the last few debug builds of main downloadable as releases, so a build can be installed straight from a
+# phone. Each is signed with the same debug key used for local builds, so any of them installs over the app
+# already on the device instead of requiring an uninstall that would wipe its accounts.
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  # One at a time, in order: pruning while another run is publishing could delete the wrong release.
+  group: publish-debug-builds
+  cancel-in-progress: false
+
+env:
+  KEEP_RELEASES: 5
+  TAG_PREFIX: debug-
+
+jobs:
+  publish:
+    name: Build and publish debug APKs
+    # Only for this fork: upstream publishes its own builds through its own release pipeline.
+    if: github.repository_owner != 'thunderbird'
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    permissions:
+      contents: write
+    env:
+      # Secrets cannot be tested in an `if`, but whether one is set can be carried in the environment.
+      HAS_SIGNING_KEY: ${{ secrets.DEBUG_KEYSTORE_BASE64 != '' }}
+
+    steps:
+      - name: Report a missing signing key
+        if: env.HAS_SIGNING_KEY != 'true'
+        run: |
+          echo "::warning::DEBUG_KEYSTORE_BASE64 is not set, so nothing is published. APKs signed with the" \
+            "runner's own throwaway key could not be installed over the app on a device."
+
+      - name: Checkout the repo
+        if: env.HAS_SIGNING_KEY == 'true'
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 1
+
+      - name: Cleanup disk
+        if: env.HAS_SIGNING_KEY == 'true'
+        uses: ./.github/actions/disk-cleanup
+
+      - name: Setup Gradle environment
+        if: env.HAS_SIGNING_KEY == 'true'
+        uses: ./.github/actions/setup-gradle
+
+      - name: Install the debug signing key
+        if: env.HAS_SIGNING_KEY == 'true'
+        env:
+          DEBUG_KEYSTORE_BASE64: ${{ secrets.DEBUG_KEYSTORE_BASE64 }}
+        run: |
+          # The Android Gradle plugin signs debug builds with the debug keystore in the Android user home, so
+          # putting the key there is all it takes; the build configuration itself is unchanged.
+          mkdir -p "$HOME/.android"
+          echo "$DEBUG_KEYSTORE_BASE64" | base64 --decode > "$HOME/.android/debug.keystore"
+          chmod 600 "$HOME/.android/debug.keystore"
+          echo "ANDROID_USER_HOME=$HOME/.android" >> "$GITHUB_ENV"
+
+      - name: Build debug APKs
+        if: env.HAS_SIGNING_KEY == 'true'
+        run: ./gradlew :app-thunderbird:assembleFullDebug :app-k9mail:assembleFullDebug
+
+      - name: Check the APKs were signed with the installed key
+        if: env.HAS_SIGNING_KEY == 'true'
+        run: |
+          # Refuse to publish anything the device would reject as an update.
+          expected=$(keytool -list -v -keystore "$HOME/.android/debug.keystore" -storepass android \
+            -alias androiddebugkey | grep 'SHA256:' | head -1 | sed 's/.*SHA256: //; s/://g' | tr 'A-F' 'a-f')
+          apksigner=$(ls -d "$ANDROID_HOME"/build-tools/*/ | sort -V | tail -1)apksigner
+          for apk in \
+            app-thunderbird/build/outputs/apk/full/debug/app-thunderbird-full-debug.apk \
+            app-k9mail/build/outputs/apk/full/debug/app-k9mail-full-debug.apk
+          do
+            actual=$("$apksigner" verify --print-certs "$apk" | grep 'SHA-256 digest' | head -1 | awk '{print $NF}')
+            if [ "$actual" != "$expected" ]; then
+              echo "::error::$apk is signed by $actual, not the debug key ($expected)"
+              exit 1
+            fi
+          done
+
+      - name: Publish release
+        if: env.HAS_SIGNING_KEY == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_NUMBER: ${{ github.run_number }}
+        run: |
+          short_sha=$(git rev-parse --short HEAD)
+          # Read from git rather than interpolated from the event, so a commit message cannot inject shell.
+          subject=$(git log -1 --format=%s)
+          tag="${TAG_PREFIX}${RUN_NUMBER}"
+
+          mkdir -p publish
+          cp app-thunderbird/build/outputs/apk/full/debug/app-thunderbird-full-debug.apk \
+            "publish/thunderbird-debug-${short_sha}.apk"
+          cp app-k9mail/build/outputs/apk/full/debug/app-k9mail-full-debug.apk \
+            "publish/k9mail-debug-${short_sha}.apk"
+
+          printf 'Debug build of %s: %s\n\nSigned with the debug key, so it installs over any other debug build.\n' \
+            "$short_sha" "$subject" > notes.md
+
+          gh release create "$tag" publish/*.apk \
+            --prerelease \
+            --target "$GITHUB_SHA" \
+            --title "Debug build ${RUN_NUMBER} (${short_sha})" \
+            --notes-file notes.md
+
+      - name: Keep only the newest releases
+        if: env.HAS_SIGNING_KEY == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # Only releases this workflow made are considered, newest first; everything past the limit goes, tag
+          # and all.
+          gh release list --limit 100 --json tagName,createdAt \
+            --jq "[.[] | select(.tagName | startswith(\"${TAG_PREFIX}\"))] | sort_by(.createdAt) | reverse
+              | .[${KEEP_RELEASES}:] | .[].tagName" |
+          while read -r old_tag; do
+            echo "Deleting $old_tag"
+            gh release delete "$old_tag" --cleanup-tag --yes
+          done
