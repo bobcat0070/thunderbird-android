@@ -15,6 +15,7 @@ import net.thunderbird.feature.navigation.drawer.dropdown.domain.entity.UnifiedD
 import net.thunderbird.feature.navigation.drawer.dropdown.domain.entity.UnifiedDisplayFolderType
 import net.thunderbird.feature.navigation.drawer.dropdown.domain.entity.createMailDisplayAccountFolderId
 import net.thunderbird.feature.navigation.drawer.dropdown.ui.DrawerView
+import net.thunderbird.feature.search.legacy.UnifiedFolderKind
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
 
@@ -28,7 +29,7 @@ class DropDownDrawer(
     override val parent: AppCompatActivity,
     private val openAccount: (accountId: String) -> Unit,
     private val openFolder: (accountId: String, folderId: Long) -> Unit,
-    private val openUnifiedFolder: () -> Unit,
+    private val openUnifiedFolder: (UnifiedFolderKind) -> Unit,
     private val openManageFolders: () -> Unit,
     private val openSettings: () -> Unit,
     private val openAddAccount: () -> Unit,
@@ -91,6 +92,17 @@ class DropDownDrawer(
             it.copy(
                 selectedAccountUuid = UnifiedDisplayAccount.UNIFIED_ACCOUNT_ID,
                 selectedFolderId = UnifiedDisplayFolderType.INBOX.id,
+            )
+        }
+    }
+
+    override fun selectUnifiedFolder(searchId: String) {
+        val kind = UnifiedFolderKind.fromSearchId(searchId) ?: return
+
+        drawerState.update {
+            it.copy(
+                selectedAccountUuid = UnifiedDisplayAccount.UNIFIED_ACCOUNT_ID,
+                selectedFolderId = UnifiedDisplayFolderType.fromKind(kind).id,
             )
         }
     }

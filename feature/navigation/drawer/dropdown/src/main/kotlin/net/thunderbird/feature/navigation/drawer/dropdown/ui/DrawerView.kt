@@ -7,6 +7,7 @@ import net.thunderbird.feature.navigation.drawer.dropdown.FolderDrawerState
 import net.thunderbird.feature.navigation.drawer.dropdown.ui.DrawerContract.Effect
 import net.thunderbird.feature.navigation.drawer.dropdown.ui.DrawerContract.Event
 import net.thunderbird.feature.navigation.drawer.dropdown.ui.DrawerContract.ViewModel
+import net.thunderbird.feature.search.legacy.UnifiedFolderKind
 import org.koin.compose.viewmodel.koinViewModel
 
 @Suppress("LongParameterList")
@@ -15,7 +16,7 @@ internal fun DrawerView(
     drawerState: FolderDrawerState,
     openAccount: (accountId: String) -> Unit,
     openFolder: (accountId: String, folderId: Long) -> Unit,
-    openUnifiedFolder: () -> Unit,
+    openUnifiedFolder: (UnifiedFolderKind) -> Unit,
     openManageFolders: () -> Unit,
     openSettings: () -> Unit,
     openAddAccount: () -> Unit,
@@ -31,7 +32,7 @@ internal fun DrawerView(
                 effect.folderId,
             )
 
-            Effect.OpenUnifiedFolder -> openUnifiedFolder()
+            is Effect.OpenUnifiedFolder -> openUnifiedFolder(effect.kind)
 
             is Effect.OpenManageFolders -> openManageFolders()
 

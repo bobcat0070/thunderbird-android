@@ -63,6 +63,7 @@ import com.fsck.k9.helper.mapToSet
 import com.fsck.k9.mail.AuthType
 import com.fsck.k9.mailstore.LocalStoreProvider
 import com.fsck.k9.search.getLegacyAccounts
+import com.fsck.k9.search.unifiedSpecialFolder
 import com.fsck.k9.ui.BuildConfig
 import com.fsck.k9.activity.MessageCompose
 import com.fsck.k9.helper.HttpsUnsubscribeUri
@@ -117,6 +118,8 @@ import net.thunderbird.feature.mail.folder.api.OutboxFolderManager
 import net.thunderbird.feature.mail.message.list.domain.DomainContract
 import net.thunderbird.feature.mail.message.list.ui.dialog.SetupArchiveFolderDialogFragmentFactory
 import net.thunderbird.feature.navigation.changelog.api.ChangeLogMode
+import net.thunderbird.feature.navigation.drawer.api.NavigationDrawerExternalContract.PinnedFolder
+import net.thunderbird.feature.navigation.drawer.api.NavigationDrawerExternalContract.PinnedFolderRepository
 import net.thunderbird.feature.notification.api.content.InAppNotification
 import net.thunderbird.feature.notification.api.content.SentFolderNotFoundNotification
 import net.thunderbird.feature.notification.api.ui.InAppNotificationHost
@@ -126,6 +129,7 @@ import net.thunderbird.feature.notification.api.ui.dialog.ErrorNotificationsDial
 import net.thunderbird.feature.notification.api.ui.host.DisplayInAppNotificationFlag
 import net.thunderbird.feature.notification.api.ui.host.visual.SnackbarVisual
 import net.thunderbird.feature.notification.api.ui.style.SnackbarDuration
+import net.thunderbird.feature.search.legacy.UnifiedFolderKind
 import net.thunderbird.feature.search.legacy.api.MessageSearchField
 import net.thunderbird.feature.search.legacy.LocalMessageSearch
 import net.thunderbird.feature.search.legacy.SearchAccount
@@ -169,6 +173,7 @@ class LegacyMessageListFragment :
     private val recentChangesViewModel: RecentChangesViewModel by viewModel()
 
     private val generalSettingsManager: GeneralSettingsManager by inject()
+    private val pinnedFolderRepository: PinnedFolderRepository by inject()
     private val sortTypeToastProvider: SortTypeToastProvider by inject()
     private val messageListPreferencesManager: MessageListPreferencesManager by inject()
     private val folderNameFormatter: FolderNameFormatter by inject { parametersOf(requireContext()) }
@@ -778,11 +783,13 @@ class LegacyMessageListFragment :
 
     private fun setWindowTitle() {
         val classification = displayedClassification
+        val unifiedFolder = localSearch.unifiedSpecialFolder
         val title = when {
             // Checked before the folder cases: a category list is a view of a folder, and naming the folder
             // would leave nothing on screen saying which category is being shown.
             classification != null -> getString(classification.titleRes())
             isUnifiedFolders -> getString(R.string.integrated_inbox_title)
+            unifiedFolder != null -> getString(unifiedFolder.titleRes())
             isNewMessagesView -> getString(R.string.new_messages_title)
             isManualSearch -> getString(R.string.search_results)
             isThreadDisplay -> threadTitle ?: ""
@@ -807,6 +814,15 @@ class LegacyMessageListFragment :
         }
 
         fragmentListener.setMessageListProgressEnabled(progress)
+    }
+
+    private fun UnifiedFolderKind.titleRes(): Int = when (this) {
+        UnifiedFolderKind.INBOX -> R.string.integrated_inbox_title
+        UnifiedFolderKind.DRAFTS -> R.string.unified_drafts_title
+        UnifiedFolderKind.SENT -> R.string.unified_sent_title
+        UnifiedFolderKind.ARCHIVE -> R.string.unified_archive_title
+        UnifiedFolderKind.SPAM -> R.string.unified_spam_title
+        UnifiedFolderKind.TRASH -> R.string.unified_trash_title
     }
 
     private fun MessageClass.titleRes(): Int = when (this) {
@@ -1278,6 +1294,50 @@ class LegacyMessageListFragment :
 
         menu.findItem(R.id.search_remote).isVisible = !isRemoteSearch && isRemoteSearchAllowed
         menu.findItem(R.id.search_everywhere).isVisible = isManualSearch && !localSearch.searchAllAccounts()
+        preparePinMenu(menu)
+    }
+
+    /**
+     * Offers pinning only where a pin would be seen: pins are listed in the drawer's unified section, so with
+     * that section switched off the action would pin into a place the user cannot see.
+     */
+    private fun preparePinMenu(menu: Menu) {
+        val pinItem = menu.findItem(R.id.pin_folder) ?: return
+        val folder = currentPinnableFolder()
+        val isUnifiedSectionShown = generalSettingsManager.getConfig().display.inboxSettings.isShowUnifiedInbox
+
+        pinItem.isVisible = folder != null && isUnifiedSectionShown
+        if (folder != null) {
+            val isPinned = pinnedFolderRepository.isPinned(folder)
+            pinItem.setTitle(if (isPinned) R.string.unpin_folder_action else R.string.pin_folder_action)
+        }
+    }
+
+    /**
+     * @return the folder being shown, when exactly one folder of one account is - the only kind of list that has
+     *   a single place to pin.
+     */
+    private fun currentPinnableFolder(): PinnedFolder? {
+        if (!isSingleFolderMode || isManualSearch || isThreadDisplay) return null
+        val accountUuid = account?.uuid ?: return null
+        val folderId = currentFolder?.databaseId ?: return null
+
+        return PinnedFolder(accountUuid = accountUuid, folderId = folderId)
+    }
+
+    private fun onTogglePin() {
+        val folder = currentPinnableFolder() ?: return
+
+        val message = if (pinnedFolderRepository.isPinned(folder)) {
+            pinnedFolderRepository.unpin(folder)
+            R.string.folder_unpinned
+        } else {
+            pinnedFolderRepository.pin(folder)
+            R.string.folder_pinned
+        }
+
+        Toast.makeText(requireContext(), message, Toast.LENGTH_SHORT).show()
+        requireActivity().invalidateMenu()
     }
 
     private fun prepareSortMenu(menu: Menu) {
@@ -1334,6 +1394,7 @@ class LegacyMessageListFragment :
             R.id.empty_trash -> onEmptyTrash()
             R.id.expunge -> onExpunge()
             R.id.search_everywhere -> onSearchEverywhere()
+            R.id.pin_folder -> onTogglePin()
             R.id.debug_invalidate_access_token_local -> onDebugInvalidateAccessTokenLocal()
             R.id.debug_invalidate_access_token_server -> onDebugInvalidateAccessTokenServer()
             R.id.debug_force_auth_failure -> onDebugForceAuthFailure()

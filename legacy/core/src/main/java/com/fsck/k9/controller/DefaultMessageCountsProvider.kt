@@ -6,6 +6,7 @@ import app.k9mail.legacy.message.controller.MessageCountsProvider
 import app.k9mail.legacy.message.controller.MessagingControllerRegistry
 import app.k9mail.legacy.message.controller.SimpleMessagingListener
 import com.fsck.k9.search.excludeSpecialFolders
+import com.fsck.k9.search.forAccount
 import com.fsck.k9.search.getAccounts
 import com.fsck.k9.search.limitToDisplayableFolders
 import kotlin.coroutines.CoroutineContext
@@ -99,9 +100,11 @@ internal class DefaultMessageCountsProvider(
     private fun getMessageCounts(account: LegacyAccountDto, conditions: SearchConditionTreeNode?): MessageCounts {
         return try {
             val messageStore = messageStoreManager.getMessageStore(account)
+            // Folder ids are this account's own, so a condition naming a folder by role becomes this account's.
+            val accountConditions = conditions?.forAccount(account)
             return MessageCounts(
-                unread = messageStore.getUnreadMessageCount(conditions),
-                starred = messageStore.getStarredMessageCount(conditions),
+                unread = messageStore.getUnreadMessageCount(accountConditions),
+                starred = messageStore.getStarredMessageCount(accountConditions),
             )
         } catch (e: Exception) {
             Log.e(e, "Unable to getMessageCounts for account: %s", account)

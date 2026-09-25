@@ -1,6 +1,7 @@
 package net.thunderbird.feature.search.legacy.sql
 
 import net.thunderbird.feature.search.legacy.SearchConditionTreeNode
+import net.thunderbird.feature.search.legacy.api.MessageSearchField
 import net.thunderbird.feature.search.legacy.api.SearchAttribute
 import net.thunderbird.feature.search.legacy.api.SearchCondition
 import net.thunderbird.feature.search.legacy.api.SearchFieldType
@@ -68,7 +69,12 @@ class SqlWhereClause private constructor(
             if (node.left == null && node.right == null) {
                 val condition = node.condition ?: error("Leaf node missing condition")
 
-                if (condition.field.fieldType == SearchFieldType.CUSTOM) {
+                if (condition.field == MessageSearchField.SPECIAL_FOLDER) {
+                    // Only reaches here if a caller forgot to resolve it for an account. Matching nothing is the
+                    // safe failure: an empty list is visibly wrong, while emitting the placeholder column would be
+                    // a SQL error, and guessing a folder would show the wrong mail.
+                    query.append("0")
+                } else if (condition.field.fieldType == SearchFieldType.CUSTOM) {
                     require(condition.attribute == SearchAttribute.CONTAINS) {
                         "Custom fields only support CONTAINS"
                     }

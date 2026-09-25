@@ -34,6 +34,7 @@ import net.thunderbird.feature.navigation.drawer.dropdown.ui.DrawerContract.Effe
 import net.thunderbird.feature.navigation.drawer.dropdown.ui.DrawerContract.Event
 import net.thunderbird.feature.navigation.drawer.dropdown.ui.DrawerContract.State
 import net.thunderbird.feature.navigation.drawer.dropdown.ui.FakeData.MAIL_DISPLAY_ACCOUNT
+import net.thunderbird.feature.search.legacy.UnifiedFolderKind
 
 @OptIn(ExperimentalCoroutinesApi::class)
 internal class DrawerViewModelTest {
@@ -440,7 +441,7 @@ internal class DrawerViewModelTest {
             // Consume the state update
             turbines.awaitStateItem()
 
-            assertThat(turbines.awaitEffectItem()).isEqualTo(Effect.OpenUnifiedFolder)
+            assertThat(turbines.awaitEffectItem()).isEqualTo(Effect.OpenUnifiedFolder(UnifiedFolderKind.INBOX))
 
             turbines.assertThatAndEffectTurbineConsumed {
                 isEqualTo(Effect.CloseDrawer)

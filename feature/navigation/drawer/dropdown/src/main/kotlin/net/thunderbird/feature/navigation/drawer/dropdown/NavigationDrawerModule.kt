@@ -1,5 +1,7 @@
 package net.thunderbird.feature.navigation.drawer.dropdown
 
+import net.thunderbird.feature.navigation.drawer.api.NavigationDrawerExternalContract.PinnedFolderRepository
+import net.thunderbird.feature.navigation.drawer.dropdown.data.SharedPreferencesPinnedFolderRepository
 import net.thunderbird.feature.navigation.drawer.dropdown.data.UnifiedFolderRepository
 import net.thunderbird.feature.navigation.drawer.dropdown.domain.DomainContract
 import net.thunderbird.feature.navigation.drawer.dropdown.domain.DomainContract.UseCase
@@ -11,11 +13,16 @@ import net.thunderbird.feature.navigation.drawer.dropdown.domain.usecase.SaveDra
 import net.thunderbird.feature.navigation.drawer.dropdown.domain.usecase.SyncAccount
 import net.thunderbird.feature.navigation.drawer.dropdown.domain.usecase.SyncAllAccounts
 import net.thunderbird.feature.navigation.drawer.dropdown.ui.DrawerViewModel
+import org.koin.android.ext.koin.androidContext
 import org.koin.core.module.Module
 import org.koin.core.module.dsl.viewModel
 import org.koin.dsl.module
 
 val navigationDropDownDrawerModule: Module = module {
+
+    single<PinnedFolderRepository> {
+        SharedPreferencesPinnedFolderRepository(context = androidContext())
+    }
 
     single<DomainContract.UnifiedFolderRepository> {
         UnifiedFolderRepository(
@@ -49,6 +56,8 @@ val navigationDropDownDrawerModule: Module = module {
         GetDisplayFoldersForAccount(
             displayFolderRepository = get(),
             unifiedFolderRepository = get(),
+            pinnedFolderRepository = get(),
+            accountManager = get(),
         )
     }
 

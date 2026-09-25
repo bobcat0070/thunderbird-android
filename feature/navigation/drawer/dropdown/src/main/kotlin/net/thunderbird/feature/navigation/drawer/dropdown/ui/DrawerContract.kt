@@ -8,6 +8,7 @@ import net.thunderbird.feature.navigation.drawer.api.NavigationDrawerExternalCon
 import net.thunderbird.feature.navigation.drawer.dropdown.domain.entity.DisplayAccount
 import net.thunderbird.feature.navigation.drawer.dropdown.domain.entity.DisplayFolder
 import net.thunderbird.feature.navigation.drawer.dropdown.domain.entity.DisplayTreeFolder
+import net.thunderbird.feature.search.legacy.UnifiedFolderKind
 
 internal interface DrawerContract {
 
@@ -54,7 +55,7 @@ internal interface DrawerContract {
     sealed interface Effect {
         data class OpenAccount(val accountId: String) : Effect
         data class OpenFolder(val accountId: String, val folderId: Long) : Effect
-        data object OpenUnifiedFolder : Effect
+        data class OpenUnifiedFolder(val kind: UnifiedFolderKind) : Effect
         data object OpenManageFolders : Effect
         data object OpenSettings : Effect
         data object OpenAddAccount : Effect

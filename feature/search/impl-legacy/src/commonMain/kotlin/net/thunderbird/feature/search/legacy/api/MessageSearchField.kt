@@ -41,4 +41,15 @@ enum class MessageSearchField(
     FLAGGED("flagged", SearchFieldType.NUMBER),
     VISIBLE("visible", SearchFieldType.NUMBER),
     CLASSIFICATION("classification", SearchFieldType.TEXT),
+
+    /**
+     * One of an account's special folders, by kind rather than by id - the value is a
+     * [net.thunderbird.feature.search.legacy.UnifiedFolderKind] name.
+     *
+     * Folder ids belong to one account's database, so a search spanning accounts cannot name "the Sent folder"
+     * by id. This names it by role instead, and each account's query replaces it with that account's own
+     * folder before any SQL is built; see
+     * [net.thunderbird.feature.search.legacy.resolveSpecialFolders]. The column name is never emitted.
+     */
+    SPECIAL_FOLDER("special_folder", SearchFieldType.NUMBER),
 }

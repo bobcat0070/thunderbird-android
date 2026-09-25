@@ -91,6 +91,7 @@ import com.fsck.k9.helper.Utility
 import com.fsck.k9.helper.mapToSet
 import com.fsck.k9.mail.AuthType
 import com.fsck.k9.mailstore.LocalStoreProvider
+import com.fsck.k9.search.unifiedSpecialFolder
 import com.fsck.k9.search.getLegacyAccounts
 import com.fsck.k9.ui.BuildConfig
 import com.fsck.k9.ui.R
@@ -169,6 +170,7 @@ import net.thunderbird.feature.notification.api.content.SentFolderNotFoundNotifi
 import net.thunderbird.feature.notification.api.ui.action.NotificationAction
 import net.thunderbird.feature.notification.api.ui.dialog.ErrorNotificationsDialogFragmentActionListener
 import net.thunderbird.feature.notification.api.ui.dialog.ErrorNotificationsDialogFragmentFactory
+import net.thunderbird.feature.search.legacy.UnifiedFolderKind
 import net.thunderbird.feature.search.legacy.LocalMessageSearch
 import net.thunderbird.feature.search.legacy.SearchAccount
 import net.thunderbird.feature.search.legacy.serialization.LocalMessageSearchSerializer
@@ -670,8 +672,10 @@ class MessageListFragment :
     }
 
     private fun setWindowTitle() {
+        val unifiedFolder = localSearch.unifiedSpecialFolder
         val title = when {
             isUnifiedFolders -> getString(R.string.integrated_inbox_title)
+            unifiedFolder != null -> getString(unifiedFolder.titleRes())
             isNewMessagesView -> getString(R.string.new_messages_title)
             isManualSearch -> getString(R.string.search_results)
             isThreadDisplay -> threadTitle ?: ""
@@ -688,6 +692,15 @@ class MessageListFragment :
         }
 
         fragmentListener.setMessageListTitle(title, subtitle)
+    }
+
+    private fun UnifiedFolderKind.titleRes(): Int = when (this) {
+        UnifiedFolderKind.INBOX -> R.string.integrated_inbox_title
+        UnifiedFolderKind.DRAFTS -> R.string.unified_drafts_title
+        UnifiedFolderKind.SENT -> R.string.unified_sent_title
+        UnifiedFolderKind.ARCHIVE -> R.string.unified_archive_title
+        UnifiedFolderKind.SPAM -> R.string.unified_spam_title
+        UnifiedFolderKind.TRASH -> R.string.unified_trash_title
     }
 
     override fun progress(progress: Boolean) {

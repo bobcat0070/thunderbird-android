@@ -38,6 +38,7 @@ import com.fsck.k9.K9.fontSizes
 import com.fsck.k9.Preferences
 import com.fsck.k9.activity.compose.MessageActions
 import com.fsck.k9.controller.MessagingController
+import com.fsck.k9.search.unifiedSpecialFolder
 import com.fsck.k9.search.isUnifiedFolders
 import com.fsck.k9.ui.BuildConfig
 import com.fsck.k9.ui.R
@@ -74,6 +75,8 @@ import net.thunderbird.feature.navigation.drawer.dropdown.DropDownDrawer
 import net.thunderbird.feature.navigation.drawer.dropdown.domain.entity.UnifiedDisplayAccount
 import net.thunderbird.feature.search.legacy.LocalMessageSearch
 import net.thunderbird.feature.search.legacy.SearchAccount
+import net.thunderbird.feature.search.legacy.UnifiedFolderKind
+import net.thunderbird.feature.search.legacy.createUnifiedFolderSearch
 import net.thunderbird.feature.search.legacy.api.MessageSearchField
 import net.thunderbird.feature.search.legacy.api.SearchAttribute
 import net.thunderbird.feature.search.legacy.api.SearchCondition
@@ -677,7 +680,7 @@ open class MessageHomeActivity :
             openAccount = { accountId -> openRealAccount(accountId) },
             openAddAccount = { launchAddAccountScreen() },
             openFolder = { accountId, folderId -> openFolder(accountId, folderId) },
-            openUnifiedFolder = { openUnifiedFolders() },
+            openUnifiedFolder = { kind -> openUnifiedFolders(kind) },
             openManageFolders = { launchManageFoldersScreen() },
             openSettings = { SettingsActivity.launch(this) },
             createDrawerListener = { createDrawerListener() },
@@ -730,10 +733,17 @@ open class MessageHomeActivity :
         onMessageListDisplayed()
     }
 
-    private fun openUnifiedFolders() {
+    private fun openUnifiedFolders(kind: UnifiedFolderKind = UnifiedFolderKind.INBOX) {
+        // The inbox keeps being built as it always was, so everything keyed on its search id carries on working.
+        val search = if (kind == UnifiedFolderKind.INBOX) {
+            createSearchAccount().relatedSearch
+        } else {
+            createUnifiedFolderSearch(kind)
+        }
+
         actionDisplaySearch(
             this,
-            createSearchAccount().relatedSearch,
+            search,
             false,
             false,
         )
@@ -1499,6 +1509,8 @@ open class MessageHomeActivity :
                     !generalSettingsManager.getConfig().display.inboxSettings.isShowUnifiedInbox -> drawer.deselect()
 
                 search.id == SearchAccount.UNIFIED_FOLDERS -> drawer.selectUnifiedInbox()
+
+                search.unifiedSpecialFolder != null -> drawer.selectUnifiedFolder(search.id)
             }
         } ?: logger.warn(TAG) { "Couldn't select folder for $accountUuid as LocalSearch is null." }
     }

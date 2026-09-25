@@ -13,6 +13,7 @@ import net.thunderbird.feature.navigation.drawer.dropdown.FolderDrawerState
 import net.thunderbird.feature.navigation.drawer.dropdown.ui.DrawerContract.Effect
 import net.thunderbird.feature.navigation.drawer.dropdown.ui.DrawerContract.Event
 import net.thunderbird.feature.navigation.drawer.dropdown.ui.DrawerContract.State
+import net.thunderbird.feature.search.legacy.UnifiedFolderKind
 
 internal class DrawerViewKtTest : ComposeTest() {
 
@@ -53,7 +54,7 @@ internal class DrawerViewKtTest : ComposeTest() {
         )
 
         verifyCounter.openUnifiedFolderCount++
-        viewModel.effect(Effect.OpenUnifiedFolder)
+        viewModel.effect(Effect.OpenUnifiedFolder(UnifiedFolderKind.SENT))
 
         verifyCounter.openManageFoldersCount++
         viewModel.effect(Effect.OpenManageFolders)

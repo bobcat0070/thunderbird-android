@@ -11,6 +11,7 @@ import net.thunderbird.feature.navigation.drawer.dropdown.domain.DomainContract.
 import net.thunderbird.feature.navigation.drawer.dropdown.domain.entity.DisplayFolder
 import net.thunderbird.feature.navigation.drawer.dropdown.domain.entity.DisplayTreeFolder
 import net.thunderbird.feature.navigation.drawer.dropdown.domain.entity.MailDisplayFolder
+import net.thunderbird.feature.navigation.drawer.dropdown.domain.entity.PinnedDisplayFolder
 import net.thunderbird.feature.navigation.drawer.dropdown.domain.entity.UnifiedDisplayFolder
 
 internal class GetDisplayTreeFolder(
@@ -23,6 +24,18 @@ internal class GetDisplayTreeFolder(
             DisplayTreeFolder(
                 displayFolder = it,
                 displayName = it.unifiedType.id,
+                totalUnreadCount = it.unreadMessageCount,
+                totalStarredCount = it.starredMessageCount,
+                children = persistentListOf(),
+            )
+        }
+
+        // Listed flat, in the order they were pinned: their paths belong to other accounts' trees, and nesting
+        // them here would invent parents the unified list does not have.
+        val pinnedFolderTreeList = folders.filterIsInstance<PinnedDisplayFolder>().map {
+            DisplayTreeFolder(
+                displayFolder = it,
+                displayName = it.folder.name,
                 totalUnreadCount = it.unreadMessageCount,
                 totalStarredCount = it.starredMessageCount,
                 children = persistentListOf(),
@@ -42,7 +55,7 @@ internal class GetDisplayTreeFolder(
             displayName = null,
             totalUnreadCount = accountFolderTreeList.sumOf { it.totalUnreadCount },
             totalStarredCount = accountFolderTreeList.sumOf { it.totalStarredCount },
-            children = (unifiedFolderTreeList + accountFolderTreeList).toImmutableList(),
+            children = (unifiedFolderTreeList + pinnedFolderTreeList + accountFolderTreeList).toImmutableList(),
         )
     }
 

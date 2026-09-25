@@ -5,6 +5,7 @@ import com.fsck.k9.contacts.ContactLetterBitmapCreator
 import com.fsck.k9.helper.MessageHelper
 import com.fsck.k9.mailstore.LocalStoreProvider
 import com.fsck.k9.mailstore.MessageColumns
+import com.fsck.k9.search.forAccount
 import com.fsck.k9.search.getLegacyAccounts
 import net.thunderbird.core.android.account.LegacyAccount
 import net.thunderbird.core.android.account.LegacyAccountManager
@@ -99,7 +100,7 @@ class MessageListLoader(
         }
 
         val whereClause = SqlWhereClause.Builder()
-            .withConditions(config.search.conditions)
+            .withConditions(config.search.conditions.forAccount(account))
             .build()
 
         query.append(whereClause.selection)

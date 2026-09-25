@@ -19,6 +19,7 @@ import net.thunderbird.feature.navigation.drawer.dropdown.domain.entity.DisplayF
 import net.thunderbird.feature.navigation.drawer.dropdown.domain.entity.DisplayTreeFolder
 import net.thunderbird.feature.navigation.drawer.dropdown.domain.entity.MailDisplayAccount
 import net.thunderbird.feature.navigation.drawer.dropdown.domain.entity.MailDisplayFolder
+import net.thunderbird.feature.navigation.drawer.dropdown.domain.entity.PinnedDisplayFolder
 import net.thunderbird.feature.navigation.drawer.dropdown.domain.entity.UnifiedDisplayFolder
 import net.thunderbird.feature.navigation.drawer.dropdown.ui.DrawerContract.Effect
 import net.thunderbird.feature.navigation.drawer.dropdown.ui.DrawerContract.Event
@@ -265,8 +266,15 @@ internal class DrawerViewModel(
                     ),
                 )
             }
+        } else if (folder is PinnedDisplayFolder) {
+            emitEffect(
+                Effect.OpenFolder(
+                    accountId = folder.accountId,
+                    folderId = folder.folder.id,
+                ),
+            )
         } else if (folder is UnifiedDisplayFolder) {
-            emitEffect(Effect.OpenUnifiedFolder)
+            emitEffect(Effect.OpenUnifiedFolder(folder.unifiedType.kind))
         }
 
         viewModelScope.launch {

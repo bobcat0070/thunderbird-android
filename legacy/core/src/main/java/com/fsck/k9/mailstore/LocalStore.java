@@ -28,6 +28,7 @@ import androidx.core.database.CursorKt;
 import app.k9mail.legacy.di.DI;
 import app.k9mail.legacy.mailstore.MessageListRepository;
 import app.k9mail.legacy.mailstore.MoreMessages;
+import com.fsck.k9.search.LocalSearchExtensions;
 import com.fsck.k9.Preferences;
 import com.fsck.k9.controller.MessagingControllerCommands.PendingCommand;
 import com.fsck.k9.controller.PendingCommandSerializer;
@@ -349,7 +350,7 @@ public class LocalStore {
 
     public List<LocalMessage> searchForMessages(LocalMessageSearch search) throws MessagingException {
         SqlWhereClause whereClause = new SqlWhereClause.Builder()
-            .withConditions(search.getConditions())
+            .withConditions(LocalSearchExtensions.forAccount(search.getConditions(), account))
             .build();
 
         // Avoid "ambiguous column name" error by prefixing "id" with the message table name

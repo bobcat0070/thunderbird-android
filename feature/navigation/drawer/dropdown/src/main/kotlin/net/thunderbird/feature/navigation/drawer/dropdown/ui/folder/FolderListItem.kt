@@ -30,6 +30,7 @@ import net.thunderbird.feature.navigation.drawer.dropdown.R
 import net.thunderbird.feature.navigation.drawer.dropdown.domain.entity.DisplayFolder
 import net.thunderbird.feature.navigation.drawer.dropdown.domain.entity.DisplayTreeFolder
 import net.thunderbird.feature.navigation.drawer.dropdown.domain.entity.MailDisplayFolder
+import net.thunderbird.feature.navigation.drawer.dropdown.domain.entity.PinnedDisplayFolder
 import net.thunderbird.feature.navigation.drawer.dropdown.domain.entity.UnifiedDisplayFolder
 import net.thunderbird.feature.navigation.drawer.dropdown.domain.entity.UnifiedDisplayFolderType
 import net.thunderbird.feature.navigation.drawer.dropdown.ui.common.AnimatedExpandIcon
@@ -164,6 +165,14 @@ private fun mapFolderName(
 
         is UnifiedDisplayFolder -> mapUnifiedFolderName(displayFolder)
 
+        // The whole path, not the last segment: listed flat, "2026" alone would not say which folder it is.
+        is PinnedDisplayFolder -> {
+            val folderName = folderNameFormatter.displayName(displayFolder.folder)
+            displayFolder.accountName?.let { accountName ->
+                stringResource(R.string.navigation_drawer_dropdown_pinned_folder_title, folderName, accountName)
+            } ?: folderName
+        }
+
         else -> throw IllegalArgumentException("Unknown display folder: $displayFolder")
     }
 }
@@ -172,6 +181,11 @@ private fun mapFolderName(
 private fun mapUnifiedFolderName(folder: UnifiedDisplayFolder): String {
     return when (folder.unifiedType) {
         UnifiedDisplayFolderType.INBOX -> stringResource(R.string.navigation_drawer_dropdown_unified_inbox_title)
+        UnifiedDisplayFolderType.DRAFTS -> stringResource(R.string.navigation_drawer_dropdown_unified_drafts_title)
+        UnifiedDisplayFolderType.SENT -> stringResource(R.string.navigation_drawer_dropdown_unified_sent_title)
+        UnifiedDisplayFolderType.ARCHIVE -> stringResource(R.string.navigation_drawer_dropdown_unified_archive_title)
+        UnifiedDisplayFolderType.SPAM -> stringResource(R.string.navigation_drawer_dropdown_unified_spam_title)
+        UnifiedDisplayFolderType.TRASH -> stringResource(R.string.navigation_drawer_dropdown_unified_trash_title)
     }
 }
 
@@ -179,6 +193,7 @@ private fun mapFolderIcon(folder: DisplayFolder): ImageVector {
     return when (folder) {
         is MailDisplayFolder -> mapDisplayAccountFolderIcon(folder)
         is UnifiedDisplayFolder -> mapDisplayUnifiedFolderIcon(folder)
+        is PinnedDisplayFolder -> mapFolderTypeIcon(folder.folder.type)
         else -> throw IllegalArgumentException("Unknown display folder type: $folder")
     }
 }
@@ -189,7 +204,11 @@ private fun mapDisplayAccountFolderIcon(folder: MailDisplayFolder): ImageVector 
         return Icons.Outlined.FavoriteFolder
     }
 
-    return when (folder.folder.type) {
+    return mapFolderTypeIcon(folder.folder.type)
+}
+
+private fun mapFolderTypeIcon(type: FolderType): ImageVector {
+    return when (type) {
         FolderType.INBOX -> Icons.Outlined.Inbox
         FolderType.OUTBOX -> Icons.Outlined.Outbox
         FolderType.SENT -> Icons.Outlined.Send
@@ -202,7 +221,12 @@ private fun mapDisplayAccountFolderIcon(folder: MailDisplayFolder): ImageVector 
 }
 
 private fun mapDisplayUnifiedFolderIcon(folder: UnifiedDisplayFolder): ImageVector {
-    when (folder.unifiedType) {
-        UnifiedDisplayFolderType.INBOX -> return Icons.Outlined.AllInbox
+    return when (folder.unifiedType) {
+        UnifiedDisplayFolderType.INBOX -> Icons.Outlined.AllInbox
+        UnifiedDisplayFolderType.DRAFTS -> Icons.Outlined.Drafts
+        UnifiedDisplayFolderType.SENT -> Icons.Outlined.Send
+        UnifiedDisplayFolderType.ARCHIVE -> Icons.Outlined.Archive
+        UnifiedDisplayFolderType.SPAM -> Icons.Outlined.Report
+        UnifiedDisplayFolderType.TRASH -> Icons.Outlined.Delete
     }
 }
