@@ -30,10 +30,7 @@ val featureModule = module {
     includes(fundingModule)
 
     single<FundingSettings> {
-        K9FundingSettings(
-            fundingConfigStore = get<DefaultFundingConfigStore>(),
-            scope = get(named("ConfigStoreScope")),
-        )
+        K9FundingSettings()
     }
 
     single<CssClassNameProvider> {

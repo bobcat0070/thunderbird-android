@@ -722,6 +722,7 @@
     <string name="account_settings_signature_is_html_label">Save signature as HTML</string>
     <string name="account_settings_signature_is_html_summary">Interpret the signature as HTML. Scripts and event handlers will be removed for security.</string>
     <string name="account_settings_signature_preview">Signature preview</string>
+    <string name="account_settings_signature_preview_empty">Your signature preview will appear here</string>
     <string name="account_settings_signature_clear_label">Clear Signature</string>
 
     <string name="default_identity_description">Initial identity</string>
@@ -1221,6 +1222,7 @@ You can keep this message and use it as a backup for your secret key. If you wan
 
     <!-- Name of the action to add a person to contacts. Usually displayed in a menu or in a tooltip when long-pressing the associated icon. -->
     <string name="action_add_to_contacts">Add to contacts</string>
+    <string name="error_no_contact_provider">No contacts app was found. Install a contacts app to add this address.</string>
     <!-- Name of the action to compose a new message to a particular address. Usually displayed in a menu or in a tooltip when long-pressing the associated icon. -->
     <string name="action_compose_message_to">Compose message to</string>
     <!-- Name of the action to copy an email address to the clipboard. Usually displayed in a menu or in a tooltip when long-pressing the associated icon. -->

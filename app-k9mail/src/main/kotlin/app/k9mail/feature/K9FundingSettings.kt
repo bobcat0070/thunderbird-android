@@ -1,60 +1,31 @@
 package app.k9mail.feature
 
-import com.fsck.k9.K9
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.launch
-import net.thunderbird.feature.funding.api.FundingConfig
-import net.thunderbird.feature.funding.api.FundingConfigStore
 import net.thunderbird.feature.funding.api.FundingSettings
 
-internal class K9FundingSettings(
-    private val fundingConfigStore: FundingConfigStore,
-    private val scope: CoroutineScope,
-) : FundingSettings {
-    override fun getReminderReferenceTimestamp(): Long = K9.fundingReminderReferenceTimestamp
+@Suppress("TooManyFunctions", "EmptyFunctionBlock")
+internal class K9FundingSettings : FundingSettings {
 
-    override fun setReminderReferenceTimestamp(timestamp: Long) {
-        K9.fundingReminderReferenceTimestamp = timestamp
-        K9.saveSettingsAsync()
-    }
+    override fun isReady(): Boolean = true
 
-    override fun getReminderShownTimestamp() = K9.fundingReminderShownTimestamp
+    override fun getReminderReferenceTimestamp(): Long = 0L
 
-    override fun setReminderShownTimestamp(timestamp: Long) {
-        K9.fundingReminderShownTimestamp = timestamp
-        K9.saveSettingsAsync()
-    }
+    override fun setReminderReferenceTimestamp(timestamp: Long) {}
 
-    override fun getLastReminderShownTimestamp(): Long {
-        return fundingConfigStore.configAsStateFlow().value.lastFundingReminderShownTimestamp
-    }
+    override fun getReminderShownTimestamp() = 0L
 
-    override fun setLastReminderShownTimestamp(timestamp: Long) {
-        scope.launch {
-            fundingConfigStore.update {
-                val oldConfig = it ?: FundingConfig.DEFAULT
-                oldConfig.copy(lastFundingReminderShownTimestamp = timestamp)
-            }
-        }
-    }
+    override fun setReminderShownTimestamp(timestamp: Long) {}
 
-    override fun getReminderShownCount(): Int {
-        return fundingConfigStore.configAsStateFlow().value.fundingReminderCount
-    }
+    override fun getLastReminderShownActivityAmount(): Long = 0L
 
-    override fun setReminderShownCount(count: Int) {
-        scope.launch {
-            fundingConfigStore.update {
-                val oldConfig = it ?: FundingConfig.DEFAULT
-                oldConfig.copy(fundingReminderCount = count)
-            }
-        }
-    }
+    override suspend fun setLastReminderShownActivityAmount(activityInMillis: Long) {}
 
-    override fun getActivityCounterInMillis(): Long = K9.fundingActivityCounterInMillis
+    override fun getReminderShownCount(): Int = 100
 
-    override fun setActivityCounterInMillis(activeTime: Long) {
-        K9.fundingActivityCounterInMillis = activeTime
-        K9.saveSettingsAsync()
-    }
+    override suspend fun setReminderShownCount(count: Int) {}
+
+    override suspend fun incrementReminderShownCount() {}
+
+    override fun getActivityCounterInMillis(): Long = 0L
+
+    override fun setActivityCounterInMillis(activeTime: Long) {}
 }

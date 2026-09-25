@@ -1,8 +1,8 @@
 package net.thunderbird.feature.funding
 
-import kotlin.time.ExperimentalTime
 import net.thunderbird.feature.funding.api.FundingManager
 import net.thunderbird.feature.funding.api.FundingNavigation
+import net.thunderbird.feature.funding.common.api.FundingReminderContract
 import net.thunderbird.feature.funding.googleplay.GooglePlayFundingManager
 import net.thunderbird.feature.funding.googleplay.GooglePlayFundingNavigation
 import net.thunderbird.feature.funding.googleplay.data.fundingDataModule
@@ -19,9 +19,9 @@ import net.thunderbird.feature.funding.googleplay.ui.contribution.purchase.Purch
 import net.thunderbird.feature.funding.googleplay.ui.reminder.ActivityLifecycleObserver
 import net.thunderbird.feature.funding.googleplay.ui.reminder.FragmentLifecycleObserver
 import net.thunderbird.feature.funding.googleplay.ui.reminder.FundingReminder
-import net.thunderbird.feature.funding.googleplay.ui.reminder.FundingReminderContract
 import net.thunderbird.feature.funding.googleplay.ui.reminder.FundingReminderDialog
 import org.koin.core.module.dsl.viewModel
+import org.koin.core.qualifier.named
 import org.koin.dsl.module
 
 val featureFundingModule = module {
@@ -38,20 +38,19 @@ val featureFundingModule = module {
     }
 
     single<FundingReminderContract.ActivityLifecycleObserver> {
-        @OptIn(ExperimentalTime::class)
         ActivityLifecycleObserver(
             settings = get(),
         )
     }
 
     single<FundingReminderContract.Reminder> {
-        @OptIn(ExperimentalTime::class)
         FundingReminder(
             activityProvider = get(),
             settings = get(),
             fragmentObserver = get(),
             activityCounterObserver = get(),
             dialog = get(),
+            scope = get(named("ConfigStoreScope")),
         )
     }
 

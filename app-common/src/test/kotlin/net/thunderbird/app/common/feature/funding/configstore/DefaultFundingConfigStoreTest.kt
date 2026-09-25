@@ -20,14 +20,9 @@ import net.thunderbird.feature.funding.api.FundingConfigStore
 class DefaultFundingConfigStoreTest {
 
     val defaultConfig = FundingConfig(
-        lastFundingReminderShownTimestamp = 0L,
+        lastFundingReminderShownActivityAmount = 0L,
         fundingReminderCount = 0,
     )
-
-    @Test
-    fun `config should provide the expected default`() = runTest {
-        assertEquals(defaultConfig, FundingConfig.DEFAULT)
-    }
 
     @Test
     fun `config should start with default values`() = runTest {
@@ -46,7 +41,7 @@ class DefaultFundingConfigStoreTest {
         val backend = getDefaultTestConfigBackend()
         val configTestSubject = createTestSubject(backend)
         val newConfig = FundingConfig(
-            lastFundingReminderShownTimestamp = 10000L,
+            lastFundingReminderShownActivityAmount = 10000L,
             fundingReminderCount = 1,
         )
 
@@ -55,7 +50,7 @@ class DefaultFundingConfigStoreTest {
             configTestSubject.update {
                 val oldConfig = it ?: FundingConfig.DEFAULT
                 oldConfig.copy(
-                    lastFundingReminderShownTimestamp = newConfig.lastFundingReminderShownTimestamp,
+                    lastFundingReminderShownActivityAmount = newConfig.lastFundingReminderShownActivityAmount,
                     fundingReminderCount = newConfig.fundingReminderCount,
                 )
             }
@@ -63,8 +58,8 @@ class DefaultFundingConfigStoreTest {
             // Ensure test subject has new values
             val testConfig = configTestSubject.config.first()
             assertEquals(
-                newConfig.lastFundingReminderShownTimestamp,
-                testConfig.lastFundingReminderShownTimestamp,
+                newConfig.lastFundingReminderShownActivityAmount,
+                testConfig.lastFundingReminderShownActivityAmount,
             )
             assertEquals(
                 newConfig.fundingReminderCount,
@@ -81,10 +76,8 @@ class DefaultFundingConfigStoreTest {
 
     private fun getDefaultTestConfigBackend() = TestConfigBackend(
         initialConfig = Config().apply {
-            this[FundingConfigKeys.LAST_FUNDING_REMINDER_SHOWN_TIMESTAMP] =
-                FundingConfig.DEFAULT.lastFundingReminderShownTimestamp
-            this[FundingConfigKeys.FUNDING_REMINDER_COUNT] =
-                FundingConfig.DEFAULT.fundingReminderCount
+            this[FundingConfigKeys.LAST_FUNDING_REMINDER_SHOWN_ACTIVITY_AMOUNT] = 0L
+            this[FundingConfigKeys.FUNDING_REMINDER_COUNT] = 0
         },
     )
 

@@ -7,10 +7,9 @@ import androidx.lifecycle.LifecycleOwner
 import kotlin.time.Clock
 import kotlin.time.ExperimentalTime
 import net.thunderbird.feature.funding.api.FundingSettings
+import net.thunderbird.feature.funding.common.api.FundingReminderContract
 
-class ActivityLifecycleObserver
-@OptIn(ExperimentalTime::class)
-constructor(
+class ActivityLifecycleObserver(
     private val settings: FundingSettings,
     private val clock: Clock = Clock.System,
 ) : FundingReminderContract.ActivityLifecycleObserver {
@@ -38,7 +37,6 @@ constructor(
 
             override fun onResume(owner: LifecycleOwner) {
                 super.onResume(owner)
-                @OptIn(ExperimentalTime::class)
                 startTime = clock.now().toEpochMilliseconds()
             }
 
@@ -51,7 +49,8 @@ constructor(
                 val oldActiveTime = settings.getActivityCounterInMillis()
 
                 if (newActiveTime >= 0) {
-                    settings.setActivityCounterInMillis(oldActiveTime + newActiveTime)
+                    val cumulativeActivityDuration = oldActiveTime + newActiveTime
+                    settings.setActivityCounterInMillis(cumulativeActivityDuration)
                 }
             }
 

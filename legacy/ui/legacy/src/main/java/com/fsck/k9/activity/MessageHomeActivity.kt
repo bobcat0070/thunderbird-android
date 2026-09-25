@@ -202,7 +202,6 @@ open class MessageHomeActivity :
         initializeLayout()
         initializeFragments()
         displayViews()
-        initializeFunding()
         initializeFoldableObserver()
 
         val backPressedCallback = object : OnBackPressedCallback(true) {
@@ -633,6 +632,11 @@ open class MessageHomeActivity :
         if (displayMode != DisplayMode.MESSAGE_VIEW) {
             onMessageListDisplayed()
         }
+    }
+
+    override fun onPostResume() {
+        super.onPostResume()
+        initializeFunding()
     }
 
     override fun onStart() {
