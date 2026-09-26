@@ -1970,6 +1970,11 @@ public class MessageCompose extends BaseActivity implements OnClickListener,
         }
 
         @Override
+        public void onMessageDownloadStarted() {
+            // the compose screen's own progress indicator is already showing while the message loads
+        }
+
+        @Override
         public boolean startIntentSenderForMessageLoaderHelper(IntentSender intentSender, int requestCode) {
             try {
                 requestCode |= REQUEST_MASK_LOADER_HELPER;

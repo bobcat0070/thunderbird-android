@@ -1312,12 +1312,18 @@ class MessageViewFragment :
             }
         }
 
+        override fun onMessageDownloadStarted() {
+            messageTopView.showDownloadingState()
+        }
+
         override fun onDownloadErrorMessageNotFound() {
+            messageTopView.hideDownloadingState()
             messageTopView.enableDownloadButton()
             Toast.makeText(requireContext(), R.string.status_invalid_id_error, Toast.LENGTH_LONG).show()
         }
 
         override fun onDownloadErrorNetworkError() {
+            messageTopView.hideDownloadingState()
             messageTopView.enableDownloadButton()
             Toast.makeText(requireContext(), R.string.status_network_error, Toast.LENGTH_LONG).show()
         }

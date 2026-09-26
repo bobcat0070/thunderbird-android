@@ -74,6 +74,11 @@ class MessageTopView(
     private var currentSenderAddress: String? = null
 
     private var isShowingProgress = false
+
+    /**
+     * Whether the progress area is up because the message is being fetched from the server.
+     */
+    private var isShowingDownload = false
     private var showPicturesButtonClicked = false
     var renderPlainFormat = false
 
@@ -384,6 +389,7 @@ class MessageTopView(
 
     @SuppressLint("ObjectAnimatorBinding")
     fun displayViewOnLoadFinished(finishProgressBar: Boolean) {
+        isShowingDownload = false
         if (!finishProgressBar || !isShowingProgress) {
             viewAnimator.displayedChild = 2
             return
@@ -406,14 +412,46 @@ class MessageTopView(
     }
 
     fun setToLoadingState() {
-        viewAnimator.displayedChild = 0
+        // A finished download reloads the message from the database, which lands here. Keep the indicator up through
+        // that and the decoding after it, rather than blanking the screen for a moment before the message appears.
+        if (!isShowingDownload) {
+            viewAnimator.displayedChild = 0
+        }
         progressBar.progress = 0
         isShowingProgress = false
+    }
+
+    /**
+     * Shows that the message is being fetched from the server. How long that takes is unknown, so the bar runs
+     * without a position.
+     *
+     * Only when nothing is shown yet: fetching the rest of a partly downloaded message leaves the part already on
+     * screen in place, with its disabled download button saying the rest is on its way.
+     */
+    fun showDownloadingState() {
+        if (viewAnimator.displayedChild != 0) return
+
+        progressBar.isIndeterminate = true
+        viewAnimator.displayedChild = 1
+        isShowingDownload = true
+    }
+
+    /**
+     * Takes the indicator down after a download failed, back to the empty state it replaced.
+     */
+    fun hideDownloadingState() {
+        if (!isShowingDownload) return
+
+        isShowingDownload = false
+        viewAnimator.displayedChild = 0
     }
 
     @SuppressLint("ObjectAnimatorBinding")
     fun setLoadingProgress(progress: Int, max: Int) {
         if (!isShowingProgress) {
+            // Decryption reports how far it has got, even when it follows a download that could not.
+            progressBar.isIndeterminate = false
+            isShowingDownload = false
             viewAnimator.displayedChild = 1
             isShowingProgress = true
             return

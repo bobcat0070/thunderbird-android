@@ -454,6 +454,10 @@ public class MessageLoaderHelper {
     // download missing body
 
     private void startDownloadingMessageBody(boolean downloadComplete) {
+        if (callback != null) {
+            callback.onMessageDownloadStarted();
+        }
+
         if (downloadComplete) {
             MessagingController.getInstance(context).loadMessageRemote(
                     account, messageReference.getFolderId(), messageReference.getUid(), downloadMessageListener);
@@ -520,6 +524,12 @@ public class MessageLoaderHelper {
         void onMessageViewInfoLoadFailed(MessageViewInfo messageViewInfo);
 
         void setLoadingProgress(int current, int max);
+
+        /**
+         * The message body is not stored locally and is now being fetched from the server. Followed by
+         * {@link #onMessageDataLoadFinished(LocalMessage)} once it has arrived, or by one of the download errors.
+         */
+        void onMessageDownloadStarted();
 
         boolean startIntentSenderForMessageLoaderHelper(IntentSender intentSender, int requestCode);
 
