@@ -36,6 +36,7 @@ import net.thunderbird.feature.mail.message.reader.api.css.CssClassNameProvider
 import net.thunderbird.feature.mail.message.reader.api.ui.MessageReaderViewContract
 import net.thunderbird.feature.navigation.changelog.api.ChangeLogMode
 import net.thunderbird.feature.thundermail.internal.common.ui.ThundermailContract
+import org.koin.core.KoinApplication
 import org.koin.core.annotation.KoinExperimentalAPI
 import org.koin.test.verify.definition
 import org.koin.test.verify.injectedParameters
@@ -83,5 +84,18 @@ class DependencyInjectionTest {
                 definition<MessageReaderViewContract.ViewModel<Part>>(MessageReaderViewContract.State::class),
             ),
         )
+    }
+
+    /**
+     * Loads the modules the way the app does at startup, where Koin refuses a second definition for the same
+     * type. [testDependencyTree] only checks that every dependency can be resolved, so a duplicate registration
+     * passes it and then stops the app from starting on a device.
+     */
+    @Test
+    fun testModulesLoadWithoutConflictingDefinitions() {
+        KoinApplication.init().apply {
+            allowOverride(false)
+            modules(appModule)
+        }
     }
 }

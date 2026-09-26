@@ -64,8 +64,12 @@ val preferencesModule = module {
             folderPinSettings = getOrNull(),
         )
     }
-    // Taught classification rules travel with the other settings; see ExternalGlobalSettings.
-    factory { ClassificationRulesExternalSettings(store = get()) } bind ExternalGlobalSettings::class
+    // Taught classification rules travel with the other settings; see ExternalGlobalSettings. Named, because
+    // several definitions bind that type and Koin refuses a second unnamed one at startup; getAll() still finds
+    // every one of them.
+    factory(named("classificationRulesExternalSettings")) {
+        ClassificationRulesExternalSettings(store = get())
+    } bind ExternalGlobalSettings::class
     factory<LegacyAccountDtoManager> { get<Preferences>() }
     single<GravatarSettingsPreferenceManager> {
         DefaultGravatarSettingsPreferenceManager(

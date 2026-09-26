@@ -14,6 +14,7 @@ import net.thunderbird.feature.navigation.drawer.api.NavigationDrawerExternalCon
 import net.thunderbird.feature.notification.impl.inject.featureNotificationModule
 import net.thunderbird.feature.thundermail.internal.common.inject.featureThundermailCommonModule
 import org.koin.android.ext.koin.androidContext
+import org.koin.core.qualifier.named
 import org.koin.dsl.bind
 import org.koin.dsl.module
 
@@ -40,8 +41,11 @@ internal val appCommonFeatureModule = module {
         NavigationDrawerConfigWriter(get())
     }
 
-    // Settings this fork keeps outside the main storage, so that settings export carries them too.
-    factory { RemoteImageSendersExternalSettings(store = get()) } bind ExternalGlobalSettings::class
+    // Settings this fork keeps outside the main storage, so that settings export carries them too. Named, because
+    // several definitions bind ExternalGlobalSettings and Koin refuses a second unnamed one at startup.
+    factory(named("remoteImageSendersExternalSettings")) {
+        RemoteImageSendersExternalSettings(store = get())
+    } bind ExternalGlobalSettings::class
     factory<FolderPinSettings> {
         DefaultFolderPinSettings(
             pinnedFolderStore = get(),
