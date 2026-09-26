@@ -1,9 +1,13 @@
 ---
-name: Build - Publish debug APKs
+name: Build - Publish APKs
 
-# Keeps the last few debug builds of main downloadable as releases, so a build can be installed straight from a
-# phone. Each is signed with the same debug key used for local builds, so any of them installs over the app
-# already on the device instead of requiring an uninstall that would wipe its accounts.
+# Keeps the last few builds of main downloadable as releases, so a build can be installed straight from a phone.
+#
+# Debug builds of both apps are signed with the same debug key used for local builds, so any of them installs over
+# the debug app already on a device instead of requiring an uninstall that would wipe its accounts.
+#
+# A Thunderbird Daily build is added when its key is available: signed with a key of this fork's own and not
+# debuggable, it installs as a separate app beside any Play Store Thunderbird and is the one to use day to day.
 
 on:
   push:
@@ -25,7 +29,7 @@ env:
 
 jobs:
   publish:
-    name: Build and publish debug APKs
+    name: Build and publish APKs
     # Only for this fork: upstream publishes its own builds through its own release pipeline.
     if: github.repository_owner != 'thunderbird'
     runs-on: ubuntu-latest
@@ -35,6 +39,7 @@ jobs:
     env:
       # Secrets cannot be tested in an `if`, but whether one is set can be carried in the environment.
       HAS_SIGNING_KEY: ${{ secrets.DEBUG_KEYSTORE_BASE64 != '' }}
+      HAS_DAILY_KEY: ${{ secrets.TB_DAILY_KEYSTORE_BASE64 != '' && secrets.TB_DAILY_KEYSTORE_PASSWORD != '' }}
 
     steps:
       - name: Report a missing signing key
@@ -42,6 +47,12 @@ jobs:
         run: |
           echo "::warning::DEBUG_KEYSTORE_BASE64 is not set, so nothing is published. APKs signed with the" \
             "runner's own throwaway key could not be installed over the app on a device."
+
+      - name: Report a missing daily signing key
+        if: env.HAS_SIGNING_KEY == 'true' && env.HAS_DAILY_KEY != 'true'
+        run: |
+          echo "::warning::TB_DAILY_KEYSTORE_BASE64 or TB_DAILY_KEYSTORE_PASSWORD is not set, so only debug" \
+            "builds are published."
 
       - name: Checkout the repo
         if: env.HAS_SIGNING_KEY == 'true'
@@ -69,27 +80,64 @@ jobs:
           chmod 600 "$HOME/.android/debug.keystore"
           echo "ANDROID_USER_HOME=$HOME/.android" >> "$GITHUB_ENV"
 
-      - name: Build debug APKs
-        if: env.HAS_SIGNING_KEY == 'true'
-        run: ./gradlew :app-thunderbird:assembleFullDebug :app-k9mail:assembleFullDebug
+      - name: Install the daily signing key
+        if: env.HAS_SIGNING_KEY == 'true' && env.HAS_DAILY_KEY == 'true'
+        env:
+          TB_DAILY_KEYSTORE_BASE64: ${{ secrets.TB_DAILY_KEYSTORE_BASE64 }}
+          TB_DAILY_KEYSTORE_PASSWORD: ${{ secrets.TB_DAILY_KEYSTORE_PASSWORD }}
+        run: |
+          # Read by the build from the ignored .signing folder, the same way a local daily build finds its key.
+          # The keystore stays outside the checkout.
+          echo "$TB_DAILY_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/tb.daily.keystore"
+          chmod 600 "$RUNNER_TEMP/tb.daily.keystore"
+          mkdir -p .signing
+          {
+            echo "tb.daily.storeFile=$RUNNER_TEMP/tb.daily.keystore"
+            echo "tb.daily.storePassword=$TB_DAILY_KEYSTORE_PASSWORD"
+            echo "tb.daily.keyAlias=tbdaily"
+            echo "tb.daily.keyPassword=$TB_DAILY_KEYSTORE_PASSWORD"
+          } > .signing/tb.daily.signing.properties
+          chmod 600 .signing/tb.daily.signing.properties
 
-      - name: Check the APKs were signed with the installed key
+      - name: Build APKs
         if: env.HAS_SIGNING_KEY == 'true'
         run: |
-          # Refuse to publish anything the device would reject as an update.
-          expected=$(keytool -list -v -keystore "$HOME/.android/debug.keystore" -storepass android \
-            -alias androiddebugkey | grep 'SHA256:' | head -1 | sed 's/.*SHA256: //; s/://g' | tr 'A-F' 'a-f')
+          tasks=":app-thunderbird:assembleFullDebug :app-k9mail:assembleFullDebug"
+          if [ "$HAS_DAILY_KEY" = "true" ]; then
+            tasks="$tasks :app-thunderbird:assembleFullDaily"
+          fi
+          # Sign with the key in .signing rather than a Play upload key, which this fork does not have.
+          ./gradlew $tasks -Ptb.useUploadKey=false
+
+      - name: Check the APKs were signed with the installed keys
+        if: env.HAS_SIGNING_KEY == 'true'
+        env:
+          TB_DAILY_KEYSTORE_PASSWORD: ${{ secrets.TB_DAILY_KEYSTORE_PASSWORD }}
+        run: |
+          # Refuse to publish anything a device would reject as an update.
           apksigner=$(ls -d "$ANDROID_HOME"/build-tools/*/ | sort -V | tail -1)apksigner
-          for apk in \
-            app-thunderbird/build/outputs/apk/full/debug/app-thunderbird-full-debug.apk \
-            app-k9mail/build/outputs/apk/full/debug/app-k9mail-full-debug.apk
-          do
-            actual=$("$apksigner" verify --print-certs "$apk" | grep 'SHA-256 digest' | head -1 | awk '{print $NF}')
-            if [ "$actual" != "$expected" ]; then
-              echo "::error::$apk is signed by $actual, not the debug key ($expected)"
+
+          # $1 apk, $2 keystore, $3 alias, $4 name of the variable holding the store password
+          check_signed() {
+            expected=$(keytool -list -v -keystore "$2" -storepass:env "$4" -alias "$3" \
+              | grep 'SHA256:' | head -1 | sed 's/.*SHA256: //; s/://g' | tr 'A-F' 'a-f')
+            actual=$("$apksigner" verify --print-certs "$1" | grep 'SHA-256 digest' | head -1 | awk '{print $NF}')
+            if [ -z "$expected" ] || [ "$actual" != "$expected" ]; then
+              echo "::error::$1 is signed by $actual, not the expected key"
               exit 1
             fi
-          done
+          }
+
+          export DEBUG_STORE_PASSWORD=android
+          check_signed app-thunderbird/build/outputs/apk/full/debug/app-thunderbird-full-debug.apk \
+            "$HOME/.android/debug.keystore" androiddebugkey DEBUG_STORE_PASSWORD
+          check_signed app-k9mail/build/outputs/apk/full/debug/app-k9mail-full-debug.apk \
+            "$HOME/.android/debug.keystore" androiddebugkey DEBUG_STORE_PASSWORD
+
+          if [ "$HAS_DAILY_KEY" = "true" ]; then
+            check_signed app-thunderbird/build/outputs/apk/full/daily/app-thunderbird-full-daily.apk \
+              "$RUNNER_TEMP/tb.daily.keystore" tbdaily TB_DAILY_KEYSTORE_PASSWORD
+          fi
 
       - name: Publish release
         if: env.HAS_SIGNING_KEY == 'true'
@@ -107,14 +155,24 @@ jobs:
             "publish/thunderbird-debug-${short_sha}.apk"
           cp app-k9mail/build/outputs/apk/full/debug/app-k9mail-full-debug.apk \
             "publish/k9mail-debug-${short_sha}.apk"
+          if [ "$HAS_DAILY_KEY" = "true" ]; then
+            cp app-thunderbird/build/outputs/apk/full/daily/app-thunderbird-full-daily.apk \
+              "publish/thunderbird-daily-${short_sha}.apk"
+          fi
 
-          printf 'Debug build of %s: %s\n\nSigned with the debug key, so it installs over any other debug build.\n' \
-            "$short_sha" "$subject" > notes.md
+          {
+            printf 'Build of %s: %s\n\n' "$short_sha" "$subject"
+            if [ "$HAS_DAILY_KEY" = "true" ]; then
+              printf -- '- `thunderbird-daily`: Thunderbird Daily, for everyday use. Not debuggable, signed with'
+              printf ' a key belonging to this fork, installs beside any Play Store Thunderbird.\n'
+            fi
+            printf -- '- `*-debug`: debuggable builds for testing, signed with the debug key.\n'
+          } > notes.md
 
           gh release create "$tag" publish/*.apk \
             --prerelease \
             --target "$GITHUB_SHA" \
-            --title "Debug build ${RUN_NUMBER} (${short_sha})" \
+            --title "Build ${RUN_NUMBER} (${short_sha})" \
             --notes-file notes.md
 
       - name: Keep only the newest releases
