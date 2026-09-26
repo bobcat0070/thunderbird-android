@@ -110,6 +110,8 @@ class WidgetCategoryFilterTest {
 
     private fun item(uniqueId: Long, classification: MessageClass) = MessageListItem(
         displayName = "Sender $uniqueId",
+        displayAddress = null,
+        isSenderAuthenticated = false,
         displayDate = "",
         subject = "Subject $uniqueId",
         preview = "",

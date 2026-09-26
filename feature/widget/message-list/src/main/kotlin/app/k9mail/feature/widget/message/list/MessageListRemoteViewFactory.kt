@@ -10,6 +10,7 @@ import android.widget.RemoteViewsService.RemoteViewsFactory
 import androidx.core.content.ContextCompat
 import com.fsck.k9.CoreResourceProvider
 import com.fsck.k9.activity.MessageHomeActivity
+import com.fsck.k9.contacts.ContactPictureLoader
 import net.thunderbird.core.android.account.SortType
 import net.thunderbird.core.preference.GeneralSettingsManager
 import net.thunderbird.feature.search.legacy.LocalMessageSearch
@@ -22,11 +23,13 @@ internal class MessageListRemoteViewFactory(private val context: Context) : Remo
     private val messageListLoader: MessageListLoader by inject()
     private val coreResourceProvider: CoreResourceProvider by inject()
     private val generalSettingsManager: GeneralSettingsManager by inject()
+    private val contactPictureLoader: ContactPictureLoader by inject()
 
     private lateinit var unifiedInboxFolders: LocalMessageSearch
 
     private var messageListItems = emptyList<MessageListItem>()
     private var senderAboveSubject = false
+    private var showContactPictures = false
     private var readTextColor = 0
     private var unreadTextColor = 0
 
@@ -46,6 +49,13 @@ internal class MessageListRemoteViewFactory(private val context: Context) : Remo
     }
 
     private fun loadMessageList() {
+        // Read on every refresh rather than once, so turning pictures on or off in the app reaches the widget.
+        showContactPictures = generalSettingsManager.getConfig()
+            .display
+            .visualSettings
+            .messageListSettings
+            .isShowContactPicture
+
         // TODO: Use same sort order that is used for the Unified Inbox inside the app
         val messageListConfig = MessageListConfig(
             search = unifiedInboxFolders,
@@ -81,6 +91,8 @@ internal class MessageListRemoteViewFactory(private val context: Context) : Remo
             remoteView.setTextViewText(R.id.mail_subject, displayName)
         }
 
+        bindContactPicture(remoteView, item)
+
         remoteView.setTextViewText(R.id.mail_date, item.displayDate)
         remoteView.setTextViewText(R.id.mail_preview, item.preview)
 
@@ -109,6 +121,29 @@ internal class MessageListRemoteViewFactory(private val context: Context) : Remo
         remoteView.setInt(R.id.chip, "setBackgroundColor", item.accountColor)
 
         return remoteView
+    }
+
+    /**
+     * Shows the same picture the message list shows for the sender: contact photo, brand logo, Gravatar, website
+     * icon or letter tile, each behind the same setting and, for a brand logo, the same DMARC check.
+     *
+     * Loaded synchronously: this runs on a binder thread, where a row is expected to be built completely before it
+     * is returned.
+     */
+    private fun bindContactPicture(remoteView: RemoteViews, item: MessageListItem) {
+        val address = item.displayAddress
+        val picture = if (showContactPictures && address != null) {
+            contactPictureLoader.getContactPicture(address, item.isSenderAuthenticated)
+        } else {
+            null
+        }
+
+        if (picture != null) {
+            remoteView.setImageViewBitmap(R.id.contact_picture, picture)
+            remoteView.setInt(R.id.contact_picture, "setVisibility", View.VISIBLE)
+        } else {
+            remoteView.setInt(R.id.contact_picture, "setVisibility", View.GONE)
+        }
     }
 
     override fun getLoadingView(): RemoteViews {

@@ -1,10 +1,13 @@
 package app.k9mail.feature.widget.message.list
 
 import app.k9mail.legacy.message.controller.MessageReference
+import com.fsck.k9.mail.Address
 import net.thunderbird.feature.mail.message.classification.api.MessageClass
 
 internal data class MessageListItem(
     val displayName: String,
+    val displayAddress: Address?,
+    val isSenderAuthenticated: Boolean,
     val displayDate: String,
     val subject: String,
     val preview: String,

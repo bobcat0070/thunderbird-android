@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- The size ContactPictureLoader renders at, so the picture is shown without rescaling. -->
+    <dimen name="message_list_widget_contact_picture_size">40dp</dimen>
+</resources>

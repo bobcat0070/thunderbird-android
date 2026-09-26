@@ -17,6 +17,20 @@
         android:visibility="visible"
         />
 
+    <!-- Decorative: the sender's name is in the row's text. -->
+    <ImageView
+        android:id="@+id/contact_picture"
+        android:layout_width="@dimen/message_list_widget_contact_picture_size"
+        android:layout_height="@dimen/message_list_widget_contact_picture_size"
+        android:layout_gravity="center_vertical"
+        android:layout_marginStart="@dimen/widget_padding"
+        android:importantForAccessibility="no"
+        android:scaleType="centerCrop"
+        android:visibility="gone"
+        tools:src="@drawable/ic_attachment"
+        tools:visibility="visible"
+        />
+
     <RelativeLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
