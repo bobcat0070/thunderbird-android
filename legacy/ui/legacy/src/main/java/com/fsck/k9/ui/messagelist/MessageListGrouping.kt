@@ -58,7 +58,11 @@ private fun bundleFor(messageClass: MessageClass, messages: List<MessageListItem
     messageClass = messageClass,
     messageCount = messages.size,
     unreadCount = messages.count { !it.isRead },
-    senderNames = messages.map { it.displayName.toString() }.distinct().take(BUNDLE_PREVIEW_SENDERS),
+    // The list is newest first, so each sender is represented by their most recent message.
+    senders = messages
+        .distinctBy { it.displayName.toString() }
+        .take(BUNDLE_PREVIEW_SENDERS)
+        .map { BundleSender(it.displayName.toString(), it.displayAddress, it.isSenderAuthenticated) },
 )
 
 /**

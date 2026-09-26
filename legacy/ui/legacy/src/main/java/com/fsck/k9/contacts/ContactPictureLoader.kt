@@ -2,6 +2,7 @@ package com.fsck.k9.contacts
 
 import android.content.Context
 import android.graphics.Bitmap
+import android.graphics.drawable.Drawable
 import android.net.Uri
 import android.widget.ImageView
 import androidx.annotation.WorkerThread
@@ -9,9 +10,13 @@ import app.k9mail.core.ui.legacy.designsystem.atom.icon.Icons
 import com.bumptech.glide.Glide
 import com.bumptech.glide.load.engine.DiskCacheStrategy
 import com.bumptech.glide.request.FutureTarget
+import com.bumptech.glide.request.target.Target
 import com.fsck.k9.mail.Address
 import com.fsck.k9.view.RecipientSelectView.Recipient
 
+// One entry point per way a caller receives a picture - into a view, as a bitmap, into another target - which is
+// what keeps every caller on the same source chain and checks; splitting it would split that too.
+@Suppress("TooManyFunctions")
 class ContactPictureLoader(
     private val context: Context,
     private val contactLetterBitmapCreator: ContactLetterBitmapCreator,
@@ -28,6 +33,34 @@ class ContactPictureLoader(
             .diskCacheStrategy(DiskCacheStrategy.NONE)
             .dontAnimate()
             .into(imageView)
+    }
+
+    /**
+     * Loads the same picture [setContactPicture] would show, at [sizeInPx], into a target that is not an image view
+     * - a picture drawn inline in a line of text, say.
+     *
+     * @param isSenderAuthenticated whether the message passed DMARC, which gates the brand indicator exactly as it
+     *   does for the list's own avatars.
+     */
+    fun loadContactPicture(
+        address: Address,
+        isSenderAuthenticated: Boolean,
+        sizeInPx: Int,
+        target: Target<Drawable>,
+    ) {
+        Glide.with(context)
+            .load(createContactImage(address, contactLetterOnly = false, isSenderAuthenticated))
+            .override(sizeInPx)
+            .diskCacheStrategy(DiskCacheStrategy.NONE)
+            .dontAnimate()
+            .into(target)
+    }
+
+    /**
+     * Cancels a load started by [loadContactPicture], for a view being reused for something else.
+     */
+    fun clear(target: Target<Drawable>) {
+        Glide.with(context).clear(target)
     }
 
     fun setContactPicture(imageView: ImageView, recipient: Recipient) {

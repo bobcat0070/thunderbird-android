@@ -14,6 +14,7 @@ import androidx.recyclerview.widget.RecyclerView
 import app.k9mail.core.android.common.contact.ContactRepository
 import app.k9mail.legacy.message.controller.MessageReference
 import com.fsck.k9.contacts.ContactPictureLoader
+import com.fsck.k9.mail.Address
 import com.fsck.k9.ui.messagelist.item.BannerInlineListInAppNotificationViewHolder
 import com.fsck.k9.ui.messagelist.item.BundleViewHolder
 import com.fsck.k9.ui.messagelist.item.DayHeaderViewHolder
@@ -242,7 +243,13 @@ class MessageListAdapter internal constructor(
 
             TYPE_FOOTER -> FooterViewHolder.create(layoutInflater, parent, footerClickListener)
 
-            TYPE_BUNDLE -> BundleViewHolder.create(layoutInflater, parent, listItemListener::onBundleClicked)
+            TYPE_BUNDLE -> BundleViewHolder.create(
+                layoutInflater = layoutInflater,
+                parent = parent,
+                onBundleClicked = listItemListener::onBundleClicked,
+                contactPictureLoader = contactsPictureLoader,
+                showSenderPictures = { appearance().showContactPicture },
+            )
 
             TYPE_DAY_HEADER -> DayHeaderViewHolder.create(layoutInflater, parent)
 
@@ -511,10 +518,22 @@ sealed interface MessageListViewItem {
         val messageClass: MessageClass,
         val messageCount: Int,
         val unreadCount: Int,
-        val senderNames: List<String>,
+        val senders: List<BundleSender>,
     ) : MessageListViewItem {
         // Negative so it cannot collide with a message's unique id, which is derived from a row id.
         override val viewId: Long get() = -(messageClass.ordinal + BUNDLE_ID_BASE)
         override val viewType: Int = TYPE_BUNDLE
     }
 }
+
+/**
+ * One sender named in a category row, with what is needed to draw their picture beside the name.
+ *
+ * @param isSenderAuthenticated whether this sender's most recent message in the category passed DMARC, which is
+ *   what allows a brand logo to be shown for them - the same gate as in the message list itself.
+ */
+data class BundleSender(
+    val name: String,
+    val address: Address?,
+    val isSenderAuthenticated: Boolean,
+)

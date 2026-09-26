@@ -187,7 +187,7 @@ class MessageListGroupingTest {
             item(3, MessageClass.NEWSLETTER, displayName = "Kohl's"),
         )
 
-        assertThat(items.grouped().bundles().single().senderNames).containsExactly("LinkedIn", "Kohl's")
+        assertThat(items.grouped().bundles().single().senders.map { it.name }).containsExactly("LinkedIn", "Kohl's")
     }
 
     private fun List<MessageListItem>.grouped() =
