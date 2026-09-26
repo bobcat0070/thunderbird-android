@@ -14,6 +14,7 @@ import app.k9mail.legacy.di.DI;
 import com.fsck.k9.FontSizes;
 import com.fsck.k9.core.R;
 import com.fsck.k9.preferences.Settings.BooleanSetting;
+import com.fsck.k9.preferences.Settings.StringSetting;
 import com.fsck.k9.preferences.Settings.ColorSetting;
 import com.fsck.k9.preferences.Settings.EnumSetting;
 import com.fsck.k9.preferences.Settings.FontSizeSetting;
@@ -51,6 +52,21 @@ import net.thunderbird.core.preference.network.NetworkSettingsKt;
 import net.thunderbird.core.preference.storage.Storage;
 import net.thunderbird.core.preference.display.visualSettings.message.list.UiDensity;
 
+import static net.thunderbird.core.preference.bimi.BimiSettingsKt.BIMI_SETTINGS_DEFAULT_IS_ENABLED;
+import static net.thunderbird.core.preference.directory.DirectorySearchSettingsKt.DIRECTORY_SEARCH_SETTINGS_DEFAULT_IS_ENABLED;
+import static net.thunderbird.core.preference.display.visualSettings.DisplayVisualSettingsKt.DISPLAY_SETTINGS_DEFAULT_MESSAGE_VIEW_SENDER_AUTHENTICATION_VISIBLE;
+import static net.thunderbird.core.preference.display.visualSettings.message.list.DisplayMessageListSettingsKt.MESSAGE_LIST_SETTINGS_DEFAULT_IS_CATEGORY_GROUPING_ENABLED;
+import static net.thunderbird.core.preference.gravatar.GravatarSettingsKt.GRAVATAR_SETTINGS_DEFAULT_IS_ENABLED;
+import static net.thunderbird.core.preference.notification.NotificationPreferenceKt.NOTIFICATION_PREFERENCE_DEFAULT_IS_NOTIFY_NEWSLETTERS;
+import static net.thunderbird.core.preference.notification.NotificationPreferenceKt.NOTIFICATION_PREFERENCE_DEFAULT_IS_NOTIFY_NOTIFICATIONS;
+import static net.thunderbird.core.preference.notification.NotificationPreferenceKt.NOTIFICATION_PREFERENCE_DEFAULT_IS_NOTIFY_PERSONAL;
+import static net.thunderbird.core.preference.websiteicon.WebsiteIconSettingsKt.WEBSITE_ICON_SETTINGS_DEFAULT_IS_ENABLED;
+import static net.thunderbird.core.preference.widget.WidgetSettingsKt.WIDGET_SETTINGS_DEFAULT_SHOW_NEWSLETTERS;
+import static net.thunderbird.core.preference.widget.WidgetSettingsKt.WIDGET_SETTINGS_DEFAULT_SHOW_NOTIFICATIONS;
+import static net.thunderbird.core.preference.widget.WidgetSettingsKt.WIDGET_SETTINGS_DEFAULT_SHOW_PERSONAL;
+import static com.fsck.k9.preferences.ExternalSettingKeys.LEARNED_CLASSIFICATION_RULES_KEY;
+import static com.fsck.k9.preferences.ExternalSettingKeys.REMOTE_IMAGE_TRUSTED_DOMAINS_KEY;
+import static com.fsck.k9.preferences.ExternalSettingKeys.REMOTE_IMAGE_TRUSTED_SENDERS_KEY;
 import static net.thunderbird.core.preference.display.inboxSettings.DisplayInboxSettingsKt.DISPLAY_SETTINGS_DEFAULT_IS_MESSAGE_LIST_SENDER_ABOVE_SUBJECT;
 import static net.thunderbird.core.preference.display.inboxSettings.DisplayInboxSettingsKt.DISPLAY_SETTINGS_DEFAULT_IS_SHOW_COMPOSE_BUTTON_ON_MESSAGE_LIST;
 import static net.thunderbird.core.preference.display.inboxSettings.DisplayInboxSettingsKt.DISPLAY_SETTINGS_DEFAULT_IS_SHOW_MESSAGE_LIST_STAR;
@@ -346,6 +362,58 @@ class GeneralSettingsDescriptions {
         ));
         s.put("messageListDateTimeFormat", Settings.versions(
             new V(110, new EnumSetting<>(MessageListDateTimeFormat.class, MessageListDateTimeFormat.Contextual))
+        ));
+
+        // Settings added by this fork. When merging upstream, keep Settings.VERSION at least as high as every
+        // version used here and never renumber these: a file exported at 112 must keep meaning the same thing.
+        //
+        // gravatarApiKey is deliberately absent. It is a credential, and an export never carries credentials -
+        // the same reason server passwords are left out.
+        s.put("gravatarEnabled", Settings.versions(
+            new V(112, new BooleanSetting(GRAVATAR_SETTINGS_DEFAULT_IS_ENABLED))
+        ));
+        s.put("bimiEnabled", Settings.versions(
+            new V(112, new BooleanSetting(BIMI_SETTINGS_DEFAULT_IS_ENABLED))
+        ));
+        s.put("websiteIconEnabled", Settings.versions(
+            new V(112, new BooleanSetting(WEBSITE_ICON_SETTINGS_DEFAULT_IS_ENABLED))
+        ));
+        s.put("directorySearchEnabled", Settings.versions(
+            new V(112, new BooleanSetting(DIRECTORY_SEARCH_SETTINGS_DEFAULT_IS_ENABLED))
+        ));
+        s.put("messageViewSenderAuthenticationVisible", Settings.versions(
+            new V(112, new BooleanSetting(DISPLAY_SETTINGS_DEFAULT_MESSAGE_VIEW_SENDER_AUTHENTICATION_VISIBLE))
+        ));
+        s.put("categoryGroupingEnabled", Settings.versions(
+            new V(112, new BooleanSetting(MESSAGE_LIST_SETTINGS_DEFAULT_IS_CATEGORY_GROUPING_ENABLED))
+        ));
+        s.put("notifyPersonal", Settings.versions(
+            new V(112, new BooleanSetting(NOTIFICATION_PREFERENCE_DEFAULT_IS_NOTIFY_PERSONAL))
+        ));
+        s.put("notifyNotifications", Settings.versions(
+            new V(112, new BooleanSetting(NOTIFICATION_PREFERENCE_DEFAULT_IS_NOTIFY_NOTIFICATIONS))
+        ));
+        s.put("notifyNewsletters", Settings.versions(
+            new V(112, new BooleanSetting(NOTIFICATION_PREFERENCE_DEFAULT_IS_NOTIFY_NEWSLETTERS))
+        ));
+        s.put("widgetShowPersonal", Settings.versions(
+            new V(112, new BooleanSetting(WIDGET_SETTINGS_DEFAULT_SHOW_PERSONAL))
+        ));
+        s.put("widgetShowNotifications", Settings.versions(
+            new V(112, new BooleanSetting(WIDGET_SETTINGS_DEFAULT_SHOW_NOTIFICATIONS))
+        ));
+        s.put("widgetShowNewsletters", Settings.versions(
+            new V(112, new BooleanSetting(WIDGET_SETTINGS_DEFAULT_SHOW_NEWSLETTERS))
+        ));
+        // Kept in stores of their own rather than the main storage; see ExternalGlobalSettings.
+        s.put(LEARNED_CLASSIFICATION_RULES_KEY, Settings.versions(
+            new V(112, new StringSetting(""))
+        ));
+        s.put(REMOTE_IMAGE_TRUSTED_SENDERS_KEY, Settings.versions(
+            new V(112, new StringSetting(""))
+        ));
+        s.put(REMOTE_IMAGE_TRUSTED_DOMAINS_KEY, Settings.versions(
+            new V(112, new StringSetting(""))
         ));
 
         // TODO: Add a way to properly support feature-specific settings.

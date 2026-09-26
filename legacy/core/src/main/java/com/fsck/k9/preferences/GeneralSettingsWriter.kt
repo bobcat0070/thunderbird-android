@@ -11,10 +11,19 @@ internal class GeneralSettingsWriter(
     private val preferences: Preferences,
     private val generalSettingsManager: DefaultGeneralSettingsManager,
     private val changePublisher: PreferenceChangePublisher,
+    private val externalGlobalSettings: List<ExternalGlobalSettings> = emptyList(),
 ) {
     fun write(settings: InternalSettingsMap): Boolean {
         // Convert general settings to the string representation used in preference storage
-        val stringSettings = GeneralSettingsDescriptions.convert(settings)
+        val allSettings = GeneralSettingsDescriptions.convert(settings)
+
+        // Settings kept in stores of their own go back to those stores, not into the main storage.
+        val externalKeys = externalGlobalSettings.flatMapTo(mutableSetOf()) { it.keys }
+        for (external in externalGlobalSettings) {
+            val values = allSettings.filterKeys { it in external.keys }.filterValues { it.isNotEmpty() }
+            if (values.isNotEmpty()) external.importSettings(values)
+        }
+        val stringSettings = allSettings.filterKeys { it !in externalKeys }
 
         val editor = preferences.createStorageEditor()
 

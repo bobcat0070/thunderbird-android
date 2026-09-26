@@ -5,7 +5,10 @@ import net.thunderbird.components.core.outcome.fold
 import net.thunderbird.core.android.account.LegacyAccountDto
 import net.thunderbird.feature.mail.folder.api.data.repository.RemoteFolderDetailsRepository
 
-class FolderSettingsProvider(private val remoteFolderDetailsRepository: RemoteFolderDetailsRepository) {
+class FolderSettingsProvider(
+    private val remoteFolderDetailsRepository: RemoteFolderDetailsRepository,
+    private val folderPinSettings: FolderPinSettings? = null,
+) {
     suspend fun getFolderSettings(account: LegacyAccountDto): List<FolderSettings> {
         return remoteFolderDetailsRepository
             .getAllByAccountId(account.id)
@@ -18,17 +21,20 @@ class FolderSettingsProvider(private val remoteFolderDetailsRepository: RemoteFo
                     }
                 },
             )
+            .map { it.toFolderSettings(account.uuid) }
             .filterNot { it.containsOnlyDefaultValues() }
-            .map { it.toFolderSettings() }
     }
 
-    private fun RemoteFolderDetails.containsOnlyDefaultValues(): Boolean {
+    // A pinned folder is worth exporting even when every other setting is at its default.
+    private fun FolderSettings.containsOnlyDefaultValues(): Boolean {
         return isInTopGroup == getDefaultValue("inTopGroup") &&
             isIntegrate == getDefaultValue("integrate") &&
             isSyncEnabled == getDefaultValue("syncEnabled") &&
             isVisible == getDefaultValue("visible") &&
             isNotificationsEnabled == getDefaultValue("notificationsEnabled") &&
-            isPushEnabled == getDefaultValue("pushEnabled")
+            isPushEnabled == getDefaultValue("pushEnabled") &&
+            isPinnedForFiling == getDefaultValue("pinnedForFiling") &&
+            isPinnedToDrawer == getDefaultValue("pinnedToDrawer")
     }
 
     private fun getDefaultValue(key: String): Any? {
@@ -38,7 +44,7 @@ class FolderSettingsProvider(private val remoteFolderDetailsRepository: RemoteFo
         return setting.defaultValue
     }
 
-    private fun RemoteFolderDetails.toFolderSettings(): FolderSettings {
+    private fun RemoteFolderDetails.toFolderSettings(accountUuid: String): FolderSettings {
         return FolderSettings(
             folder.serverId,
             isInTopGroup,
@@ -47,6 +53,8 @@ class FolderSettingsProvider(private val remoteFolderDetailsRepository: RemoteFo
             isVisible,
             isNotificationsEnabled,
             isPushEnabled,
+            isPinnedForFiling = folderPinSettings?.isPinnedForFiling(accountUuid, folder.id) == true,
+            isPinnedToDrawer = folderPinSettings?.isPinnedToDrawer(accountUuid, folder.id) == true,
         )
     }
 }
@@ -59,4 +67,6 @@ data class FolderSettings(
     val isVisible: Boolean,
     val isNotificationsEnabled: Boolean,
     val isPushEnabled: Boolean,
+    val isPinnedForFiling: Boolean = false,
+    val isPinnedToDrawer: Boolean = false,
 )

@@ -55,9 +55,17 @@ val preferencesModule = module {
             folderQueryRepository = get(),
             notificationSettingsUpdater = get(),
             filePrefixProvider = get(),
+            externalGlobalSettings = getAll(),
         )
     }
-    factory { FolderSettingsProvider(remoteFolderDetailsRepository = get()) }
+    factory {
+        FolderSettingsProvider(
+            remoteFolderDetailsRepository = get(),
+            folderPinSettings = getOrNull(),
+        )
+    }
+    // Taught classification rules travel with the other settings; see ExternalGlobalSettings.
+    factory { ClassificationRulesExternalSettings(store = get()) } bind ExternalGlobalSettings::class
     factory<LegacyAccountDtoManager> { get<Preferences>() }
     single<GravatarSettingsPreferenceManager> {
         DefaultGravatarSettingsPreferenceManager(
@@ -244,6 +252,7 @@ val preferencesModule = module {
             preferences = get(),
             generalSettingsManager = get(),
             changePublisher = get(),
+            externalGlobalSettings = getAll(),
         )
     }
 

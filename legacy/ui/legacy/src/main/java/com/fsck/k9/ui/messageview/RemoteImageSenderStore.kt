@@ -69,6 +69,22 @@ class RemoteImageSenderStore(context: Context) {
         write(scope.key(), read(scope.key()) + value)
     }
 
+    /**
+     * Trusts a value as it is stored - an address for [RemoteImageScope.SENDER], a bare domain for
+     * [RemoteImageScope.DOMAIN] - which is the form a settings import carries. Anything that is not of that shape
+     * is ignored, so a malformed import cannot trust something the user never chose.
+     */
+    fun trustStoredValue(scope: RemoteImageScope, value: String) {
+        val normalized = value.trim().lowercase()
+        val isValid = when (scope) {
+            RemoteImageScope.SENDER -> normalized.emailDomainOrNull() != null
+            RemoteImageScope.DOMAIN -> normalized.isNotEmpty() && '@' !in normalized
+        }
+        if (!isValid) return
+
+        write(scope.key(), read(scope.key()) + normalized)
+    }
+
     fun forget(emailAddress: String, scope: RemoteImageScope) {
         val value = valueFor(emailAddress, scope) ?: return
 

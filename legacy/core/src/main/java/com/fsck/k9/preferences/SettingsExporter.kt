@@ -29,6 +29,7 @@ class SettingsExporter(
     private val folderQueryRepository: FolderQueryRepository,
     private val notificationSettingsUpdater: NotificationSettingsUpdater,
     private val filePrefixProvider: FilePrefixProvider,
+    private val externalGlobalSettings: List<ExternalGlobalSettings> = emptyList(),
 ) {
     @Throws(SettingsImportExportException::class)
     suspend fun exportToUri(includeGlobals: Boolean, accountUuids: Set<String>, uri: Uri) {
@@ -70,7 +71,8 @@ class SettingsExporter(
             val prefs: Map<String, Any> = storage.getAll().toSortedMap()
             if (includeGlobals) {
                 serializer.startTag(null, GLOBAL_ELEMENT)
-                writeSettings(serializer, prefs)
+                // Settings kept in stores of their own are written alongside the rest, as if they were stored here.
+                writeSettings(serializer, prefs + externalGlobalSettings.flatMap { it.exportSettings().toList() })
                 serializer.endTag(null, GLOBAL_ELEMENT)
             }
 
@@ -430,6 +432,8 @@ class SettingsExporter(
         writeFolderSetting(serializer, "visible", folder.isVisible.toString())
         writeFolderSetting(serializer, "notificationsEnabled", folder.isNotificationsEnabled.toString())
         writeFolderSetting(serializer, "pushEnabled", folder.isPushEnabled.toString())
+        writeFolderSetting(serializer, "pinnedForFiling", folder.isPinnedForFiling.toString())
+        writeFolderSetting(serializer, "pinnedToDrawer", folder.isPinnedToDrawer.toString())
 
         serializer.endTag(null, FOLDER_ELEMENT)
     }

@@ -61,6 +61,13 @@ class FolderSettingsDescriptions {
         s.put("visible", Settings.versions(
             new V(100, new BooleanSetting(true))
         ));
+        // Added by this fork; see FolderPinSettings.
+        s.put("pinnedForFiling", Settings.versions(
+            new V(112, new BooleanSetting(false))
+        ));
+        s.put("pinnedToDrawer", Settings.versions(
+            new V(112, new BooleanSetting(false))
+        ));
 
         SETTINGS = Collections.unmodifiableMap(s);
 
