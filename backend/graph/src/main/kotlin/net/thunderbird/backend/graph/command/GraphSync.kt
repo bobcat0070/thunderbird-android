@@ -49,13 +49,14 @@ internal const val FOLDER_EXTRA_SYNC_FORMAT = "graphSyncFormat"
  * that was already synchronized. Version 2 added the message list preview text, version 3 the headers
  * used to classify a message, version 4 the classification itself, version 5 a revision of the
  * classification rules, and version 6 stores envelopes as headers-only so that opening one downloads the
- * body instead of offering a button, version 7 the sender's authentication result, and version 8 a
- * revision of the classification rules.
+ * body instead of offering a button, version 7 the sender's authentication result, version 8 a
+ * revision of the classification rules, and version 9 refills windows that earlier versions cut short at
+ * Graph's page-size and delta-round limits.
  *
  * A change to the classification rules also needs a bump: the headers a verdict was derived from are not
  * kept, so the only way to re-classify stored mail is to fetch its envelope again and re-save it.
  */
-internal const val SYNC_FORMAT_VERSION = 8
+internal const val SYNC_FORMAT_VERSION = 9
 
 /**
  * Synchronizes a single folder with Microsoft Graph.
@@ -80,7 +81,9 @@ internal class GraphSync(
             listener.syncStarted(folderServerId)
 
             val backendFolder = backendStorage.getFolder(folderServerId)
-            val visibleLimit = backendFolder.visibleLimit.takeIf { it > 0 } ?: syncConfig.defaultVisibleLimit
+            // A limit of 0 is the "all messages" setting; a folder without a limit of its own takes the account's.
+            val visibleLimit = listOf(backendFolder.visibleLimit, syncConfig.defaultVisibleLimit)
+                .firstOrNull { it > 0 } ?: UNLIMITED_VISIBLE_LIMIT
 
             listener.syncHeadersStarted(folderServerId)
 

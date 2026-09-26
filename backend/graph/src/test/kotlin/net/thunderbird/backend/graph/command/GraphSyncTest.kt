@@ -362,23 +362,15 @@ class GraphSyncTest {
     fun `large folder should bound the enumeration by the date of the oldest visible message`() {
         createFolder()
         backendStorage.getFolder(FOLDER_ID).visibleLimit = 2
-        // The probe returns a full page, meaning the folder holds more than the window.
-        server.enqueue(
-            MockResponse().setBody(
-                """
-                {
-                  "value": [
-                    {"id": "a", "receivedDateTime": "2026-01-05T00:00:00Z"},
-                    {"id": "b", "receivedDateTime": "2026-01-04T00:00:00Z"}
-                  ]
-                }
-                """.trimIndent(),
-            ),
-        )
+        // The probe finds a message at the edge of the window, meaning the folder holds at least the window.
+        enqueueWindowProbe(edgeReceivedDateTime = "2026-01-04T00:00:00Z")
         server.enqueue(
             MockResponse().setBody(
                 deltaResponse(
-                    messages = listOf(message("a", subject = "A")),
+                    messages = listOf(
+                        message("a", subject = "A", receivedDateTime = "2026-01-05T00:00:00Z"),
+                        message("b", subject = "B", receivedDateTime = "2026-01-04T00:00:00Z"),
+                    ),
                     deltaLink = "${server.url("/v1.0/")}me/mailFolders/$FOLDER_ID/messages/delta?\$deltatoken=t1",
                 ),
             ),
@@ -412,12 +404,129 @@ class GraphSyncTest {
         assertThat(server.takeRequest().requestUrl?.queryParameter("\$filter")).isNull()
     }
 
+    @Test
+    fun `window probe should fetch only the message at the edge of the window`() {
+        createFolder()
+        backendStorage.getFolder(FOLDER_ID).visibleLimit = 10000
+        enqueueWindowProbe()
+        server.enqueue(
+            MockResponse().setBody(
+                deltaResponse(
+                    messages = listOf(message("m1", subject = "One")),
+                    deltaLink = "${server.url("/v1.0/")}me/mailFolders/$FOLDER_ID/messages/delta?\$deltatoken=t1",
+                ),
+            ),
+        )
+
+        createTestSubject().sync(FOLDER_ID, syncConfig(), listener)
+
+        // Graph accepts a page size of at most 1000, so the limit itself cannot be the page size.
+        val probe = server.takeRequest().requestUrl
+        assertThat(probe?.queryParameter("\$top")).isEqualTo("1")
+        assertThat(probe?.queryParameter("\$skip")).isEqualTo("9999")
+        assertThat(listener.failures).isEmpty()
+    }
+
+    @Test
+    fun `messages the filtered delta round leaves out should be listed from the folder`() {
+        createFolder()
+        backendStorage.getFolder(FOLDER_ID).visibleLimit = 4
+        enqueueWindowProbe(edgeReceivedDateTime = "2026-01-01T00:00:00Z")
+        // Graph returns at most 5000 messages from a filtered delta round; here it stops short at two.
+        server.enqueue(
+            MockResponse().setBody(
+                deltaResponse(
+                    messages = listOf(
+                        message("a", subject = "A", receivedDateTime = "2026-01-04T00:00:00Z"),
+                        message("b", subject = "B", receivedDateTime = "2026-01-03T00:00:00Z"),
+                    ),
+                    deltaLink = "${server.url("/v1.0/")}me/mailFolders/$FOLDER_ID/messages/delta?\$deltatoken=t1",
+                ),
+            ),
+        )
+        server.enqueue(
+            MockResponse().setBody(
+                listResponse(
+                    messages = listOf(
+                        message("b", subject = "B", receivedDateTime = "2026-01-03T00:00:00Z"),
+                        message("c", subject = "C", receivedDateTime = "2026-01-02T00:00:00Z"),
+                        message("d", subject = "D", receivedDateTime = "2026-01-01T00:00:00Z"),
+                    ),
+                ),
+            ),
+        )
+
+        createTestSubject().sync(FOLDER_ID, syncConfig(), listener)
+
+        assertThat(backendStorage.getFolder(FOLDER_ID).getMessageServerIds())
+            .containsExactlyInAnyOrder("a", "b", "c", "d")
+        server.takeRequest() // window probe
+        server.takeRequest() // delta round
+        val listRequest = server.takeRequest().requestUrl
+        assertThat(listRequest?.encodedPath).isEqualTo("/v1.0/me/mailFolders/$FOLDER_ID/messages")
+        assertThat(listRequest?.queryParameter("\$filter"))
+            .isEqualTo("receivedDateTime ge 2026-01-01T00:00:00Z and receivedDateTime le 2026-01-03T00:00:00Z")
+        assertThat(listener.failures).isEmpty()
+    }
+
+    @Test
+    fun `all messages setting should synchronize the whole folder`() {
+        createFolder()
+        backendStorage.getFolder(FOLDER_ID).visibleLimit = 0
+        server.enqueue(
+            MockResponse().setBody(
+                deltaResponse(
+                    messages = listOf(message("m1", subject = "One"), message("m2", subject = "Two")),
+                    deltaLink = "${server.url("/v1.0/")}me/mailFolders/$FOLDER_ID/messages/delta?\$deltatoken=t1",
+                ),
+            ),
+        )
+
+        createTestSubject().sync(FOLDER_ID, syncConfig(defaultVisibleLimit = 0), listener)
+
+        assertThat(backendStorage.getFolder(FOLDER_ID).getMessageServerIds()).containsExactlyInAnyOrder("m1", "m2")
+        // Nothing to bound, so no window probe: the one request is the delta round, unfiltered.
+        assertThat(server.requestCount).isEqualTo(1)
+        assertThat(server.takeRequest().requestUrl?.queryParameter("\$filter")).isNull()
+    }
+
+    @Test
+    fun `a large window should be enumerated to the end so the round can be resumed`() {
+        createFolder()
+        backendStorage.getFolder(FOLDER_ID).visibleLimit = 10000
+        enqueueWindowProbe()
+        val pageCount = 80
+        repeat(pageCount - 1) { page ->
+            val nextLink = "${server.url("/v1.0/")}me/mailFolders/$FOLDER_ID/messages/delta?\$skiptoken=s$page"
+            server.enqueue(
+                MockResponse().setBody(
+                    """{"value": [${message("m$page", subject = "Page $page")}], "@odata.nextLink": "$nextLink"}""",
+                ),
+            )
+        }
+        server.enqueue(
+            MockResponse().setBody(
+                deltaResponse(
+                    messages = listOf(message("last", subject = "Last")),
+                    deltaLink = "${server.url("/v1.0/")}me/mailFolders/$FOLDER_ID/messages/delta?\$deltatoken=t1",
+                ),
+            ),
+        )
+
+        createTestSubject().sync(FOLDER_ID, syncConfig(), listener)
+
+        val folder = backendStorage.getFolder(FOLDER_ID)
+        assertThat(folder.getMessageServerIds().size).isEqualTo(pageCount)
+        assertThat(folder.getFolderExtraString(FOLDER_EXTRA_DELTA_LINK)).isNotNull()
+    }
+
     /**
      * A fresh enumeration first asks when the oldest message inside the visible window arrived. Returning fewer
      * messages than the limit means the whole folder fits, so no date bound is applied.
      */
-    private fun enqueueWindowProbe() {
-        server.enqueue(MockResponse().setBody("""{"value": []}"""))
+    private fun enqueueWindowProbe(edgeReceivedDateTime: String? = null) {
+        val edge = edgeReceivedDateTime?.let { """{"id": "edge", "receivedDateTime": "$it"}""" }.orEmpty()
+        server.enqueue(MockResponse().setBody("""{"value": [$edge]}"""))
     }
 
     private fun createFolder() {
@@ -450,12 +559,12 @@ class GraphSyncTest {
         )
     }
 
-    private fun syncConfig() = SyncConfig(
+    private fun syncConfig(defaultVisibleLimit: Int = 25) = SyncConfig(
         expungePolicy = SyncConfig.ExpungePolicy.IMMEDIATELY,
         earliestPollDate = null,
         syncRemoteDeletions = true,
         maximumAutoDownloadMessageSize = 0,
-        defaultVisibleLimit = 25,
+        defaultVisibleLimit = defaultVisibleLimit,
         syncFlags = setOf(Flag.SEEN, Flag.FLAGGED),
     )
 
@@ -478,6 +587,10 @@ class GraphSyncTest {
               "from": {"emailAddress": {"name": "Sender", "address": "sender@example.com"}}
             }
         """.trimIndent()
+    }
+
+    private fun listResponse(messages: List<String>): String {
+        return """{"value": [${messages.joinToString(",")}]}"""
     }
 
     private fun deltaResponse(messages: List<String>, deltaLink: String): String {
