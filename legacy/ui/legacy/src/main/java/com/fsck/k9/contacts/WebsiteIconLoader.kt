@@ -113,9 +113,10 @@ class WebsiteIconLoader(
         cache.get(CACHE_PREFIX + domain)?.let { cached ->
             return if (cached.isEmpty()) null else decode(cached)
         }
-        if (cachedOnly) return null
+        val key = CACHE_PREFIX + domain
+        if (cachedOnly || cache.isBackingOff(key)) return null
 
-        return try {
+        val icon = try {
             resolve(domain)
         } catch (e: Exception) {
             // Anything from a DNS failure to a truncated image. Not cached either way: an outage says
@@ -123,6 +124,11 @@ class WebsiteIconLoader(
             logger.debug(TAG, e) { "Could not load website icon" }
             null
         }
+
+        // Neither an icon nor a remembered absence: the lookup itself failed, so it waits before trying again.
+        if (icon == null && cache.get(key) == null) cache.putFailure(key)
+
+        return icon
     }
 
     /**

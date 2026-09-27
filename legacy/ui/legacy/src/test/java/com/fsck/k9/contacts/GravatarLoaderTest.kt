@@ -22,6 +22,7 @@ import org.mockito.kotlin.whenever
 
 class GravatarLoaderTest : RobolectricTest() {
     private lateinit var server: MockWebServer
+    private var now = 1_000_000L
 
     @Before
     fun setUp() {
@@ -104,15 +105,19 @@ class GravatarLoaderTest : RobolectricTest() {
     }
 
     @Test
-    fun `should retry after a server error`() {
-        // A rate limit or an outage says nothing about whether this address has a Gravatar.
+    fun `should wait a while before retrying after a server error`() {
+        // A rate limit or an outage says nothing about whether this address has a Gravatar, so it is not
+        // remembered as a miss - but asking again on every redraw would hold up every other picture.
         server.enqueue(MockResponse(code = 429))
         server.enqueue(MockResponse(code = 429))
         val testSubject = loaderFor(GravatarSettings(isEnabled = true))
 
         testSubject.loadGravatar("sam@example.com", size = 80)
         testSubject.loadGravatar("sam@example.com", size = 80)
+        assertThat(server.requestCount).isEqualTo(1)
 
+        now += AvatarCache.DEFAULT_FAILURE_BACKOFF_MILLIS + 1
+        testSubject.loadGravatar("sam@example.com", size = 80)
         assertThat(server.requestCount).isEqualTo(2)
     }
 
@@ -145,7 +150,7 @@ class GravatarLoaderTest : RobolectricTest() {
         return GravatarLoader(
             generalSettingsManager = generalSettingsManager,
             httpClient = OkHttpClient(),
-            cache = AvatarCache(ApplicationProvider.getApplicationContext()),
+            cache = AvatarCache(ApplicationProvider.getApplicationContext(), currentTimeMillis = { now }),
             logger = TestLogger(),
             baseUrl = server.url("/avatar/").toString(),
         )

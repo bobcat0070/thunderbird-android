@@ -94,6 +94,28 @@ class AvatarCacheTest : RobolectricTest() {
         assertThat(cache().get("sam@example.com")?.toList()).isEqualTo(listOf<Byte>(9))
     }
 
+    @Test
+    fun `a failed lookup should pause further lookups for a while`() {
+        var time = 1_000_000L
+        val testSubject = cache { time }
+
+        testSubject.putFailure("key")
+
+        assertThat(testSubject.isBackingOff("key")).isEqualTo(true)
+        time += AvatarCache.DEFAULT_FAILURE_BACKOFF_MILLIS + 1
+        assertThat(testSubject.isBackingOff("key")).isEqualTo(false)
+    }
+
+    @Test
+    fun `an answer should end a pause`() {
+        val testSubject = cache()
+        testSubject.putFailure("key")
+
+        testSubject.putMiss("key")
+
+        assertThat(testSubject.isBackingOff("key")).isEqualTo(false)
+    }
+
     private fun cache(now: () -> Long = { System.currentTimeMillis() }) = AvatarCache(
         context = ApplicationProvider.getApplicationContext(),
         currentTimeMillis = now,

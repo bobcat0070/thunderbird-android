@@ -25,6 +25,8 @@ import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
 
 class WebsiteIconLoaderTest : RobolectricTest() {
+    private var now = 1_000_000L
+
     private lateinit var server: MockWebServer
 
     @Before
@@ -134,16 +136,21 @@ class WebsiteIconLoaderTest : RobolectricTest() {
     }
 
     @Test
-    fun `should retry after a server error`() {
-        // A rate limit or an outage says nothing about whether this domain has an icon.
+    fun `should retry after a server error once a pause has passed`() {
+        // A rate limit or an outage says nothing about whether this domain has an icon, but asking again on every
+        // redraw would hold up every other picture in the list.
         server.enqueue(MockResponse(code = 429))
         server.enqueue(MockResponse(code = 429))
         val testSubject = loaderFor(WebsiteIconSettings(isEnabled = true))
 
         testSubject.loadIcon("example.com")
         testSubject.loadIcon("example.com")
+        val requestsDuringPause = server.requestCount
 
-        assertThat(server.requestCount).isEqualTo(2)
+        now += AvatarCache.DEFAULT_FAILURE_BACKOFF_MILLIS + 1
+        testSubject.loadIcon("example.com")
+
+        assertThat(server.requestCount).isEqualTo(requestsDuringPause + 1)
     }
 
     @Test
@@ -246,6 +253,7 @@ class WebsiteIconLoaderTest : RobolectricTest() {
         val testSubject = loaderFor(WebsiteIconSettings(isEnabled = true))
         testSubject.loadIcon("example.com")
 
+        now += AvatarCache.DEFAULT_FAILURE_BACKOFF_MILLIS + 1
         server.enqueue(imageResponse())
         assertThat(testSubject.loadIcon("example.com")).isNotNull()
     }
@@ -317,7 +325,7 @@ class WebsiteIconLoaderTest : RobolectricTest() {
         return WebsiteIconLoader(
             generalSettingsManager = generalSettingsManager,
             httpClient = OkHttpClient(),
-            cache = AvatarCache(ApplicationProvider.getApplicationContext()),
+            cache = AvatarCache(ApplicationProvider.getApplicationContext(), currentTimeMillis = { now }),
             logger = TestLogger(),
             baseUrl = server.url("/faviconV2").toString(),
         )

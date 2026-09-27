@@ -110,14 +110,17 @@ class BimiLogoLoader(
         cache.get(CACHE_PREFIX + domain)?.let { cached ->
             return cached.toCachedMark()?.takeIf { isSafeMark(it.svg) }
         }
-        if (cachedOnly) return null
+        val key = CACHE_PREFIX + domain
+        if (cachedOnly || cache.isBackingOff(key)) return null
 
         return try {
             fetchMark(domain, selector)
         } catch (e: Exception) {
             // A DNS failure, an unreachable host, or an SVG this renderer cannot read. Not cached: an outage
-            // says nothing about what this domain publishes. The caller falls back to the next source.
+            // says nothing about what this domain publishes - but it is not asked again straight away either.
+            // The caller falls back to the next source.
             logger.debug(TAG, e) { "Could not load BIMI logo" }
+            cache.putFailure(key)
             null
         }
     }

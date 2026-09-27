@@ -66,9 +66,10 @@ class GravatarLoader(
         cache.get(CACHE_PREFIX + address)?.let { cached ->
             return if (cached.isEmpty()) null else decode(cached)
         }
-        if (cachedOnly) return null
+        val key = CACHE_PREFIX + address
+        if (cachedOnly || cache.isBackingOff(key)) return null
 
-        return try {
+        val picture = try {
             fetch(address, size, settings.apiKey)
         } catch (e: Exception) {
             // Anything from a DNS failure to a truncated image. Not cached either way: an outage says
@@ -76,6 +77,11 @@ class GravatarLoader(
             logger.debug(TAG, e) { "Could not load Gravatar" }
             null
         }
+
+        // Neither a picture nor a remembered absence: the lookup itself failed, so it waits before trying again.
+        if (picture == null && cache.get(key) == null) cache.putFailure(key)
+
+        return picture
     }
 
     /**

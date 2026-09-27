@@ -1,5 +1,6 @@
 package com.fsck.k9.contacts
 
+import java.util.concurrent.ConcurrentHashMap
 import android.content.Context
 import java.io.File
 import java.security.MessageDigest
@@ -26,8 +27,37 @@ class AvatarCache(
     private val hitLifetimeMillis: Long = DEFAULT_HIT_LIFETIME_MILLIS,
     private val missLifetimeMillis: Long = DEFAULT_MISS_LIFETIME_MILLIS,
     private val currentTimeMillis: () -> Long = { System.currentTimeMillis() },
+    private val failureBackoffMillis: Long = DEFAULT_FAILURE_BACKOFF_MILLIS,
 ) {
     private val directory = File(context.applicationContext.cacheDir, CACHE_DIRECTORY)
+
+    /**
+     * When a lookup last failed, by key. Kept in memory only: a failure is about the network right now, not about
+     * the sender, so it is not worth remembering past a restart.
+     */
+    private val failedAt = ConcurrentHashMap<String, Long>()
+
+    /**
+     * Whether a lookup of this key failed a moment ago and should not be tried again yet.
+     *
+     * A failure - a timeout, a rate limit, an outage - is not cached as a miss, because it says nothing about the
+     * sender. But retried on every redraw, it held the few threads that load pictures for seconds at a time on a
+     * poor connection, and every other avatar in the list waited behind it.
+     */
+    fun isBackingOff(key: String): Boolean {
+        val failedTime = failedAt[key] ?: return false
+        val isBackingOff = currentTimeMillis() - failedTime < failureBackoffMillis
+        if (!isBackingOff) failedAt.remove(key)
+
+        return isBackingOff
+    }
+
+    /**
+     * Records that a lookup of this key failed, so it is not tried again for a while.
+     */
+    fun putFailure(key: String) {
+        failedAt[key] = currentTimeMillis()
+    }
 
     /**
      * @return the cached bytes, an empty array for a remembered miss, or `null` when nothing usable is held.
@@ -58,6 +88,7 @@ class AvatarCache(
     }
 
     fun put(key: String, bytes: ByteArray) {
+        failedAt.remove(key)
         write(key, bytes)
     }
 
@@ -65,6 +96,7 @@ class AvatarCache(
      * Records that this key has nothing behind it.
      */
     fun putMiss(key: String) {
+        failedAt.remove(key)
         write(key, ByteArray(0))
     }
 
@@ -120,5 +152,6 @@ class AvatarCache(
          * show up without waiting a week.
          */
         const val DEFAULT_MISS_LIFETIME_MILLIS = DAY_MILLIS
+        const val DEFAULT_FAILURE_BACKOFF_MILLIS = 10L * 60L * 1000L
     }
 }
