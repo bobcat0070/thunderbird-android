@@ -41,6 +41,16 @@ internal const val HTTP_GATEWAY_TIMEOUT = 504
 private const val MILLIS_PER_SECOND = 1000L
 private const val MAX_ERROR_BODY_BYTES = 4096L
 private const val MAX_HTTP_CODE = 599
+private const val HTTP_LOWEST_CLIENT_ERROR = 400
+private const val HTTP_HIGHEST_CLIENT_ERROR = 499
+
+private val OCTET_STREAM_MEDIA_TYPE = "application/octet-stream".toMediaType()
+
+/**
+ * Where Graph hands out attachment upload URLs. They carry their own authorization, so they are checked against this
+ * rather than being sent the account's token.
+ */
+private val UPLOAD_HOST_SUFFIXES = listOf("office.com", "office365.com", "outlook.com", "microsoft.com")
 
 /**
  * Minimal HTTP client for the Microsoft Graph mail API.
@@ -53,6 +63,9 @@ private const val MAX_HTTP_CODE = 599
  *
  * Instances hold no request state and are safe to use from the backend worker threads.
  */
+// One method per shape of request Graph is sent; splitting them apart would scatter the authentication, throttling
+// and error handling every one of them shares.
+@Suppress("TooManyFunctions")
 internal class GraphApiClient(
     private val okHttpClient: OkHttpClient,
     private val tokenProvider: OAuth2TokenProvider,
@@ -139,6 +152,56 @@ internal class GraphApiClient(
     fun patchJson(url: HttpUrl, body: String): String {
         return execute(Request.Builder().url(url).patch(body.toRequestBody(JSON_MEDIA_TYPE)).build()) { response ->
             response.body.string()
+        }
+    }
+
+    /**
+     * Parses an attachment upload URL returned by Graph.
+     *
+     * The URL is pre-authorized and lives on a different host from the API, so it is accepted only over https on a
+     * Microsoft host - or on the API's own host, which is what a test server looks like.
+     */
+    fun uploadUrl(url: String): HttpUrl {
+        val parsed = url.toHttpUrl()
+        val isApiHost = parsed.scheme == baseHttpUrl.scheme && parsed.host == baseHttpUrl.host &&
+            parsed.port == baseHttpUrl.port
+        val isMicrosoftHost = parsed.isHttps && UPLOAD_HOST_SUFFIXES.any { suffix ->
+            parsed.host == suffix || parsed.host.endsWith(".$suffix")
+        }
+        if (!isApiHost && !isMicrosoftHost) {
+            throw MessagingException("Refusing a Microsoft Graph upload URL on an unexpected host", true, null)
+        }
+
+        return parsed
+    }
+
+    /**
+     * Sends one piece of an attachment to an upload session.
+     *
+     * Deliberately without the account's token: the upload URL authorizes itself, and Graph documents that sending
+     * the token along makes the upload fail.
+     *
+     * @param range the `Content-Range` value, e.g. `bytes 0-327679/1000000`.
+     */
+    fun putUploadChunk(uploadUrl: HttpUrl, chunk: ByteArray, range: String) {
+        val request = Request.Builder()
+            .url(uploadUrl)
+            .put(chunk.toRequestBody(OCTET_STREAM_MEDIA_TYPE))
+            .header("Content-Range", range)
+            .build()
+
+        val response = try {
+            okHttpClient.newCall(request).execute()
+        } catch (e: IOException) {
+            throw networkFailure(e)
+        }
+
+        response.use {
+            if (!response.isSuccessful) {
+                val isPermanent = response.code in HTTP_LOWEST_CLIENT_ERROR..HTTP_HIGHEST_CLIENT_ERROR &&
+                    !response.isThrottled()
+                throw MessagingException("Attachment upload failed (HTTP ${response.code})", isPermanent)
+            }
         }
     }
 

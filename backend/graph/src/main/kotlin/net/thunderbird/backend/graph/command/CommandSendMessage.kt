@@ -5,15 +5,15 @@ import java.io.ByteArrayOutputStream
 import net.thunderbird.backend.graph.api.GraphApiClient
 import net.thunderbird.backend.graph.api.GraphMessage
 import net.thunderbird.backend.graph.api.pathSegment
-import net.thunderbird.core.common.exception.MessagingException
 import okio.ByteString.Companion.toByteString
 
 /**
- * Largest MIME payload Graph accepts inline for `sendMail` and message creation.
+ * Largest MIME message Graph takes in a single request.
  *
- * Larger messages need an upload session, which this backend does not implement yet.
+ * Graph caps a request at 4 MB, and raw MIME travels base64 encoded, which is a third larger - so 3 MB of message is
+ * what fits. Anything bigger goes through [LargeMessageUploader].
  */
-private const val MAX_INLINE_MIME_BYTES = 4 * 1024 * 1024
+internal const val MAX_INLINE_MIME_BYTES = 3 * 1024 * 1024
 
 /**
  * Sends messages and stores them in a folder.
@@ -23,14 +23,22 @@ private const val MAX_INLINE_MIME_BYTES = 4 * 1024 * 1024
  */
 internal class CommandSendMessage(
     private val client: GraphApiClient,
+    maxInlineMimeBytes: Int = MAX_INLINE_MIME_BYTES,
 ) {
+    private val maxInlineMimeBytes = maxInlineMimeBytes
+    private val largeMessageUploader = LargeMessageUploader(client, maxInlineMimeBytes)
+
     /**
      * Sends a message. Graph files a copy in Sent Items on the server.
      */
     fun sendMessage(message: Message) {
-        val url = client.url("me/sendMail")
+        val mimeBytes = message.toMimeBytes()
 
-        client.postMime(url, message.toBase64Mime())
+        if (mimeBytes.size <= maxInlineMimeBytes) {
+            client.postMime(client.url("me/sendMail"), mimeBytes.toByteString().base64())
+        } else {
+            largeMessageUploader.send(largeMessageUploader.create(message, folderServerId = null))
+        }
     }
 
     /**
@@ -39,30 +47,19 @@ internal class CommandSendMessage(
      * @return the server id Graph assigned to the created message.
      */
     fun uploadMessage(folderServerId: String, message: Message): String? {
+        val mimeBytes = message.toMimeBytes()
+        if (mimeBytes.size > maxInlineMimeBytes) {
+            return largeMessageUploader.create(message, folderServerId)
+        }
+
         val url = client.url("me/mailFolders/${pathSegment(folderServerId)}/messages")
-        val response = client.postMime(url, message.toBase64Mime())
+        val response = client.postMime(url, mimeBytes.toByteString().base64())
 
         return client.json.decodeFromString<GraphMessage>(response).id
     }
 
     /**
-     * Serializes a message to base64 encoded MIME, which is the format Graph expects for raw content.
-     *
-     * Encoding goes through okio rather than `java.util.Base64`, which is only available from API 26.
+     * Encoding to base64 goes through okio rather than `java.util.Base64`, which is only available from API 26.
      */
-    private fun Message.toBase64Mime(): String {
-        val outputStream = ByteArrayOutputStream()
-        writeTo(outputStream)
-        val mimeBytes = outputStream.toByteArray()
-
-        if (mimeBytes.size > MAX_INLINE_MIME_BYTES) {
-            throw MessagingException(
-                "Message is too large to send via Microsoft Graph without an upload session",
-                true,
-                null,
-            )
-        }
-
-        return mimeBytes.toByteString().base64()
-    }
+    private fun Message.toMimeBytes(): ByteArray = ByteArrayOutputStream().also { writeTo(it) }.toByteArray()
 }
