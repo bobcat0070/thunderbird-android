@@ -6,6 +6,7 @@ import net.thunderbird.backend.graph.api.GraphMessage
 import net.thunderbird.backend.graph.api.batchExecute
 import net.thunderbird.backend.graph.api.graphBatchItem
 import net.thunderbird.backend.graph.api.pathSegment
+import net.thunderbird.backend.graph.api.requireSuccess
 
 private const val DELETE_PAGE_SIZE = 100
 private const val MAX_DELETE_PASSES = 100
@@ -24,7 +25,7 @@ internal class CommandDelete(
             messageServerIds.mapIndexed { index, messageServerId ->
                 graphBatchItem(index, "DELETE", "/me/messages/$messageServerId")
             },
-        )
+        ).requireSuccess("delete")
     }
 
     /**

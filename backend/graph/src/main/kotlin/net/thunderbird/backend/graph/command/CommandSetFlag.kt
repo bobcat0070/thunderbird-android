@@ -10,6 +10,7 @@ import net.thunderbird.backend.graph.api.GraphMessage
 import net.thunderbird.backend.graph.api.batchExecute
 import net.thunderbird.backend.graph.api.graphBatchItem
 import net.thunderbird.backend.graph.api.pathSegment
+import net.thunderbird.backend.graph.api.requireSuccess
 import net.thunderbird.core.common.mail.Flag
 
 private const val FLAG_STATUS_NOT_FLAGGED = "notFlagged"
@@ -96,5 +97,5 @@ private fun GraphApiClient.patchMessages(messageServerIds: List<String>, patch: 
         messageServerIds.mapIndexed { index, messageServerId ->
             graphBatchItem(index, "PATCH", "/me/messages/$messageServerId", patch)
         },
-    )
+    ).requireSuccess("update")
 }

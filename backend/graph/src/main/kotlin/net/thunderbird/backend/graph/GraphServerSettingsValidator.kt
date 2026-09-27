@@ -54,7 +54,12 @@ class GraphServerSettingsValidator(
         } catch (e: IOException) {
             ServerSettingsValidationResult.NetworkError(e)
         } catch (e: MessagingException) {
-            ServerSettingsValidationResult.ServerError(e.message)
+            val networkFailure = e.cause as? IOException
+            if (networkFailure != null) {
+                ServerSettingsValidationResult.NetworkError(networkFailure)
+            } else {
+                ServerSettingsValidationResult.ServerError(e.message)
+            }
         } catch (e: Exception) {
             ServerSettingsValidationResult.UnknownError(e)
         }

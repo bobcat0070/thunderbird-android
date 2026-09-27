@@ -2,6 +2,7 @@ package net.thunderbird.backend.graph.api
 
 import com.fsck.k9.mail.AuthenticationFailedException
 import com.fsck.k9.mail.oauth.OAuth2TokenProvider
+import java.io.IOException
 import java.io.InputStream
 import kotlinx.serialization.json.Json
 import net.thunderbird.core.common.exception.MessagingException
@@ -25,17 +26,17 @@ private val JSON_MEDIA_TYPE = "application/json".toMediaType()
 private val MIME_MEDIA_TYPE = "text/plain".toMediaType()
 
 private const val MAX_AUTH_RETRIES = 1
-private const val MAX_THROTTLE_RETRIES = 3
+internal const val MAX_THROTTLE_RETRIES = 3
 private const val DEFAULT_RETRY_AFTER_SECONDS = 5L
 private const val MAX_RETRY_AFTER_SECONDS = 60L
 
 private const val HTTP_UNAUTHORIZED = 401
 private const val HTTP_FORBIDDEN = 403
-private const val HTTP_NOT_FOUND = 404
-private const val HTTP_TOO_MANY_REQUESTS = 429
+internal const val HTTP_NOT_FOUND = 404
+internal const val HTTP_TOO_MANY_REQUESTS = 429
 private const val HTTP_INTERNAL_SERVER_ERROR = 500
-private const val HTTP_SERVICE_UNAVAILABLE = 503
-private const val HTTP_GATEWAY_TIMEOUT = 504
+internal const val HTTP_SERVICE_UNAVAILABLE = 503
+internal const val HTTP_GATEWAY_TIMEOUT = 504
 
 private const val MILLIS_PER_SECOND = 1000L
 private const val MAX_ERROR_BODY_BYTES = 4096L
@@ -47,7 +48,8 @@ private const val MAX_HTTP_CODE = 599
  * Responsibilities:
  * - attaching a bearer token obtained from [tokenProvider] and refreshing it once on 401
  * - honouring Graph throttling (429, 503, 504) via the Retry-After header
- * - translating API errors into [MessagingException] / [AuthenticationFailedException]
+ * - translating API errors into [MessagingException] / [AuthenticationFailedException], and network failures into a
+ *   temporary [MessagingException], which is what tells the app to keep a pending change and try it again later
  *
  * Instances hold no request state and are safe to use from the backend worker threads.
  */
@@ -145,6 +147,13 @@ internal class GraphApiClient(
     }
 
     /**
+     * Waits before retrying requests Graph throttled, as a batch does for the requests inside it.
+     */
+    fun pauseForThrottling(retryAfterSeconds: Long?, attempt: Int) {
+        sleeper(retryDelayMillis(retryAfterSeconds, attempt))
+    }
+
+    /**
      * Executes [request] with authentication, token refresh and throttling retries applied.
      */
     @Suppress("ThrowsCount")
@@ -159,11 +168,20 @@ internal class GraphApiClient(
                 .header("Accept", "application/json")
                 .build()
 
-            val response = okHttpClient.newCall(authorizedRequest).execute()
+            val response = try {
+                okHttpClient.newCall(authorizedRequest).execute()
+            } catch (e: IOException) {
+                throw networkFailure(e)
+            }
 
             response.use {
                 when {
-                    response.isSuccessful -> return handler(response)
+                    response.isSuccessful -> return try {
+                        handler(response)
+                    } catch (e: IOException) {
+                        // The connection can also drop while the body is still arriving.
+                        throw networkFailure(e)
+                    }
 
                     response.code == HTTP_UNAUTHORIZED && authRetries < MAX_AUTH_RETRIES -> {
                         authRetries++
@@ -204,9 +222,20 @@ private fun Response.isThrottled(): Boolean {
 }
 
 private fun Response.retryAfterMillis(attempt: Int): Long {
-    val headerValue = header("Retry-After")?.toLongOrNull()
-    val seconds = headerValue ?: (DEFAULT_RETRY_AFTER_SECONDS * attempt)
+    return retryDelayMillis(header("Retry-After")?.toLongOrNull(), attempt)
+}
+
+private fun retryDelayMillis(retryAfterSeconds: Long?, attempt: Int): Long {
+    val seconds = retryAfterSeconds ?: (DEFAULT_RETRY_AFTER_SECONDS * attempt)
     return seconds.coerceIn(1L, MAX_RETRY_AFTER_SECONDS) * MILLIS_PER_SECOND
+}
+
+/**
+ * A failure to reach Graph at all, reported the way the IMAP backend reports one: temporary, so a pending change is
+ * kept and tried again rather than dropped. The cause is kept for callers that tell network trouble apart.
+ */
+private fun networkFailure(cause: IOException): MessagingException {
+    return MessagingException("Could not reach Microsoft Graph", cause)
 }
 
 /**

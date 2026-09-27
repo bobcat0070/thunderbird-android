@@ -7,10 +7,13 @@ import assertk.assertions.isEmpty
 import assertk.assertions.isEqualTo
 import assertk.assertions.isNotNull
 import assertk.assertions.isNull
+import java.util.concurrent.TimeUnit
 import kotlin.test.AfterTest
 import kotlin.test.Test
+import kotlin.test.assertFailsWith
 import net.thunderbird.backend.graph.FakeOAuth2TokenProvider
 import net.thunderbird.backend.graph.api.GraphApiClient
+import net.thunderbird.core.common.exception.MessagingException
 import net.thunderbird.core.common.mail.Flag
 import okhttp3.OkHttpClient
 import okhttp3.mockwebserver.MockResponse
@@ -141,6 +144,44 @@ class GraphCommandTest {
         CommandMoveOrCopy(client).moveMessages("archive-id", emptyList())
 
         assertThat(server.requestCount).isEqualTo(0)
+    }
+
+    @Test
+    fun `a throttled request inside a batch should be retried`() {
+        server.enqueue(
+            batchResponse(
+                """{"id":"0","status":200}""",
+                """{"id":"1","status":429,"headers":{"Retry-After":"1"}}""",
+            ),
+        )
+        server.enqueue(batchResponse("""{"id":"1","status":200}"""))
+
+        CommandSetFlag(createClient()).setFlag(listOf("m1", "m2"), Flag.SEEN, true)
+
+        server.takeRequest()
+        val retry = server.takeRequest(1, TimeUnit.SECONDS)?.body?.readUtf8().orEmpty()
+        assertThat(retry).contains("/me/messages/m2")
+        assertThat(retry.contains("/me/messages/m1")).isEqualTo(false)
+    }
+
+    @Test
+    fun `a flag change the server failed should be reported so it is tried again`() {
+        server.enqueue(batchResponse("""{"id":"0","status":500}"""))
+
+        val exception = assertFailsWith<MessagingException> {
+            CommandSetFlag(createClient()).setFlag(listOf("m1"), Flag.SEEN, true)
+        }
+
+        assertThat(exception.isPermanentFailure).isEqualTo(false)
+    }
+
+    @Test
+    fun `deleting a message that is already gone should not fail`() {
+        server.enqueue(batchResponse("""{"id":"0","status":404,"body":{"error":{"code":"ErrorItemNotFound"}}}"""))
+
+        CommandDelete(createClient()).deleteMessages(listOf("m1"))
+
+        assertThat(server.requestCount).isEqualTo(1)
     }
 
     @Test

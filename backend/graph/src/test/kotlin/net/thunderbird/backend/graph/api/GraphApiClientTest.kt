@@ -13,6 +13,7 @@ import net.thunderbird.core.common.exception.MessagingException
 import okhttp3.OkHttpClient
 import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
+import okhttp3.mockwebserver.SocketPolicy
 
 class GraphApiClientTest {
     private val server = MockWebServer()
@@ -47,6 +48,21 @@ class GraphApiClientTest {
         assertThat(tokenProvider.invalidateCount).isEqualTo(1)
         assertThat(server.takeRequest().getHeader("Authorization")).isEqualTo("Bearer stale-token")
         assertThat(server.takeRequest().getHeader("Authorization")).isEqualTo("Bearer fresh-token")
+    }
+
+    @Test
+    fun `network failure should be reported as a temporary messaging failure`() {
+        val testSubject = createTestSubject(FakeOAuth2TokenProvider())
+        // OkHttp retries a dropped connection once on its own, so both attempts have to fail.
+        server.enqueue(MockResponse().setSocketPolicy(SocketPolicy.DISCONNECT_AT_START))
+        server.enqueue(MockResponse().setSocketPolicy(SocketPolicy.DISCONNECT_AT_START))
+
+        // A pending command that fails with anything but a MessagingException is dropped instead of retried.
+        val exception = assertFailsWith<MessagingException> {
+            testSubject.getString(testSubject.url("me/mailFolders"))
+        }
+
+        assertThat(exception.isPermanentFailure).isEqualTo(false)
     }
 
     @Test
