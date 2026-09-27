@@ -19,7 +19,11 @@ import kotlin.time.ExperimentalTime
 import kotlin.time.Instant
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
+import assertk.assertions.isEmpty
+import kotlinx.coroutines.CoroutineExceptionHandler
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.map
@@ -69,6 +73,31 @@ class DefaultOutboxFolderManagerTest {
 
         // Assert
         assertThat(result).isEqualTo(expectedFolderId)
+    }
+
+    @Test
+    fun `a background lookup that fails should not escape its scope`() {
+        // Arrange
+        val (accountId, _) = createAccountPair()
+        val escaped = mutableListOf<Throwable>()
+        // Nothing escapes a scope quietly: on a device, an exception that does takes the app down with it.
+        val scope = CoroutineScope(
+            SupervisorJob() + Dispatchers.Unconfined + CoroutineExceptionHandler { _, e -> escaped += e },
+        )
+        val subject = DefaultOutboxFolderManager(
+            logger = logger,
+            accountManager = FakeLegacyAccountManager(initialAccounts = emptyList()),
+            localStoreProvider = mock(),
+            outboxFolderIdCache = TimeLimitedCache(),
+            ioDispatcher = Dispatchers.Unconfined,
+            coroutineScope = scope,
+        )
+
+        // Act: an account removed while its outbox was being looked up.
+        subject.getOutboxFolderIdSync(accountId, createIfMissing = false)
+
+        // Assert
+        assertThat(escaped).isEmpty()
     }
 
     @Test

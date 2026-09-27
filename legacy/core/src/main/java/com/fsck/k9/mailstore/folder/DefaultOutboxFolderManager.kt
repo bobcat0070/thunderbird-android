@@ -62,7 +62,11 @@ class DefaultOutboxFolderManager(
      * A miss returns -1 and starts a lookup in the background, so the answer is right by the next update. A
      * transiently wrong answer costs a refresh gesture that briefly is or is not offered; blocking costs the
      * whole app.
+     *
+     * The lookup is only warming a cache, so whatever it throws is logged and dropped: an exception escaping a
+     * background scope takes the app down, and an account removed mid-lookup is enough to throw one.
      */
+    @Suppress("TooGenericExceptionCaught")
     override fun getOutboxFolderIdSync(accountId: AccountId, createIfMissing: Boolean): Long {
         outboxFolderIdCache[accountId]?.let { return it.value }
 
@@ -70,7 +74,7 @@ class DefaultOutboxFolderManager(
             coroutineScope.launch {
                 try {
                     getOutboxFolderId(accountId, createIfMissing)
-                } catch (e: MessagingException) {
+                } catch (e: Exception) {
                     logger.warn(TAG, e) { "Could not resolve the Outbox folder in the background." }
                 } finally {
                     resolving.remove(accountId)
