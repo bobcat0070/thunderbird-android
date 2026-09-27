@@ -31,6 +31,10 @@ internal data class GraphMailFolder(
 @Serializable
 internal data class GraphMessage(
     val id: String,
+    /**
+     * The folder the message is in, which a search across the whole mailbox needs to say where each match is.
+     */
+    val parentFolderId: String? = null,
     val isRead: Boolean? = null,
     val isDraft: Boolean? = null,
     val receivedDateTime: String? = null,

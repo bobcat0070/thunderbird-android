@@ -220,6 +220,56 @@ class GraphCommandTest {
     }
 
     @Test
+    fun `searching all folders should be one request with the matches grouped by folder`() {
+        server.enqueue(
+            MockResponse().setBody(
+                """
+                {"value": [
+                  {"id": "m1", "parentFolderId": "inbox-id", "isRead": true},
+                  {"id": "m2", "parentFolderId": "archive-id", "isRead": false},
+                  {"id": "m3", "parentFolderId": "inbox-id", "isRead": false}
+                ]}
+                """.trimIndent(),
+            ),
+        )
+
+        val result = CommandSearch(
+            createClient(),
+        ).searchAllFolders("invoice", requiredFlags = null, forbiddenFlags = null)
+
+        assertThat(result).isEqualTo(mapOf("inbox-id" to listOf("m1", "m3"), "archive-id" to listOf("m2")))
+        val request = server.takeRequest().requestUrl
+        assertThat(request?.encodedPath).isEqualTo("/v1.0/me/messages")
+        assertThat(request?.queryParameter("\$search")).isEqualTo("\"invoice\"")
+        assertThat(server.requestCount).isEqualTo(1)
+    }
+
+    @Test
+    fun `searching all folders should still respect the requested flags`() {
+        server.enqueue(
+            MockResponse().setBody(
+                """
+                {"value": [{"id": "m1", "parentFolderId": "f", "isRead": true}, {"id": "m2", "parentFolderId": "f"}]}
+                """.trimIndent(),
+            ),
+        )
+
+        val result = CommandSearch(createClient())
+            .searchAllFolders("invoice", requiredFlags = null, forbiddenFlags = setOf(Flag.SEEN))
+
+        assertThat(result).isEqualTo(mapOf("f" to listOf("m2")))
+    }
+
+    @Test
+    fun `a search with no text should be left to the folder by folder search`() {
+        val result = CommandSearch(createClient())
+            .searchAllFolders(" ", requiredFlags = setOf(Flag.FLAGGED), forbiddenFlags = null)
+
+        assertThat(result).isNull()
+        assertThat(server.requestCount).isEqualTo(0)
+    }
+
+    @Test
     fun `searching by message id should filter on internetMessageId`() {
         server.enqueue(MockResponse().setBody("""{"value":[{"id":"m1"}]}"""))
 

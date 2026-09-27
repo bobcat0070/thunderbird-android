@@ -85,6 +85,20 @@ interface Backend {
         performFullTextSearch: Boolean,
     ): List<String>
 
+    /**
+     * Searches every folder at once, for a server that can.
+     *
+     * @return the matches by folder server id, or `null` when this server can only be searched one folder at a
+     *   time with [search] - which is what the app then does.
+     */
+    @Throws(MessagingException::class)
+    fun searchAllFolders(
+        query: String?,
+        requiredFlags: Set<Flag>?,
+        forbiddenFlags: Set<Flag>?,
+        performFullTextSearch: Boolean,
+    ): Map<String, List<String>>? = null
+
     @Throws(MessagingException::class)
     fun fetchPart(folderServerId: String, messageServerId: String, part: Part, bodyFactory: BodyFactory)
 

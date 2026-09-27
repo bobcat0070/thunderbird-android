@@ -451,8 +451,12 @@ public class MessagingControllerTest extends K9RobolectricTest {
         controller.addListener(listener);
     }
 
-    private void configureBackendManager() {
+    private void configureBackendManager() throws MessagingException {
         when(backendManager.getBackend(account.getUuid())).thenReturn(backend);
+        // What a server that can only be searched folder by folder answers. Left unstubbed, Mockito would answer
+        // with an empty map instead, which reads as "searched everything, found nothing".
+        when(backend.searchAllFolders(nullable(String.class), nullable(Set.class), nullable(Set.class), anyBoolean()))
+            .thenReturn(null);
     }
 
     private void configureAccount() {
@@ -465,6 +469,36 @@ public class MessagingControllerTest extends K9RobolectricTest {
             ConnectionSecurity.SSL_TLS_REQUIRED, AuthType.PLAIN, "username", "password", null));
         account.setMaximumAutoDownloadMessageSize(MAXIMUM_SMALL_MESSAGE_SIZE);
         account.setEmail("user@host.com");
+    }
+
+    @Test
+    public void searchRemoteMessagesEverywhere_withServerSearchingAllFoldersAtOnce_shouldNotSearchFolderByFolder()
+        throws Exception {
+        // One request for the whole mailbox rather than one per folder, where the server can.
+        setupRemoteSearch();
+        when(backend.searchAllFolders(eq("query"), nullable(Set.class), nullable(Set.class), anyBoolean()))
+            .thenReturn(Collections.singletonMap(FOLDER_NAME, remoteMessages));
+
+        controller.searchRemoteMessagesEverywhereSynchronous(Collections.<String>emptyList(), "query", reqFlags,
+            forbiddenFlags, listener);
+
+        verify(backend, never()).search(anyString(), anyString(), nullable(Set.class), nullable(Set.class),
+            anyBoolean());
+        verify(localFolder).extractNewMessages(remoteMessages);
+        verify(listener).remoteSearchServerQueryComplete(eq(FOLDER_ID), anyInt(), anyInt());
+    }
+
+    @Test
+    public void searchRemoteMessagesEverywhere_whenSearchingAllFoldersAtOnceFails_shouldSearchFolderByFolder()
+        throws Exception {
+        setupRemoteSearch();
+        when(backend.searchAllFolders(anyString(), nullable(Set.class), nullable(Set.class), anyBoolean()))
+            .thenThrow(new MessagingException("throttled"));
+
+        controller.searchRemoteMessagesEverywhereSynchronous(Collections.<String>emptyList(), "query", reqFlags,
+            forbiddenFlags, listener);
+
+        verify(backend).search(FOLDER_NAME, "query", reqFlags, forbiddenFlags, false);
     }
 
     @Test

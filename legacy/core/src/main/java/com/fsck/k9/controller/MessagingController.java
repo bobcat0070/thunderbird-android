@@ -513,8 +513,6 @@ public class MessagingController implements MessagingControllerRegistry, Messagi
     private List<String> searchRemoteFolderSynchronous(LegacyAccountDto account, long folderId, String query,
         Set<Flag> requiredFlags, Set<Flag> forbiddenFlags, MessagingListener listener) throws MessagingException {
 
-        List<String> extraResults = new ArrayList<>();
-
         LocalStore localStore = localStoreProvider.getInstance(account);
 
         LocalFolder localFolder = localStore.getFolder(folderId);
@@ -530,6 +528,74 @@ public class MessagingController implements MessagingControllerRegistry, Messagi
         boolean performFullTextSearch = account.isRemoteSearchFullText();
         List<String> messageServerIds = backend.search(folderServerId, query, requiredFlags, forbiddenFlags,
             performFullTextSearch);
+
+        return loadRemoteSearchResults(account, localFolder, messageServerIds, listener);
+    }
+
+    /**
+     * Searches a whole account in one request, for a server that can.
+     *
+     * One request per folder is slow on a mailbox with many folders and, on Microsoft Graph, runs into throttling.
+     * A server that can search everything at once returns its matches by folder, and each folder's are saved just
+     * as a folder-by-folder search would save them.
+     *
+     * @return whether the account was searched; `false` leaves it to be searched one folder at a time.
+     */
+    private boolean searchAccountAtOnce(LegacyAccountDto account, String query, Set<Flag> requiredFlags,
+        Set<Flag> forbiddenFlags, MessagingListener listener) {
+        Map<String, List<String>> resultsByFolder;
+        try {
+            resultsByFolder = getBackend(account).searchAllFolders(query, requiredFlags, forbiddenFlags,
+                account.isRemoteSearchFullText());
+        } catch (Exception e) {
+            Log.e(e, "Searching all folders at once failed for account %s; searching folder by folder",
+                account.getUuid());
+            return false;
+        }
+        if (resultsByFolder == null) {
+            return false;
+        }
+
+        LocalStore localStore;
+        try {
+            localStore = localStoreProvider.getInstance(account);
+        } catch (MessagingException e) {
+            Log.e(e, "Could not open the local store for account %s", account.getUuid());
+            return true;
+        }
+
+        for (Map.Entry<String, List<String>> folderResults : resultsByFolder.entrySet()) {
+            if (Thread.currentThread().isInterrupted()) {
+                return true;
+            }
+
+            try {
+                // A folder the device has not heard of yet has nowhere for its matches to go until the next
+                // folder list refresh; nor has one held only on the device.
+                LocalFolder localFolder = localStore.getFolder(folderResults.getKey());
+                if (localFolder == null || !localFolder.exists() || localFolder.isLocalOnly()) {
+                    continue;
+                }
+
+                localFolder.open();
+                loadRemoteSearchResults(account, localFolder, folderResults.getValue(), listener);
+            } catch (Exception e) {
+                Log.e(e, "Could not save remote search results for account %s", account.getUuid());
+            }
+        }
+
+        return true;
+    }
+
+    /**
+     * Saves the matches a search found in one folder and reports them.
+     *
+     * @return the matches beyond the account's result limit, left for the user to ask for.
+     */
+    private List<String> loadRemoteSearchResults(LegacyAccountDto account, LocalFolder localFolder,
+        List<String> messageServerIds, MessagingListener listener) throws MessagingException {
+        List<String> extraResults = new ArrayList<>();
+        long folderId = localFolder.getDatabaseId();
 
         Log.i("Remote search got %d results", messageServerIds.size());
 
@@ -586,6 +652,10 @@ public class MessagingController implements MessagingControllerRegistry, Messagi
         try {
             for (LegacyAccountDto account : accountsToSearch(accountUuids)) {
                 resultLimit = account.getRemoteSearchNumResults();
+
+                if (searchAccountAtOnce(account, query, requiredFlags, forbiddenFlags, listener)) {
+                    continue;
+                }
 
                 for (long folderId : searchableFolderIds(account)) {
                     if (Thread.currentThread().isInterrupted()) {
