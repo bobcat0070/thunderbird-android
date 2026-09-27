@@ -13,6 +13,7 @@ class K9BackendFolder(
     private val messageStore: MessageStore,
     private val saveMessageDataCreator: SaveMessageDataCreator,
     folderServerId: String,
+    private val accountUuid: String? = null,
 ) : BackendFolder {
     private val databaseId: String
     private val folderId: Long
@@ -86,7 +87,11 @@ class K9BackendFolder(
     override fun saveMessage(message: Message, downloadState: MessageDownloadState) {
         requireMessageServerId(message)
 
-        val messageData = saveMessageDataCreator.createSaveMessageData(message, downloadState)
+        val messageData = saveMessageDataCreator.createSaveMessageData(
+            message = message,
+            downloadState = downloadState,
+            accountUuid = accountUuid,
+        )
         messageStore.saveRemoteMessage(folderId, message.uid, messageData)
     }
 

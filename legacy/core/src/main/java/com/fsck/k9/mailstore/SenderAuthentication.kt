@@ -1,3 +1,7 @@
+// One parser for one header, read from a few directions; splitting it would scatter the rules about what to
+// believe across files that each only see part of them.
+@file:Suppress("TooManyFunctions")
+
 package com.fsck.k9.mailstore
 
 /**
@@ -8,8 +12,9 @@ package com.fsck.k9.mailstore
  * mailbox - is read. Anything further down is either an upstream hop's verdict or something the sender
  * fabricated, and a client cannot tell those apart.
  *
- * This still assumes the delivering server writes the header at all. One that does not leaves the sender's
- * own header on top, so the result remains a hint that unlocks a brand logo and never proof on its own.
+ * That alone would still trust a sender's own header on a server that writes none, since it is then on top.
+ * So the topmost header must also name the account's own server as its author (its authserv-id), as RFC 8601
+ * section 5 asks of a reader: see [AuthenticationServerTrust].
  */
 private const val AUTHENTICATION_RESULTS = "Authentication-Results"
 
@@ -34,14 +39,31 @@ private const val PASS = "pass"
  *
  * @param headerValues every `Authentication-Results` header on the message, in the order they appear.
  * @param fromDomain the domain of the address shown as the sender.
+ * @param trustedServerId the authserv-id of the account's own server, from [AuthenticationServerTrust], or `null`
+ *   when none is known - in which case nothing is trusted.
  */
-fun hasDmarcPass(headerValues: List<String>, fromDomain: String?): Boolean {
+fun hasDmarcPass(headerValues: List<String>, fromDomain: String?, trustedServerId: String?): Boolean {
     val domain = fromDomain?.trim()?.lowercase()?.takeIf { it.isNotEmpty() } ?: return false
 
-    return trustedSpecs(headerValues).any { spec ->
+    return trustedSpecs(headerValues, trustedServerId).any { spec ->
         spec.method == DMARC_METHOD && spec.result == PASS && spec.properties["header.from"]?.domainPart() == domain
     }
 }
+
+/**
+ * Whether the account's own server reported that this message failed DMARC for the domain the reader sees - the
+ * domain's owner saying this mail is not theirs. Different from [hasDmarcPass] being false, which also covers a
+ * domain with no policy, or a server that said nothing.
+ */
+fun hasDmarcFail(headerValues: List<String>, fromDomain: String?, trustedServerId: String?): Boolean {
+    val domain = fromDomain?.trim()?.lowercase()?.takeIf { it.isNotEmpty() } ?: return false
+
+    return trustedSpecs(headerValues, trustedServerId).any { spec ->
+        spec.method == DMARC_METHOD && spec.result == FAIL && spec.properties["header.from"]?.domainPart() == domain
+    }
+}
+
+private const val FAIL = "fail"
 
 /**
  * @return the domain part of [address], lower-cased, or `null` when there is none.
@@ -52,10 +74,29 @@ fun senderDomainOf(address: String?): String? =
 private const val DMARC_METHOD = "dmarc"
 
 /**
- * The clauses of the one header that can be trusted: the topmost, written by the delivering server.
+ * The authserv-id Microsoft's servers are recorded under. Exchange Online writes its header without one, starting
+ * straight in on the first result, and this stands for that shape.
  */
-private fun trustedSpecs(headerValues: List<String>): List<MethodSpec> {
-    val topmost = headerValues.firstOrNull() ?: return emptyList()
+const val UNNAMED_AUTHENTICATION_SERVER = ""
+
+/**
+ * The name of the server that wrote an `Authentication-Results` header: its authserv-id, lower-cased and without
+ * the optional version, or [UNNAMED_AUTHENTICATION_SERVER] for a header that has none.
+ */
+fun authenticationServerIdOf(headerValue: String): String {
+    val first = stripComments(headerValue).substringBefore(';').trim()
+    if (METHOD_RESULT.containsMatchIn(first)) return UNNAMED_AUTHENTICATION_SERVER
+
+    return first.substringBefore(' ').substringBefore('\t').lowercase()
+}
+
+/**
+ * The clauses of the one header that can be trusted: the topmost, and only when the account's own server wrote it.
+ */
+private fun trustedSpecs(headerValues: List<String>, trustedServerId: String?): List<MethodSpec> {
+    val topmost = headerValues.firstOrNull()
+        ?.takeIf { trustedServerId != null && authenticationServerIdOf(it) == trustedServerId }
+        ?: return emptyList()
 
     return stripComments(topmost).split(';').mapNotNull { chunk -> chunk.toMethodSpec() }
 }
@@ -103,11 +144,16 @@ data class AuthenticationOutcome(
  *
  * @param headerValues every `Authentication-Results` header on the message, in the order they appear.
  * @param fromDomain the domain of the address shown as the sender.
- * @return one outcome per mechanism, or nothing at all when no server reported anything - which is not the
- *   same as everything failing and should not be shown as though it were.
+ * @param trustedServerId the authserv-id of the account's own server, as for [hasDmarcPass].
+ * @return one outcome per mechanism, or nothing at all when no trusted server reported anything - which is not
+ *   the same as everything failing and should not be shown as though it were.
  */
-fun authenticationOutcomes(headerValues: List<String>, fromDomain: String?): List<AuthenticationOutcome> {
-    val specs = trustedSpecs(headerValues)
+fun authenticationOutcomes(
+    headerValues: List<String>,
+    fromDomain: String?,
+    trustedServerId: String?,
+): List<AuthenticationOutcome> {
+    val specs = trustedSpecs(headerValues, trustedServerId)
     if (specs.isEmpty()) return emptyList()
 
     val domain = fromDomain?.trim()?.lowercase()?.takeIf { it.isNotEmpty() }

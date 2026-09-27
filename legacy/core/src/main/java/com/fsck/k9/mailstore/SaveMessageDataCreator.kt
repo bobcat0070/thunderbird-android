@@ -18,11 +18,18 @@ class SaveMessageDataCreator(
     private val messageClassifier: MessageClassifier,
     private val knownContacts: KnownContacts,
     private val knownCorrespondents: KnownCorrespondents,
+    private val authenticationServerTrust: AuthenticationServerTrust,
 ) {
+    /**
+     * @param accountUuid the account a message arriving from its server belongs to, whose server is the one whose
+     *   verdict on the sender counts. `null` for a message this app wrote itself, which no server has checked.
+     */
+    @JvmOverloads
     fun createSaveMessageData(
         message: Message,
         downloadState: MessageDownloadState,
         subject: String? = null,
+        accountUuid: String? = null,
     ): SaveMessageData {
         val now = System.currentTimeMillis()
         val date = message.sentDate?.time ?: now
@@ -38,10 +45,12 @@ class SaveMessageDataCreator(
                 hasCorresponded = senderAddress?.let { knownCorrespondents.isKnown(it) } == true,
             ),
         )
-        val isSenderAuthenticated = hasDmarcPass(
-            message.getHeader(authenticationResultsHeaderName()).orEmpty().toList(),
-            senderDomainOf(senderAddress),
-        )
+        val authenticationResults = message.getHeader(authenticationResultsHeaderName()).orEmpty().toList()
+        val trustedServerId = accountUuid?.let { uuid ->
+            authenticationServerTrust.observe(uuid, authenticationResults)
+            authenticationServerTrust.trustedServerId(uuid)
+        }
+        val isSenderAuthenticated = hasDmarcPass(authenticationResults, senderDomainOf(senderAddress), trustedServerId)
 
         val encryptionResult = encryptionExtractor.extractEncryption(message)
         return if (encryptionResult != null) {

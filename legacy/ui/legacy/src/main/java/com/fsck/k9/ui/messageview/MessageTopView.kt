@@ -19,8 +19,10 @@ import app.k9mail.core.android.common.contact.ContactRepository
 import com.fsck.k9.mail.Message
 import com.fsck.k9.mail.Part
 import com.fsck.k9.mailstore.AttachmentViewInfo
+import com.fsck.k9.mailstore.AuthenticationServerTrust
 import com.fsck.k9.mailstore.MessageViewInfo
 import com.fsck.k9.mailstore.authenticationResultsHeaderName
+import com.fsck.k9.mailstore.hasDmarcFail
 import com.fsck.k9.mailstore.hasDmarcPass
 import com.fsck.k9.mailstore.senderDomainOf
 import com.fsck.k9.ui.R
@@ -51,6 +53,7 @@ class MessageTopView(
     private val visualSettingsPrefManager: DisplayVisualSettingsPreferenceManager by inject()
     private val animationManager: AnimationManager by inject()
     private val remoteImageSenderStore: RemoteImageSenderStore by inject()
+    private val authenticationServerTrust: AuthenticationServerTrust by inject()
 
     private lateinit var layoutInflater: LayoutInflater
 
@@ -155,7 +158,8 @@ class MessageTopView(
 
         currentSenderAddress = getSenderEmailAddress(messageViewInfo.message)?.address
         val showPicturesSetting = account.showPictures
-        val loadPictures = shouldAutomaticallyLoadPictures(showPicturesSetting, messageViewInfo.message) ||
+        val loadPictures =
+            shouldAutomaticallyLoadPictures(showPicturesSetting, messageViewInfo.message, account.uuid) ||
             showPicturesButtonClicked
 
         val view = layoutInflater.inflate(
@@ -350,9 +354,13 @@ class MessageTopView(
         extraHeaderContainer.visibility = GONE
     }
 
-    private fun shouldAutomaticallyLoadPictures(showPicturesSetting: ShowPictures, message: Message): Boolean {
+    private fun shouldAutomaticallyLoadPictures(
+        showPicturesSetting: ShowPictures,
+        message: Message,
+        accountUuid: String,
+    ): Boolean {
         return showPicturesSetting === ShowPictures.ALWAYS ||
-            isTrustedSender(message) ||
+            isTrustedSender(message, accountUuid) ||
             shouldShowPicturesFromSender(showPicturesSetting, message)
     }
 
@@ -360,14 +368,18 @@ class MessageTopView(
      * Checked regardless of the account's setting: the user naming this sender is a more specific decision
      * than the blanket policy, so it stands even when that policy is "never".
      */
-    private fun isTrustedSender(message: Message): Boolean {
+    private fun isTrustedSender(message: Message, accountUuid: String): Boolean {
         val senderAddress = getSenderEmailAddress(message)?.address ?: return false
-        val isSenderAuthenticated = hasDmarcPass(
-            message.getHeader(authenticationResultsHeaderName()).orEmpty().toList(),
-            senderDomainOf(senderAddress),
-        )
+        val authenticationResults = message.getHeader(authenticationResultsHeaderName()).orEmpty().toList()
+        val trustedServerId = authenticationServerTrust.trustedServerId(accountUuid)
+        val senderDomain = senderDomainOf(senderAddress)
 
-        return remoteImageSenderStore.isTrusted(senderAddress, isSenderAuthenticated)
+        val isSenderAuthenticated = hasDmarcPass(authenticationResults, senderDomain, trustedServerId)
+
+        // A trusted address is only an address: anyone can write it into From. When the domain's owner says
+        // through DMARC that this message is not theirs, it is not the sender the user trusted.
+        return !hasDmarcFail(authenticationResults, senderDomain, trustedServerId) &&
+            remoteImageSenderStore.isTrusted(senderAddress, isSenderAuthenticated)
     }
 
     private fun shouldShowPicturesFromSender(showPicturesSetting: ShowPictures, message: Message): Boolean {

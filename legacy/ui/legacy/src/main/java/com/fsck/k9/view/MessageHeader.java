@@ -41,6 +41,7 @@ import com.fsck.k9.contacts.bimi.BimiRecordKt;
 import com.fsck.k9.contacts.bimi.CachedMark;
 import com.fsck.k9.contacts.bimi.MarkTrust;
 import com.fsck.k9.mailstore.AuthenticationOutcome;
+import com.fsck.k9.mailstore.AuthenticationServerTrust;
 import com.fsck.k9.mailstore.SenderAuthenticationKt;
 import com.fsck.k9.helper.ClipboardManager;
 import com.fsck.k9.helper.MessageHelper;
@@ -74,6 +75,12 @@ public class MessageHeader extends LinearLayout implements OnClickListener, OnLo
         DI.get(MessageListPreferencesManager.class);
     private final ReplyActionStrategy<LegacyAccountDto, Message> replyActionStrategy = DI.get(ReplyActionStrategy.class);
     private final MessageHelper messageHelper = DI.get(MessageHelper.class);
+    private final AuthenticationServerTrust authenticationServerTrust = DI.get(AuthenticationServerTrust.class);
+
+    /**
+     * The account of the message on screen, whose server is the one whose verdict on the sender is believed.
+     */
+    private String accountUuid;
     private final FontSizes fontSizes = K9.getFontSizes();
 
     private Chip accountNameView;
@@ -311,7 +318,7 @@ public class MessageHeader extends LinearLayout implements OnClickListener, OnLo
     private void showSenderAuthentication(Address fromAddress, String domain, boolean isSenderAuthenticated,
         Message message) {
         List<AuthenticationOutcome> outcomes =
-            SenderAuthenticationKt.authenticationOutcomes(authenticationResults(message), domain);
+            SenderAuthenticationKt.authenticationOutcomes(authenticationResults(message), domain, trustedServerId());
         if (outcomes.isEmpty()) {
             return;
         }
@@ -461,7 +468,12 @@ public class MessageHeader extends LinearLayout implements OnClickListener, OnLo
      * message list: without it a lookalike domain gets a bank's logo drawn beside its mail.
      */
     private boolean isSenderAuthenticated(Message message, Address fromAddress) {
-        return SenderAuthenticationKt.hasDmarcPass(authenticationResults(message), senderDomain(fromAddress));
+        return SenderAuthenticationKt.hasDmarcPass(authenticationResults(message), senderDomain(fromAddress),
+            trustedServerId());
+    }
+
+    private String trustedServerId() {
+        return accountUuid == null ? null : authenticationServerTrust.trustedServerId(accountUuid);
     }
 
     private List<String> authenticationResults(Message message) {
@@ -480,6 +492,7 @@ public class MessageHeader extends LinearLayout implements OnClickListener, OnLo
 
     public void populate(final Message message, final LegacyAccountDto account, boolean showStar,
         boolean showAccountIndicator) {
+        accountUuid = account.getUuid();
         if (showAccountIndicator) {
             accountNameView.setVisibility(View.VISIBLE);
             accountNameView.setText(account.getDisplayName());

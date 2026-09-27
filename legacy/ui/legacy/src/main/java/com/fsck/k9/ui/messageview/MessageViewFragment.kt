@@ -55,6 +55,7 @@ import com.fsck.k9.helper.UnsubscribeUri
 import com.fsck.k9.mail.Message
 import com.fsck.k9.mail.Part
 import com.fsck.k9.mailstore.AttachmentViewInfo
+import com.fsck.k9.mailstore.AuthenticationServerTrust
 import com.fsck.k9.mailstore.LocalMessage
 import com.fsck.k9.mailstore.MessageClassificationTeacher
 import com.fsck.k9.mailstore.authenticationResultsHeaderName
@@ -128,6 +129,7 @@ class MessageViewFragment :
     private val themeProvider: FeatureThemeProvider by inject()
     private val messageLoaderHelperFactory: MessageLoaderHelperFactory by inject()
     private val accountManager: LegacyAccountDtoManager by inject()
+    private val authenticationServerTrust: AuthenticationServerTrust by inject()
     private val messagingController: MessagingController by inject()
     private val attachmentLoadingController: AttachmentLoadingController by inject()
     private val shareIntentBuilder: ShareIntentBuilder by inject()
@@ -626,6 +628,7 @@ class MessageViewFragment :
         return hasDmarcPass(
             message.getHeader(authenticationResultsHeaderName()).orEmpty().toList(),
             senderDomainOf(senderAddress()),
+            authenticationServerTrust.trustedServerId(account.uuid),
         )
     }
 

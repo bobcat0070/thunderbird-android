@@ -96,7 +96,11 @@ val mailStoreModule = module {
             messageClassifier = get(),
             knownContacts = get(),
             knownCorrespondents = get(),
+            authenticationServerTrust = get(),
         )
+    }
+    single<AuthenticationServerTrust> {
+        DefaultAuthenticationServerTrust(preferences = get(), accountManager = get())
     }
     single { RecipientIndex(context = get()) }
     single {

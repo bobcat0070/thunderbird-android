@@ -42,6 +42,7 @@ class K9BackendStorageFactory(
             folderSettingsProvider = folderSettingsProvider,
             saveMessageDataCreator = saveMessageDataCreator,
             listeners = listeners,
+            accountUuid = accountId.toString(),
         )
     }
 }

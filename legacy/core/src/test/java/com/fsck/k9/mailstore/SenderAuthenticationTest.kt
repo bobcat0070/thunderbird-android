@@ -53,7 +53,7 @@ class SenderAuthenticationTest {
             "i=1; dkim=none",
         )
 
-        assertThat(hasDmarcPass(headers, "example.com")).isTrue()
+        assertThat(hasDmarcPass(headers, "example.com", trustingTopmost(headers))).isTrue()
     }
 
     @Test
@@ -65,19 +65,27 @@ class SenderAuthenticationTest {
             "forged.example; dmarc=pass header.from=example.com",
         )
 
-        assertThat(hasDmarcPass(headers, "example.com")).isFalse()
+        assertThat(hasDmarcPass(headers, "example.com", trustingTopmost(headers))).isFalse()
     }
 
     @Test
     fun `a pass for a different From domain should not count`() {
         // A sender passing DMARC for their own domain proves nothing about the address the reader sees.
-        assertThat(hasDmarcPass(listOf("dmarc=pass header.from=attacker.example"), "example.com")).isFalse()
+        assertThat(hasDmarcPass(
+            listOf("dmarc=pass header.from=attacker.example"),
+            "example.com",
+            UNNAMED_AUTHENTICATION_SERVER,
+        )).isFalse()
     }
 
     @Test
     fun `a pass for a parent domain should not count`() {
         // DMARC judges one exact From domain; the server already did any relaxed alignment.
-        assertThat(hasDmarcPass(listOf("dmarc=pass header.from=example.com"), "mail.example.com")).isFalse()
+        assertThat(hasDmarcPass(
+            listOf("dmarc=pass header.from=example.com"),
+            "mail.example.com",
+            UNNAMED_AUTHENTICATION_SERVER,
+        )).isFalse()
     }
 
     @Test
@@ -92,7 +100,11 @@ class SenderAuthenticationTest {
 
     @Test
     fun `an unknown sender domain should not count`() {
-        assertThat(hasDmarcPass(listOf("dmarc=pass header.from=example.com"), null)).isFalse()
+        assertThat(hasDmarcPass(
+            listOf("dmarc=pass header.from=example.com"),
+            null,
+            UNNAMED_AUTHENTICATION_SERVER,
+        )).isFalse()
     }
 
     @Test
@@ -108,7 +120,7 @@ class SenderAuthenticationTest {
 
     @Test
     fun `no headers should not count as authenticated`() {
-        assertThat(hasDmarcPass(emptyList(), "example.com")).isFalse()
+        assertThat(hasDmarcPass(emptyList(), "example.com", UNNAMED_AUTHENTICATION_SERVER)).isFalse()
     }
 
     @Test
@@ -118,7 +130,8 @@ class SenderAuthenticationTest {
         assertThat(senderDomainOf(null)).isNull()
     }
 
-    private fun dmarcPass(header: String) = hasDmarcPass(listOf(header), fromDomain = "example.com")
+    private fun dmarcPass(header: String) =
+        hasDmarcPass(listOf(header), fromDomain = "example.com", trustedServerId = authenticationServerIdOf(header))
 }
 
 class SenderAuthenticationOutcomesTest {
@@ -219,19 +232,23 @@ class SenderAuthenticationOutcomesTest {
     @Test
     fun `a message no server reported on should say nothing at all`() {
         // Not the same as everything failing, and drawing three struck-through checks would claim it was.
-        assertThat(authenticationOutcomes(emptyList(), "example.com")).isEmpty()
+        assertThat(authenticationOutcomes(emptyList(), "example.com", UNNAMED_AUTHENTICATION_SERVER)).isEmpty()
     }
 
     @Test
     fun `a header with nothing but the server name should say nothing at all`() {
-        assertThat(authenticationOutcomes(listOf("mx.google.com"), "example.com")).isEmpty()
+        assertThat(authenticationOutcomes(listOf("mx.google.com"), "example.com", "mx.google.com")).isEmpty()
     }
 
     @Test
     fun `a message with no sender domain should pass nothing`() {
         val header = "spf=pass smtp.mailfrom=example.com; dkim=pass header.d=example.com; dmarc=pass"
 
-        assertThat(authenticationOutcomes(listOf(header), fromDomain = null)).containsExactly(
+        assertThat(authenticationOutcomes(
+            listOf(header),
+            fromDomain = null,
+            trustedServerId = authenticationServerIdOf(header),
+        )).containsExactly(
             AuthenticationOutcome(AuthenticationMethod.DKIM, passed = false),
             AuthenticationOutcome(AuthenticationMethod.SPF, passed = false),
             AuthenticationOutcome(AuthenticationMethod.DMARC, passed = false),
@@ -257,7 +274,7 @@ class SenderAuthenticationOutcomesTest {
                 "dmarc=pass header.from=example.com",
         )
 
-        assertThat(authenticationOutcomes(headers, "example.com")).containsExactly(
+        assertThat(authenticationOutcomes(headers, "example.com", trustingTopmost(headers))).containsExactly(
             AuthenticationOutcome(AuthenticationMethod.DKIM, passed = false),
             AuthenticationOutcome(AuthenticationMethod.SPF, passed = false),
             AuthenticationOutcome(AuthenticationMethod.DMARC, passed = false),
@@ -276,5 +293,69 @@ class SenderAuthenticationOutcomesTest {
         )
     }
 
-    private fun outcomes(header: String) = authenticationOutcomes(listOf(header), fromDomain = "example.com")
+    private fun outcomes(header: String) =
+        authenticationOutcomes(
+            listOf(header),
+            fromDomain = "example.com",
+            trustedServerId = authenticationServerIdOf(header),
+        )
+}
+
+/**
+ * Trusts whichever server wrote the topmost header, so a test about reading a header is not also a test about
+ * which server wrote it; that has tests of its own.
+ */
+private fun trustingTopmost(headers: List<String>): String? = headers.firstOrNull()?.let(::authenticationServerIdOf)
+
+class TrustedAuthenticationServerTest {
+    @Test
+    fun `a pass from a server other than the account's own should not count`() {
+        // A sender's forgery, left on top by a mailbox server that writes no header of its own.
+        val headers = listOf("forged.example; dmarc=pass header.from=example.com")
+
+        assertThat(hasDmarcPass(headers, "example.com", trustedServerId = "mx.google.com")).isFalse()
+        assertThat(authenticationOutcomes(headers, "example.com", trustedServerId = "mx.google.com")).isEmpty()
+    }
+
+    @Test
+    fun `nothing should be believed while the account's server is unknown`() {
+        val headers = listOf("mx.google.com; dmarc=pass header.from=example.com")
+
+        assertThat(hasDmarcPass(headers, "example.com", trustedServerId = null)).isFalse()
+    }
+
+    @Test
+    fun `a pass from the account's own server should count`() {
+        val headers = listOf("mx.google.com; dmarc=pass header.from=example.com")
+
+        assertThat(hasDmarcPass(headers, "example.com", trustedServerId = "mx.google.com")).isTrue()
+    }
+
+    @Test
+    fun `the server name should be read without its version or comments`() {
+        assertThat(authenticationServerIdOf("MX.Google.com 1; dmarc=pass")).isEqualTo("mx.google.com")
+        assertThat(authenticationServerIdOf("(checked) mx.example.net; spf=pass")).isEqualTo("mx.example.net")
+    }
+
+    @Test
+    fun `Microsoft's header without a server name should be recognised as such`() {
+        val header = "spf=pass (sender IP is 192.0.2.1) smtp.mailfrom=example.com; dmarc=pass header.from=example.com"
+
+        assertThat(authenticationServerIdOf(header)).isEqualTo(UNNAMED_AUTHENTICATION_SERVER)
+        assertThat(hasDmarcPass(listOf(header), "example.com", UNNAMED_AUTHENTICATION_SERVER)).isTrue()
+    }
+
+    @Test
+    fun `an explicit DMARC failure from the account's server should be reported`() {
+        val headers = listOf("mx.google.com; dmarc=fail (p=REJECT) header.from=example.com")
+
+        assertThat(hasDmarcFail(headers, "example.com", "mx.google.com")).isTrue()
+        assertThat(hasDmarcFail(headers, "example.com", "other.example")).isFalse()
+        assertThat(hasDmarcFail(
+            listOf("mx.google.com; dmarc=none header.from=example.com"),
+            "example.com",
+            "mx.google.com",
+        ))
+            .isFalse()
+    }
 }

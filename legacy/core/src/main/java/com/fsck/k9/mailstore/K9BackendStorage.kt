@@ -14,9 +14,10 @@ class K9BackendStorage(
     private val folderSettingsProvider: FolderSettingsProvider,
     private val saveMessageDataCreator: SaveMessageDataCreator,
     private val listeners: List<BackendFoldersRefreshListener>,
+    private val accountUuid: String? = null,
 ) : BackendStorage {
     override fun getFolder(folderServerId: String): BackendFolder {
-        return K9BackendFolder(messageStore, saveMessageDataCreator, folderServerId)
+        return K9BackendFolder(messageStore, saveMessageDataCreator, folderServerId, accountUuid)
     }
 
     override fun getFolderServerIds(): List<String> {
