@@ -8,10 +8,8 @@ import com.fsck.k9.contacts.bimi.PlatformDnsTxtLookup
 import com.fsck.k9.contacts.bimi.VmcValidator
 import com.fsck.k9.contacts.bimi.loadMvaRoots
 import java.util.concurrent.Executors
-import java.util.concurrent.TimeUnit
 import org.koin.android.ext.koin.androidContext
 import org.koin.core.qualifier.named
-import okhttp3.OkHttpClient
 import org.koin.dsl.module
 
 /**
@@ -27,16 +25,7 @@ val contactsModule = module {
     factory { ContactLetterBitmapCreator(letterExtractor = get(), config = get()) }
     factory { ContactPhotoLoader(contentResolver = get(), contactRepository = get()) }
     factory { ContactPictureLoader(context = get(), contactLetterBitmapCreator = get()) }
-    single(named("gravatarHttpClient")) {
-        OkHttpClient.Builder()
-            .connectTimeout(GRAVATAR_TIMEOUT_SECONDS, TimeUnit.SECONDS)
-            .readTimeout(GRAVATAR_TIMEOUT_SECONDS, TimeUnit.SECONDS)
-            // Sender-chosen URLs pass through this client, so it must neither reach the local network nor let
-            // an https URL be redirected to plain http, which would undo the https-only check on BIMI records.
-            .dns(PublicAddressDns())
-            .followSslRedirects(false)
-            .build()
-    }
+    single(named("gravatarHttpClient")) { senderPictureHttpClient(GRAVATAR_TIMEOUT_SECONDS) }
     single {
         GravatarLoader(
             generalSettingsManager = get(),
