@@ -104,6 +104,34 @@ class RuleBasedMessageClassifierTest {
     }
 
     @Test
+    fun `mail the provider sorted into Other should be filed with the newsletters when nothing else decides`() {
+        val result = testSubject.classify(
+            evidenceOf("x-thunderbird-server-relevance" to "other", from = "a@shop.example"),
+        )
+
+        assertThat(result.messageClass).isEqualTo(MessageClass.NEWSLETTER)
+        assertThat(result.signal).isEqualTo(ClassificationSignal.SERVER_SORTED_OTHER)
+    }
+
+    @Test
+    fun `the provider's sorting should not outrank someone the user writes to`() {
+        val result = testSubject.classify(
+            evidenceOf("x-thunderbird-server-relevance" to "other", from = "sam@example.com", hasCorresponded = true),
+        )
+
+        assertThat(result.messageClass).isEqualTo(MessageClass.HUMAN)
+    }
+
+    @Test
+    fun `mail the provider kept in Focused should not be moved`() {
+        val result = testSubject.classify(
+            evidenceOf("x-thunderbird-server-relevance" to "focused", from = "a@b.example"),
+        )
+
+        assertThat(result.messageClass).isEqualTo(MessageClass.UNKNOWN)
+    }
+
+    @Test
     fun `a sender the user has written to should be human`() {
         val result = testSubject.classify(evidenceOf(from = "sam@example.com", hasCorresponded = true))
 

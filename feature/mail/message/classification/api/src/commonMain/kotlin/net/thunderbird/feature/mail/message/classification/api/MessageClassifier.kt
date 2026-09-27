@@ -15,7 +15,18 @@ val CLASSIFICATION_HEADERS: List<String> = listOf(
     "Precedence",
     "Auto-Submitted",
     "X-Auto-Response-Suppress",
+    SERVER_RELEVANCE_HEADER,
 )
+
+/**
+ * How the mail provider itself sorted the message, written by the backend that fetched it - `other` for mail
+ * Microsoft's Focused Inbox kept out of Focused. The name is the one the backend contract defines as
+ * `SERVER_RELEVANCE_HEADER`; this module does not depend on the backend, so it is spelled out here too.
+ *
+ * A sender could write it into their own mail on a protocol whose backend does not replace it, but the only thing
+ * it can do is file that sender's mail lower, so there is nothing to gain by forging it.
+ */
+const val SERVER_RELEVANCE_HEADER = "X-Thunderbird-Server-Relevance"
 
 /**
  * The facts a classifier is allowed to look at.

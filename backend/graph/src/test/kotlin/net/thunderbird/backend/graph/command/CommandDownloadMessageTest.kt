@@ -40,12 +40,15 @@ class CommandDownloadMessageTest {
     fun `downloading a complete message should fetch raw MIME and store it as full`() {
         createFolder()
         server.enqueue(MockResponse().setBody(RAW_MIME))
+        server.enqueue(MockResponse().setBody("""{"id":"m1","inferenceClassification":"other"}"""))
 
         createTestSubject().downloadCompleteMessage(FOLDER_ID, "m1")
 
         // The $value endpoint returns RFC 5322 content, which the existing MIME parser handles unchanged.
         assertThat(server.takeRequest().path).isNotNull().contains("/me/messages/m1/\$value")
         assertThat(backendStorage.getFolder(FOLDER_ID).getMessageFlags("m1")).contains(Flag.X_DOWNLOADED_FULL)
+        // Where Focused Inbox put it, so opening the message does not change how it is classified.
+        assertThat(server.takeRequest().requestUrl?.queryParameter("\$select")).isEqualTo("inferenceClassification")
     }
 
     @Test

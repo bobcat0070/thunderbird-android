@@ -5,6 +5,7 @@ import net.thunderbird.feature.mail.message.classification.api.MessageClass
 import net.thunderbird.feature.mail.message.classification.api.MessageClassification
 import net.thunderbird.feature.mail.message.classification.api.MessageClassifier
 import net.thunderbird.feature.mail.message.classification.api.MessageEvidence
+import net.thunderbird.feature.mail.message.classification.api.SERVER_RELEVANCE_HEADER
 
 /**
  * Local parts that conventionally mean "this mailbox does not read replies".
@@ -34,6 +35,11 @@ private val LOCAL_PART_SEPARATORS = charArrayOf('.', '-', '+', '=', '_')
 private val BULK_PRECEDENCE = setOf("bulk", "list")
 
 /**
+ * The value [SERVER_RELEVANCE_HEADER] carries for mail the provider sorted out of the focused inbox.
+ */
+private const val SERVER_RELEVANCE_OTHER = "other"
+
+/**
  * Classifies mail from the headers it carries.
  *
  * Rules rather than a model, because senders of bulk and automated mail label themselves: the standards exist
@@ -52,6 +58,7 @@ class RuleBasedMessageClassifier : MessageClassifier {
             ?: knownCorrespondent(evidence)
             ?: bulk(evidence)
             ?: noReplySender(evidence)
+            ?: serverSortedOther(evidence)
             ?: MessageClassification.UNKNOWN
     }
 
@@ -128,6 +135,18 @@ class RuleBasedMessageClassifier : MessageClassifier {
         if (!localPart.hasNoReplyPart()) return null
 
         return MessageClassification(MessageClass.NOTIFICATION, ClassificationSignal.NO_REPLY_SENDER)
+    }
+
+    /**
+     * The provider's own verdict, asked last. Microsoft's Focused Inbox learns from the whole mailbox and sorts
+     * well, but it only says "not important" - not whether the mail is a newsletter or a notification - so it
+     * decides only mail nothing else could place, and files it with the newsletters, which is where most of it is.
+     */
+    private fun serverSortedOther(evidence: MessageEvidence): MessageClassification? {
+        val relevance = evidence.firstHeader(SERVER_RELEVANCE_HEADER.lowercase())?.trim()?.lowercase()
+        if (relevance != SERVER_RELEVANCE_OTHER) return null
+
+        return MessageClassification(MessageClass.NEWSLETTER, ClassificationSignal.SERVER_SORTED_OTHER)
     }
 
     /**

@@ -77,6 +77,9 @@ enum class ClassificationSignal {
      * what the mail actually is to the person reading it, and when the two disagree the reader is right.
      */
     USER_OVERRIDE,
+
+    /** Nothing else decided, and the mail provider sorted it out of the focused inbox. */
+    SERVER_SORTED_OTHER,
 }
 
 /**

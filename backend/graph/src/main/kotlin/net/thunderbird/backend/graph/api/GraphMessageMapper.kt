@@ -1,6 +1,10 @@
 package net.thunderbird.backend.graph.api
 
+import com.fsck.k9.backend.api.SERVER_RELEVANCE_FOCUSED
+import com.fsck.k9.backend.api.SERVER_RELEVANCE_HEADER
+import com.fsck.k9.backend.api.SERVER_RELEVANCE_OTHER
 import com.fsck.k9.mail.Address
+import com.fsck.k9.mail.Message
 import com.fsck.k9.mail.internet.AddressHeaderBuilder
 import com.fsck.k9.mail.internet.MimeMessage
 import com.fsck.k9.mail.internet.MimeMessageHelper
@@ -9,6 +13,18 @@ import java.time.Instant
 import java.time.format.DateTimeParseException
 import java.util.Date
 import net.thunderbird.core.common.mail.Flag
+
+/**
+ * Records where Focused Inbox sorted a message, replacing any copy of the header the sender wrote themselves.
+ */
+internal fun Message.setServerRelevance(inferenceClassification: String?) {
+    removeHeader(SERVER_RELEVANCE_HEADER)
+
+    when (inferenceClassification?.lowercase()) {
+        SERVER_RELEVANCE_FOCUSED -> addHeader(SERVER_RELEVANCE_HEADER, SERVER_RELEVANCE_FOCUSED)
+        SERVER_RELEVANCE_OTHER -> addHeader(SERVER_RELEVANCE_HEADER, SERVER_RELEVANCE_OTHER)
+    }
+}
 
 /**
  * Builds a [MimeMessage] from the envelope Graph returns for a message.
@@ -35,6 +51,7 @@ internal fun GraphMessage.toEnvelopeMessage(): MimeMessage {
     sentDate()?.let { message.setSentDate(it, false) }
 
     applyInternetHeaders(message)
+    message.setServerRelevance(inferenceClassification)
 
     bodyPreview?.takeIf { it.isNotBlank() }?.let { preview ->
         MimeMessageHelper.setBody(message, TextBody(preview))

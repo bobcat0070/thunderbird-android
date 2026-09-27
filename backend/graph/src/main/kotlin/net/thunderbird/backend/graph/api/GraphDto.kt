@@ -64,6 +64,11 @@ internal data class GraphMessage(
     val singleValueExtendedProperties: List<GraphExtendedProperty> = emptyList(),
 
     /**
+     * Where Focused Inbox sorted the message: `focused` or `other`.
+     */
+    val inferenceClassification: String? = null,
+
+    /**
      * Present only in delta responses, marking a message that is no longer in the folder.
      */
     @SerialName("@removed") val removed: GraphRemoved? = null,

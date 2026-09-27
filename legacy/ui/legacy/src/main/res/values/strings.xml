@@ -167,6 +167,7 @@
     <string name="message_details_classification_reason_contact">The sender is in your contacts</string>
     <string name="message_details_classification_reason_correspondence">You have written to this sender</string>
     <string name="message_details_classification_reason_taught">You chose this for this sender</string>
+    <string name="message_details_classification_reason_server_other">Your mail provider sorted it into Other</string>
     <string name="message_details_classification_reason_none">Nothing indicated what this is</string>
     <string name="classify_action">Classify message</string>
     <string name="classify_message_title">What kind of mail is this?</string>

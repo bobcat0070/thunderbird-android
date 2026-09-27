@@ -236,6 +236,7 @@ class MessageDetailsFragment : ToolbarBottomSheetDialogFragment() {
         ClassificationSignal.KNOWN_CONTACT -> R.string.message_details_classification_reason_contact
         ClassificationSignal.PRIOR_CORRESPONDENCE -> R.string.message_details_classification_reason_correspondence
         ClassificationSignal.USER_OVERRIDE -> R.string.message_details_classification_reason_taught
+        ClassificationSignal.SERVER_SORTED_OTHER -> R.string.message_details_classification_reason_server_other
         ClassificationSignal.NONE -> R.string.message_details_classification_reason_none
     }
 

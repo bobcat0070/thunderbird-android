@@ -14,7 +14,8 @@ import okhttp3.HttpUrl
  */
 internal const val MESSAGE_ENVELOPE_SELECT =
     "id,isRead,isDraft,receivedDateTime,sentDateTime,internetMessageId,subject,from,sender,replyTo," +
-        "toRecipients,ccRecipients,bccRecipients,hasAttachments,flag,bodyPreview,internetMessageHeaders"
+        "toRecipients,ccRecipients,bccRecipients,hasAttachments,flag,bodyPreview,internetMessageHeaders," +
+        "inferenceClassification"
 
 private const val DELTA_PAGE_SIZE = 100
 

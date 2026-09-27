@@ -7,6 +7,7 @@ import net.thunderbird.backend.graph.api.GraphApiClient
 import net.thunderbird.backend.graph.api.GraphMessage
 import net.thunderbird.backend.graph.api.MESSAGE_ENVELOPE_EXPAND
 import net.thunderbird.backend.graph.api.pathSegment
+import net.thunderbird.backend.graph.api.setServerRelevance
 import net.thunderbird.backend.graph.api.toEnvelopeMessage
 
 /**
@@ -28,6 +29,9 @@ internal class CommandDownloadMessage(
 
     fun downloadCompleteMessage(folderServerId: String, messageServerId: String) {
         val message = fetchFullMessage(messageServerId)
+        // The raw message says nothing about Focused Inbox, and the stored message is classified again from what
+        // is saved here, so where it was sorted is asked for alongside - or opening it would change its category.
+        message.setServerRelevance(fetchInferenceClassification(messageServerId))
 
         backendStorage.getFolder(folderServerId).saveMessage(message, MessageDownloadState.FULL)
     }
@@ -44,6 +48,14 @@ internal class CommandDownloadMessage(
         message.uid = messageServerId
 
         return message
+    }
+
+    private fun fetchInferenceClassification(messageServerId: String): String? {
+        val url = client.url("me/messages/${pathSegment(messageServerId)}") {
+            addQueryParameter("\$select", "inferenceClassification")
+        }
+
+        return client.json.decodeFromString<GraphMessage>(client.getString(url)).inferenceClassification
     }
 
     private fun fetchEnvelope(messageServerId: String): MimeMessage {

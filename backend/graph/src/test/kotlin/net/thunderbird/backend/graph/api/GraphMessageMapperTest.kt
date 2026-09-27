@@ -11,6 +11,24 @@ import net.thunderbird.core.common.mail.Flag
 class GraphMessageMapperTest {
 
     @Test
+    fun `where Focused Inbox sorted a message should be recorded on it`() {
+        val envelope = GraphMessage(id = "m1", inferenceClassification = "Other").toEnvelopeMessage()
+
+        assertThat(envelope.getHeader("X-Thunderbird-Server-Relevance").toList()).isEqualTo(listOf("other"))
+    }
+
+    @Test
+    fun `a sender's own copy of the relevance header should be replaced`() {
+        val message = com.fsck.k9.mail.internet.MimeMessage().apply {
+            addHeader("X-Thunderbird-Server-Relevance", "focused")
+        }
+
+        message.setServerRelevance("other")
+
+        assertThat(message.getHeader("X-Thunderbird-Server-Relevance").toList()).isEqualTo(listOf("other"))
+    }
+
+    @Test
     fun `a message Outlook recorded as replied to should be answered`() {
         val message = GraphMessage(
             id = "m1",
