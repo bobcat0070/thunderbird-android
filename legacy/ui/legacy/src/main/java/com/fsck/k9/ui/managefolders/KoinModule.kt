@@ -10,6 +10,8 @@ val manageFoldersUiModule = module {
             preferences = get(),
             folderDetailsRepository = get(),
             messagingController = get(),
+            messageStoreManager = get(),
+            categoryGroupingStore = get(),
         )
     }
 }

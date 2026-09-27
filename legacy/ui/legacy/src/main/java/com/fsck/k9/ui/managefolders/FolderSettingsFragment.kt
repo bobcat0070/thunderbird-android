@@ -82,6 +82,9 @@ class FolderSettingsFragment : PreferenceFragmentCompat(), ConfirmationDialogFra
         setCategoryTitle(folderSettings)
         updateMenu()
         setPreferenceVisibility(folderSettings)
+
+        // A folder only on the device has no server id to keep the choice under, and nothing to categorise.
+        findPreference<Preference>(PREFERENCE_CATEGORY_GROUPING)?.isVisible = folderSettings.hasCategoryGrouping
     }
 
     private fun updateMenu() {

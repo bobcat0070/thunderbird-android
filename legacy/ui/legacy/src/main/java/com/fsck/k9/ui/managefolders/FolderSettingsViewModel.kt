@@ -1,5 +1,7 @@
 package com.fsck.k9.ui.managefolders
 
+import app.k9mail.legacy.mailstore.MessageStoreManager
+import com.fsck.k9.preferences.CategoryGroupingStore
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.liveData
@@ -23,6 +25,8 @@ class FolderSettingsViewModel(
     private val preferences: Preferences,
     private val folderDetailsRepository: FolderDetailsRepository,
     private val messagingController: MessagingController,
+    private val messageStoreManager: MessageStoreManager,
+    private val categoryGroupingStore: CategoryGroupingStore,
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
 ) : ViewModel() {
     private val actionLiveData = SingleLiveEvent<Action>()
@@ -56,9 +60,22 @@ class FolderSettingsViewModel(
             this@FolderSettingsViewModel.account = account
             this@FolderSettingsViewModel.folderId = folderId
 
+            val folderServerId = withContext(ioDispatcher) {
+                messageStoreManager.getMessageStore(account).getFolderServerId(folderId)
+            }
+            val categoryGrouping = folderServerId?.let { serverId ->
+                FolderSettingsDataStore.FolderCategoryGrouping(categoryGroupingStore, account.uuid, serverId)
+            }
+
             val folderSettingsData = FolderSettingsData(
                 folder = folderDetails.folder,
-                dataStore = FolderSettingsDataStore(folderDetailsRepository, account.id, folderDetails),
+                dataStore = FolderSettingsDataStore(
+                    folderDetailsRepository = folderDetailsRepository,
+                    accountId = account.id,
+                    folder = folderDetails,
+                    categoryGrouping = categoryGrouping,
+                ),
+                hasCategoryGrouping = categoryGrouping != null,
             )
             emit(folderSettingsData)
         }
@@ -92,7 +109,11 @@ class FolderSettingsViewModel(
 
 sealed class FolderSettingsResult
 object FolderNotFound : FolderSettingsResult()
-data class FolderSettingsData(val folder: Folder, val dataStore: FolderSettingsDataStore) : FolderSettingsResult()
+data class FolderSettingsData(
+    val folder: Folder,
+    val dataStore: FolderSettingsDataStore,
+    val hasCategoryGrouping: Boolean = false,
+) : FolderSettingsResult()
 
 sealed class Action {
     object ShowClearFolderConfirmationDialog : Action()

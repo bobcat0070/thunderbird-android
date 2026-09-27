@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string-array name="folder_settings_category_grouping_entries">
+        <item>@string/folder_settings_category_grouping_default</item>
+        <item>@string/folder_settings_category_grouping_grouped</item>
+        <item>@string/folder_settings_category_grouping_ungrouped</item>
+    </string-array>
+
+    <!-- The names of CategoryGrouping, which is how the choice is stored. -->
+    <string-array name="folder_settings_category_grouping_values" translatable="false">
+        <item>DEFAULT</item>
+        <item>GROUPED</item>
+        <item>UNGROUPED</item>
+    </string-array>
+</resources>
