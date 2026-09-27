@@ -10,6 +10,7 @@ import com.fsck.k9.notification.NotificationController
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import net.thunderbird.legacy.logging.Log
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
 import org.koin.core.qualifier.named
@@ -84,10 +85,20 @@ object Core : KoinComponent {
         }
     }
 
+    /**
+     * Best effort: notifications that cannot be brought back are simply not shown again. Nothing may escape this
+     * coroutine, which runs on the app-wide scope - on a device that crashes the app at startup, and in unit tests
+     * it outlives the test that started the app and fails whichever test runs next.
+     */
+    @Suppress("TooGenericExceptionCaught")
     private fun restoreNotifications() {
         appCoroutineScope.launch(Dispatchers.IO) {
-            val accounts = preferences.getAccounts()
-            notificationController.restoreNewMailNotifications(accounts)
+            try {
+                val accounts = preferences.getAccounts()
+                notificationController.restoreNewMailNotifications(accounts)
+            } catch (e: Exception) {
+                Log.e(e, "Failed to restore new mail notifications")
+            }
         }
     }
 }
