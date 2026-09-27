@@ -6,9 +6,10 @@ import android.database.sqlite.SQLiteOpenHelper
 
 internal const val TABLE_RECIPIENTS = "recipients"
 internal const val TABLE_SYNC_STATE = "recipient_sync_state"
+internal const val TABLE_SEARCH_KEYS = "recipient_search_keys"
 
 private const val DATABASE_NAME = "recipients.db"
-private const val DATABASE_VERSION = 1
+private const val DATABASE_VERSION = 2
 
 /**
  * Holds the addresses worth offering while a message is being addressed.
@@ -46,6 +47,23 @@ internal class RecipientIndexDatabase(context: Context) : SQLiteOpenHelper(
         db.execSQL("CREATE INDEX recipients_display_name ON $TABLE_RECIPIENTS (display_name COLLATE NOCASE)")
         db.execSQL("CREATE INDEX recipients_account_uuid ON $TABLE_RECIPIENTS (account_uuid)")
 
+        // What completion searches: the address, and the name from each of its words on, lower-cased. Looking
+        // up a prefix of these is a range on an index, where matching a word anywhere in the name with LIKE read
+        // every row on every keystroke.
+        db.execSQL(
+            "CREATE TABLE $TABLE_SEARCH_KEYS (" +
+                "search_key TEXT NOT NULL," +
+                "address TEXT NOT NULL COLLATE NOCASE" +
+                ")",
+        )
+        db.execSQL("CREATE INDEX recipient_search_keys_key ON $TABLE_SEARCH_KEYS (search_key)")
+        db.execSQL("CREATE INDEX recipient_search_keys_address ON $TABLE_SEARCH_KEYS (address)")
+        // Deletes remove rows by all sorts of conditions; this keeps the keys in step with every one of them.
+        db.execSQL(
+            "CREATE TRIGGER recipients_delete_search_keys AFTER DELETE ON $TABLE_RECIPIENTS BEGIN " +
+                "DELETE FROM $TABLE_SEARCH_KEYS WHERE address = old.address; END",
+        )
+
         db.execSQL(
             "CREATE TABLE $TABLE_SYNC_STATE (" +
                 "account_uuid TEXT NOT NULL," +
@@ -62,6 +80,7 @@ internal class RecipientIndexDatabase(context: Context) : SQLiteOpenHelper(
     override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
         db.execSQL("DROP TABLE IF EXISTS $TABLE_RECIPIENTS")
         db.execSQL("DROP TABLE IF EXISTS $TABLE_SYNC_STATE")
+        db.execSQL("DROP TABLE IF EXISTS $TABLE_SEARCH_KEYS")
         onCreate(db)
     }
 

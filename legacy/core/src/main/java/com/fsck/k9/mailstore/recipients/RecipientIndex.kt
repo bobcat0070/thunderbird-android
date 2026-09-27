@@ -78,6 +78,9 @@ class RecipientIndex internal constructor(
                     lastUsed = at,
                 )
             }
+
+            // Only a new row, or one offered a name it may not have had, can have different keys.
+            if (updated == 0 || displayName != null) refreshSearchKeys(normalized)
         }
     }
 
@@ -110,6 +113,8 @@ class RecipientIndex internal constructor(
                         lastUsed = 0,
                     )
                 }
+
+                if (updated == 0 || contact.displayName != null) refreshSearchKeys(normalized)
             }
         }
     }
@@ -157,20 +162,21 @@ class RecipientIndex internal constructor(
      * to it, then by how recently. Someone written to often is nearly always who was meant.
      */
     fun search(query: String, limit: Int): List<IndexedRecipient> {
-        val trimmed = query.trim()
-        if (trimmed.isEmpty()) return emptyList()
+        val lower = query.trim().normalizedForSearch()
+        if (lower.isEmpty()) return emptyList()
 
-        val prefix = trimmed.escapedForLike() + "%"
-        val wordPrefix = "% " + trimmed.escapedForLike() + "%"
+        // Everything starting with what was typed sorts between it and the same text with its last character
+        // incremented, so the prefix is a range the index answers directly.
+        val upper = lower.dropLast(1) + (lower.last() + 1)
 
         return helper.readableDatabase.rawQuery(
             "SELECT address, display_name, source, times_used, last_used FROM $TABLE_RECIPIENTS" +
-                " WHERE address LIKE ? ESCAPE '\\'" +
-                " OR display_name LIKE ? ESCAPE '\\'" +
-                " OR display_name LIKE ? ESCAPE '\\'" +
-                " ORDER BY (address LIKE ? ESCAPE '\\') DESC, times_used DESC, last_used DESC, address ASC" +
+                " WHERE address IN (" +
+                "SELECT address FROM $TABLE_SEARCH_KEYS WHERE search_key >= ? AND search_key < ?" +
+                ")" +
+                " ORDER BY (address >= ? AND address < ?) DESC, times_used DESC, last_used DESC, address ASC" +
                 " LIMIT ?",
-            arrayOf(prefix, prefix, wordPrefix, prefix, limit.toString()),
+            arrayOf(lower, upper, lower, upper, limit.toString()),
         ).use { cursor -> cursor.toRecipients() }
     }
 
@@ -324,10 +330,45 @@ private fun SQLiteDatabase.execUpdate(sql: String, arguments: Array<Any?>): Int 
     }
 }
 
-internal fun String.normalizedAddress(): String? = trim().lowercase().takeIf { it.contains('@') && it.length > 2 }
+/**
+ * Replaces the search keys of [address] with those of its current row.
+ */
+private fun SQLiteDatabase.refreshSearchKeys(address: String) {
+    delete(TABLE_SEARCH_KEYS, "address = ?", arrayOf(address))
+
+    val displayName = rawQuery("SELECT display_name FROM $TABLE_RECIPIENTS WHERE address = ?", arrayOf(address))
+        .use { cursor -> if (cursor.moveToFirst() && !cursor.isNull(0)) cursor.getString(0) else null }
+
+    for (key in searchKeysOf(address, displayName)) {
+        insert(
+            TABLE_SEARCH_KEYS,
+            null,
+            ContentValues().apply {
+                put("search_key", key)
+                put("address", address)
+            },
+        )
+    }
+}
 
 /**
- * Escapes what LIKE treats as a pattern, so someone typing "%" searches for it rather than matching everything.
+ * What completion finds an address by: the address itself, and its name from each word on - "sam vimes" and
+ * "vimes" for Sam Vimes - so typing the start of any word, or of several, finds it.
+ *
+ * Lower-cased in full, where SQL's case-insensitive matching only folds ASCII: "émile" finds Émile.
  */
-private fun String.escapedForLike(): String =
-    replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+internal fun searchKeysOf(address: String, displayName: String?): Set<String> {
+    val words = displayName?.normalizedForSearch()?.split(' ')?.filter { it.isNotEmpty() }.orEmpty()
+
+    return buildSet {
+        add(address.normalizedForSearch())
+        words.indices.forEach { index -> add(words.drop(index).joinToString(" ")) }
+    }
+}
+
+private val WHITESPACE = Regex("\\s+")
+
+private fun String.normalizedForSearch(): String = trim().lowercase().replace(WHITESPACE, " ")
+
+internal fun String.normalizedAddress(): String? = trim().lowercase().takeIf { it.contains('@') && it.length > 2 }
+

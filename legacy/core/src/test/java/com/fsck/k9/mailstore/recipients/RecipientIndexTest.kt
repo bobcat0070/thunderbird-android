@@ -38,6 +38,39 @@ class RecipientIndexTest : RobolectricTest() {
     }
 
     @Test
+    fun `an address should be found by the start of several words of its name`() {
+        testSubject.recordSent("sv@example.com", "Samuel Vimes Junior", at = 1000)
+
+        assertThat(testSubject.search("vimes ju", LIMIT).map { it.address }).containsExactly("sv@example.com")
+    }
+
+    @Test
+    fun `a name should be matched whatever the case of letters outside ASCII`() {
+        // SQL's case-insensitive matching only folds ASCII, which left "émile" unable to find Émile.
+        testSubject.recordSent("ez@example.com", "Émile Zola", at = 1000)
+
+        assertThat(testSubject.search("émile", LIMIT).map { it.address }).containsExactly("ez@example.com")
+    }
+
+    @Test
+    fun `a name learned later should become searchable`() {
+        testSubject.recordSent("sv@example.com", displayName = null, at = 1000)
+
+        testSubject.recordSent("sv@example.com", "Sam Vimes", at = 2000)
+
+        assertThat(testSubject.search("vimes", LIMIT).map { it.address }).containsExactly("sv@example.com")
+    }
+
+    @Test
+    fun `a removed contact should no longer be found by its name`() {
+        testSubject.recordRemoteContacts("account", listOf(RemoteContact("cd@example.com", "Carrot Ironfoundersson")))
+
+        testSubject.removeAccount("account")
+
+        assertThat(testSubject.search("iron", LIMIT)).isEmpty()
+    }
+
+    @Test
     fun `a match in the middle of a word should not count`() {
         // Otherwise typing "sam" offers everyone whose address merely contains it.
         testSubject.recordSent("notsam@example.com", null, at = 1000)
