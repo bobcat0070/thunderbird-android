@@ -41,6 +41,8 @@ internal class MessageListItemMapper(
 
         return MessageListItem(
             displayName = displayName,
+            displayAddress = displayAddress,
+            isSenderAuthenticated = message.isSenderAuthenticated,
             displayDate = formatDate(message.messageDate),
             subject = message.subject.orEmpty(),
             preview = previewText,

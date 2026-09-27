@@ -1,9 +1,13 @@
 package net.thunderbird.feature.widget.message.list
 
+import android.graphics.Bitmap
 import app.k9mail.legacy.message.controller.MessageReference
+import com.fsck.k9.mail.Address
 
 internal data class MessageListItem(
     val displayName: String,
+    val displayAddress: Address?,
+    val isSenderAuthenticated: Boolean,
     val displayDate: String,
     val subject: String,
     val preview: String,
@@ -19,4 +23,9 @@ internal data class MessageListItem(
     val sortInternalDate: Long,
     val sortIsStarred: Boolean,
     val sortDatabaseId: Long,
+
+    /**
+     * The sender's picture, for the rows near the top that get one.
+     */
+    val picture: Bitmap? = null,
 )

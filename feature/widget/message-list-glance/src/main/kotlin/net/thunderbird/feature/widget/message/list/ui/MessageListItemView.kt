@@ -8,6 +8,8 @@ import androidx.compose.ui.unit.sp
 import androidx.core.app.PendingIntentCompat
 import androidx.glance.GlanceModifier
 import androidx.glance.GlanceTheme
+import androidx.glance.Image
+import androidx.glance.ImageProvider
 import androidx.glance.LocalContext
 import androidx.glance.action.clickable
 import androidx.glance.appwidget.cornerRadius
@@ -20,6 +22,7 @@ import androidx.glance.layout.Spacer
 import androidx.glance.layout.fillMaxWidth
 import androidx.glance.layout.height
 import androidx.glance.layout.padding
+import androidx.glance.layout.size
 import androidx.glance.layout.width
 import androidx.glance.layout.wrapContentHeight
 import androidx.glance.text.Text
@@ -51,6 +54,14 @@ internal fun MessageListItemView(item: MessageListItem) {
         },
     ) {
         Spacer(GlanceModifier.Companion.width(8.dp).background(Color(item.accountColor)))
+        item.picture?.let { picture ->
+            Image(
+                provider = ImageProvider(picture),
+                // Decorative: the sender's name is right beside it.
+                contentDescription = null,
+                modifier = GlanceModifier.Companion.size(36.dp).padding(start = 6.dp, top = 6.dp),
+            )
+        }
         Column(GlanceModifier.Companion.fillMaxWidth().padding(vertical = 4.dp, horizontal = 4.dp)) {
             Row(GlanceModifier.Companion.fillMaxWidth()) {
                 Row(GlanceModifier.Companion.defaultWeight(), horizontalAlignment = Alignment.Companion.Start) {

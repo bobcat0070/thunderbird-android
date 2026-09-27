@@ -68,6 +68,8 @@ private fun generateMessageListItem(
 ): MessageListItem {
     return MessageListItem(
         displayName = displayName,
+        displayAddress = null,
+        isSenderAuthenticated = false,
         displayDate = displayDate,
         subject = subject,
         preview = preview,

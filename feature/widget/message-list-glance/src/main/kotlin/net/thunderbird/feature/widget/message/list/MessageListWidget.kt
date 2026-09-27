@@ -2,6 +2,7 @@ package net.thunderbird.feature.widget.message.list
 
 import android.app.PendingIntent
 import android.content.Context
+import android.graphics.Bitmap
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -13,6 +14,7 @@ import androidx.glance.appwidget.GlanceAppWidget
 import androidx.glance.appwidget.provideContent
 import com.fsck.k9.CoreResourceProvider
 import com.fsck.k9.activity.MessageHomeActivity.Companion.intentDisplaySearch
+import com.fsck.k9.contacts.ContactPictureLoader
 import kotlin.random.Random.Default.nextInt
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.CoroutineScope
@@ -30,10 +32,23 @@ internal class MessageListWidget : GlanceAppWidget(), KoinComponent {
     private val messageListLoader: MessageListLoader by inject()
     private val coreResourceProvider: CoreResourceProvider by inject()
     private val generalSettingsManager: GeneralSettingsManager by inject()
+    private val contactPictureLoader: ContactPictureLoader by inject()
 
     companion object {
         private var lastMailList = emptyList<MessageListItem>()
         private const val MESSAGE_COUNT = 100
+
+        /**
+         * How many rows get a picture. The whole list reaches the home screen in one update, and Android refuses
+         * an update over about a megabyte, so pictures go only to the rows a person sees without scrolling.
+         */
+        private const val PICTURE_ROWS = 20
+
+        /**
+         * The size pictures are scaled to before they are sent, well above the size they are drawn at but a
+         * fraction of the bytes the full-size picture would take.
+         */
+        private const val PICTURE_SIZE_PX = 64
     }
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
@@ -55,7 +70,7 @@ internal class MessageListWidget : GlanceAppWidget(), KoinComponent {
                         sortDateAscending = false,
                     )
                     val list = messageListLoader.getMessageList(messageListConfig)
-                    mails = list.subList(0, list.size.coerceAtMost(MESSAGE_COUNT))
+                    mails = withPictures(list.subList(0, list.size.coerceAtMost(MESSAGE_COUNT)))
                     lastMailList = mails
                 }
             }
@@ -64,6 +79,29 @@ internal class MessageListWidget : GlanceAppWidget(), KoinComponent {
                 mails = mails.toImmutableList(),
                 onOpenApp = { openApp(context) },
             )
+        }
+    }
+
+    /**
+     * Adds the same pictures the message list shows to the first rows - only ones already cached, since a widget
+     * update cannot wait on the network - behind the same "show contact pictures" setting.
+     */
+    private fun withPictures(items: List<MessageListItem>): List<MessageListItem> {
+        val showPictures = generalSettingsManager.getConfig()
+            .display
+            .visualSettings
+            .messageListSettings
+            .isShowContactPicture
+        if (!showPictures) return items
+
+        return items.mapIndexed { index, item ->
+            val address = item.displayAddress
+            if (index >= PICTURE_ROWS || address == null) return@mapIndexed item
+
+            val picture = contactPictureLoader.getContactPicture(address, item.isSenderAuthenticated, cachedOnly = true)
+                ?.let { Bitmap.createScaledBitmap(it, PICTURE_SIZE_PX, PICTURE_SIZE_PX, true) }
+
+            item.copy(picture = picture)
         }
     }
 
