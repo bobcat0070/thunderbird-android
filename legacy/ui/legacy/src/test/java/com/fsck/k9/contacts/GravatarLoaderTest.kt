@@ -45,6 +45,18 @@ class GravatarLoaderTest : RobolectricTest() {
     }
 
     @Test
+    fun `a cache-only request should never reach the network`() {
+        // For a home screen widget building its rows, which cannot wait on a lookup.
+        server.enqueue(MockResponse(code = 404))
+        val testSubject = loaderFor(GravatarSettings(isEnabled = true))
+
+        val result = testSubject.loadGravatar("sam@example.com", size = 80, cachedOnly = true)
+
+        assertThat(result).isNull()
+        assertThat(server.requestCount).isEqualTo(0)
+    }
+
+    @Test
     fun `should hash the address rather than send it`() {
         // The whole reason the lookup is acceptable: gravatar.com is told a hash, not the address.
         server.enqueue(MockResponse(code = 404))

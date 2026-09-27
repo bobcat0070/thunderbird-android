@@ -101,9 +101,10 @@ class WebsiteIconLoader(
     /**
      * @param senderDomain the domain of the sender's address, which must already have been checked to have
      *   passed DMARC - otherwise a message merely claiming to be from a domain would borrow its icon.
+     * @param cachedOnly answer from what is already cached and never fetch.
      */
     @Suppress("TooGenericExceptionCaught", "ReturnCount")
-    fun loadIcon(senderDomain: String): Bitmap? {
+    fun loadIcon(senderDomain: String, cachedOnly: Boolean = false): Bitmap? {
         if (!isEnabled()) return null
 
         val domain = senderDomain.trim().lowercase()
@@ -112,6 +113,7 @@ class WebsiteIconLoader(
         cache.get(CACHE_PREFIX + domain)?.let { cached ->
             return if (cached.isEmpty()) null else decode(cached)
         }
+        if (cachedOnly) return null
 
         return try {
             resolve(domain)

@@ -128,12 +128,13 @@ internal class MessageListRemoteViewFactory(private val context: Context) : Remo
      * icon or letter tile, each behind the same setting and, for a brand logo, the same DMARC check.
      *
      * Loaded synchronously: this runs on a binder thread, where a row is expected to be built completely before it
-     * is returned.
+     * is returned. So only pictures already cached are used - the message list fills that cache as it is scrolled
+     * - rather than a row waiting seconds on a lookup; a sender with nothing cached gets a letter tile.
      */
     private fun bindContactPicture(remoteView: RemoteViews, item: MessageListItem) {
         val address = item.displayAddress
         val picture = if (showContactPictures && address != null) {
-            contactPictureLoader.getContactPicture(address, item.isSenderAuthenticated)
+            contactPictureLoader.getContactPicture(address, item.isSenderAuthenticated, cachedOnly = true)
         } else {
             null
         }

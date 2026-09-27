@@ -99,12 +99,14 @@ class ContactPictureLoader(
      *
      * @param isSenderAuthenticated whether the message passed DMARC. Gates the brand indicator and is part of
      *   the cache key, so a spoofed message cannot be served the logo cached for the domain's real mail.
+     * @param cachedOnly use only pictures already cached, never fetching one, for a caller that cannot wait.
      */
     @WorkerThread
-    fun getContactPicture(address: Address, isSenderAuthenticated: Boolean): Bitmap? {
+    @JvmOverloads
+    fun getContactPicture(address: Address, isSenderAuthenticated: Boolean, cachedOnly: Boolean = false): Bitmap? {
         return Glide.with(context)
             .asBitmap()
-            .load(createContactImage(address, contactLetterOnly = false, isSenderAuthenticated))
+            .load(createContactImage(address, contactLetterOnly = false, isSenderAuthenticated, cachedOnly))
             .diskCacheStrategy(DiskCacheStrategy.NONE)
             .dontAnimate()
             .submit(pictureSizeInPx, pictureSizeInPx)
@@ -148,6 +150,7 @@ class ContactPictureLoader(
         address: Address,
         contactLetterOnly: Boolean,
         isSenderAuthenticated: Boolean = false,
+        cachedOnly: Boolean = false,
     ): ContactImage {
         return ContactImage(
             contactLetterOnly = contactLetterOnly,
@@ -155,6 +158,7 @@ class ContactPictureLoader(
             contactLetterBitmapCreator = contactLetterBitmapCreator,
             address = address,
             isSenderAuthenticated = isSenderAuthenticated,
+            cachedOnly = cachedOnly,
         )
     }
 

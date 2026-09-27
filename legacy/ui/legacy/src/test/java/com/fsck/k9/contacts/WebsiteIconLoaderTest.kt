@@ -51,6 +51,17 @@ class WebsiteIconLoaderTest : RobolectricTest() {
     }
 
     @Test
+    fun `a cache-only request should never reach the network`() {
+        server.enqueue(imageResponse())
+        val testSubject = loaderFor(WebsiteIconSettings(isEnabled = true))
+
+        val result = testSubject.loadIcon("example.com", cachedOnly = true)
+
+        assertThat(result).isNull()
+        assertThat(server.requestCount).isEqualTo(0)
+    }
+
+    @Test
     fun `should ask the service for the sender domain`() {
         server.enqueue(imageResponse())
         val testSubject = loaderFor(WebsiteIconSettings(isEnabled = true))

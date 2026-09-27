@@ -376,7 +376,7 @@ public class MessageHeader extends LinearLayout implements OnClickListener, OnLo
         }
 
         if (isSenderAuthenticated) {
-            CachedMark mark = DI.get(BimiLogoLoader.class).markFor(domain, BimiRecordKt.BIMI_DEFAULT_SELECTOR);
+            CachedMark mark = DI.get(BimiLogoLoader.class).markFor(domain, BimiRecordKt.BIMI_DEFAULT_SELECTOR, true);
             if (mark != null) {
                 return sourceLabelFor(mark.getTrust());
             }
@@ -437,7 +437,7 @@ public class MessageHeader extends LinearLayout implements OnClickListener, OnLo
      * its own: a caption that went to the network could arrive disagreeing with the picture already drawn.
      */
     private Integer labelForDomain(String domain) {
-        CachedMark mark = DI.get(BimiLogoLoader.class).markFor(domain, BimiRecordKt.BIMI_DEFAULT_SELECTOR);
+        CachedMark mark = DI.get(BimiLogoLoader.class).markFor(domain, BimiRecordKt.BIMI_DEFAULT_SELECTOR, true);
         if (mark != null) {
             return labelFor(mark.getTrust());
         }

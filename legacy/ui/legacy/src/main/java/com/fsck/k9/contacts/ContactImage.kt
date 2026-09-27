@@ -17,6 +17,12 @@ class ContactImage(
      * can never be served the brand logo cached for the domain's real mail.
      */
     val isSenderAuthenticated: Boolean = false,
+    /**
+     * Use only pictures already cached, never fetching one - for a caller that has to answer at once, like a
+     * home screen widget building its rows. Part of the cache key, so a quick answer never stands in for a
+     * complete one.
+     */
+    val cachedOnly: Boolean = false,
 ) : Key {
     private val contactLetterSignature = contactLetterBitmapCreator.signatureOf(address)
 
@@ -32,6 +38,7 @@ class ContactImage(
 
         if (contactLetterOnly != other.contactLetterOnly) return false
         if (isSenderAuthenticated != other.isSenderAuthenticated) return false
+        if (cachedOnly != other.cachedOnly) return false
         if (backgroundCacheId != other.backgroundCacheId) return false
         if (address != other.address) return false
         if (contactLetterSignature != other.contactLetterSignature) return false
@@ -42,6 +49,7 @@ class ContactImage(
     override fun hashCode(): Int {
         var result = contactLetterOnly.hashCode()
         result = 31 * result + isSenderAuthenticated.hashCode()
+        result = 31 * result + cachedOnly.hashCode()
         result = 31 * result + backgroundCacheId.hashCode()
         result = 31 * result + address.hashCode()
         result = 31 * result + contactLetterSignature.hashCode()
@@ -54,6 +62,7 @@ class ContactImage(
             "backgroundCacheId='$backgroundCacheId', " +
             "address=$address, " +
             "isSenderAuthenticated=$isSenderAuthenticated, " +
+            "cachedOnly=$cachedOnly, " +
             "contactLetterSignature='$contactLetterSignature'" +
             ")"
     }

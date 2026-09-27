@@ -54,7 +54,11 @@ class GravatarLoader(
 ) {
 
     @Suppress("TooGenericExceptionCaught", "ReturnCount")
-    fun loadGravatar(emailAddress: String, size: Int): Bitmap? {
+    /**
+     * @param cachedOnly answer from what is already cached and never fetch, for callers that must not wait on the
+     *   network.
+     */
+    fun loadGravatar(emailAddress: String, size: Int, cachedOnly: Boolean = false): Bitmap? {
         val settings = generalSettingsManager.getConfig().gravatar
         val address = emailAddress.trim().lowercase()
         if (!settings.isEnabled || address.isEmpty()) return null
@@ -62,6 +66,7 @@ class GravatarLoader(
         cache.get(CACHE_PREFIX + address)?.let { cached ->
             return if (cached.isEmpty()) null else decode(cached)
         }
+        if (cachedOnly) return null
 
         return try {
             fetch(address, size, settings.apiKey)

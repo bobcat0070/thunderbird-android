@@ -56,7 +56,7 @@ internal class ContactImageBitmapDecoder(
         val domain = contactImage.address.address?.substringAfterLast('@', "")?.takeIf { it.isNotEmpty() }
             ?: return null
 
-        return bimiLogoLoader.loadLogo(domain, size)
+        return bimiLogoLoader.loadLogo(domain, size, cachedOnly = contactImage.cachedOnly)
     }
 
     /**
@@ -66,7 +66,7 @@ internal class ContactImageBitmapDecoder(
     private fun loadGravatar(contactImage: ContactImage, size: Int): Bitmap? {
         if (contactImage.contactLetterOnly) return null
 
-        return gravatarLoader.loadGravatar(contactImage.address.address, size)
+        return gravatarLoader.loadGravatar(contactImage.address.address, size, contactImage.cachedOnly)
     }
 
     /**
@@ -87,7 +87,7 @@ internal class ContactImageBitmapDecoder(
         val domain = contactImage.address.address?.substringAfterLast('@', "")?.takeIf { it.isNotEmpty() }
             ?: return null
 
-        return websiteIconLoader.loadIcon(domain)?.withMarkBadge(MarkTrust.SELF_ASSERTED)
+        return websiteIconLoader.loadIcon(domain, contactImage.cachedOnly)?.withMarkBadge(MarkTrust.SELF_ASSERTED)
     }
 
     private fun createContactLetterBitmap(contactImage: ContactImage, size: Int): Bitmap {

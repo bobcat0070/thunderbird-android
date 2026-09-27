@@ -57,8 +57,13 @@ class BimiLogoLoader(
 ) {
 
     @Suppress("TooGenericExceptionCaught")
-    fun loadLogo(senderDomain: String, size: Int, selector: String = BIMI_DEFAULT_SELECTOR): Bitmap? {
-        val mark = markFor(senderDomain, selector) ?: return null
+    fun loadLogo(
+        senderDomain: String,
+        size: Int,
+        selector: String = BIMI_DEFAULT_SELECTOR,
+        cachedOnly: Boolean = false,
+    ): Bitmap? {
+        val mark = markFor(senderDomain, selector, cachedOnly) ?: return null
 
         return try {
             renderSvg(mark.svg, size).withMarkBadge(mark.trust)
@@ -87,9 +92,17 @@ class BimiLogoLoader(
      *
      * Separate from [loadLogo] so the message view can say which verification a logo carries without
      * rendering a second copy of it. Both go through the same cache, so asking twice costs one lookup.
+     *
+     * @param cachedOnly answer from what is already cached and never look anything up - for the main thread,
+     *   where a DNS query could otherwise hold the screen for seconds.
      */
+    @JvmOverloads
     @Suppress("TooGenericExceptionCaught", "ReturnCount")
-    fun markFor(senderDomain: String, selector: String = BIMI_DEFAULT_SELECTOR): CachedMark? {
+    fun markFor(
+        senderDomain: String,
+        selector: String = BIMI_DEFAULT_SELECTOR,
+        cachedOnly: Boolean = false,
+    ): CachedMark? {
         val domain = senderDomain.trim().lowercase()
         if (!generalSettingsManager.getConfig().bimi.isEnabled || domain.isEmpty()) return null
 
@@ -97,6 +110,7 @@ class BimiLogoLoader(
         cache.get(CACHE_PREFIX + domain)?.let { cached ->
             return cached.toCachedMark()?.takeIf { isSafeMark(it.svg) }
         }
+        if (cachedOnly) return null
 
         return try {
             fetchMark(domain, selector)
