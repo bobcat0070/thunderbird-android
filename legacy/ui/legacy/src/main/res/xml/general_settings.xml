@@ -481,6 +481,15 @@
             app:useSimpleSummaryProvider="true"
             />
 
+        <ListPreference
+            android:dialogTitle="@string/general_settings_undo_send_title"
+            android:entries="@array/undo_send_delay_entries"
+            android:entryValues="@array/undo_send_delay_values"
+            android:key="undo_send_delay"
+            android:title="@string/general_settings_undo_send_title"
+            app:useSimpleSummaryProvider="true"
+            />
+
         <MultiSelectListPreference
             android:dialogTitle="@string/global_settings_confirm_actions_title"
             android:entries="@array/confirm_action_entries"

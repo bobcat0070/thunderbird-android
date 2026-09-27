@@ -1,6 +1,7 @@
 package com.fsck.k9.activity
 
 import net.thunderbird.feature.mail.message.classification.api.MessageClass
+import android.widget.Toast
 import android.app.SearchManager
 import android.content.Context
 import android.content.Intent
@@ -23,7 +24,9 @@ import androidx.fragment.app.FragmentManager
 import androidx.fragment.app.FragmentTransaction
 import androidx.fragment.app.commit
 import androidx.fragment.app.commitNow
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import app.k9mail.core.android.common.compat.BundleCompat
 import app.k9mail.core.android.common.contact.CachingRepository
 import app.k9mail.core.android.common.contact.ContactRepository
@@ -38,6 +41,7 @@ import com.fsck.k9.K9.fontSizes
 import com.fsck.k9.Preferences
 import com.fsck.k9.activity.compose.MessageActions
 import com.fsck.k9.controller.MessagingController
+import com.fsck.k9.controller.UndoSendHold
 import com.fsck.k9.search.unifiedSpecialFolder
 import com.fsck.k9.search.isUnifiedFolders
 import com.fsck.k9.ui.BuildConfig
@@ -54,8 +58,11 @@ import com.fsck.k9.ui.messageview.PlaceholderFragment
 import com.fsck.k9.ui.settings.SettingsActivity
 import com.fsck.k9.view.ViewSwitcher
 import com.fsck.k9.view.ViewSwitcher.OnSwitchCompleteListener
+import com.google.android.material.snackbar.Snackbar
 import com.google.android.material.textview.MaterialTextView
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import net.thunderbird.core.android.account.LegacyAccount
 import net.thunderbird.core.android.account.LegacyAccountDto
 import net.thunderbird.core.android.account.LegacyAccountDtoManager
@@ -116,6 +123,13 @@ open class MessageHomeActivity :
     private val defaultFolderProvider: DefaultFolderProvider by inject()
     private val generalSettingsManager: GeneralSettingsManager by inject()
     private val messagingController: MessagingController by inject()
+    private val undoSendHold: UndoSendHold by inject()
+
+    /**
+     * The held message the "Undo" snackbar on screen is for, so the same one is not offered twice.
+     */
+    private var offeredUndoSend: UndoSendHold.HeldMessage? = null
+    private var undoSendSnackbar: Snackbar? = null
     private val contactRepository: ContactRepository by inject()
     private val coreResourceProvider: CoreResourceProvider by inject()
     private val fundingManager: FundingManager by inject()
@@ -203,6 +217,7 @@ open class MessageHomeActivity :
         initializeFragments()
         displayViews()
         initializeFoldableObserver()
+        initializeUndoSend()
 
         val backPressedCallback = object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
@@ -210,6 +225,50 @@ open class MessageHomeActivity :
             }
         }
         onBackPressedDispatcher.addCallback(this, backPressedCallback)
+    }
+
+    /**
+     * Offers to take back a message that was just sent, for as long as it is held.
+     *
+     * Shown here rather than on the compose screen, which closes as the message is sent: this is the screen the
+     * user lands back on, whether that is the list or the message they replied to.
+     */
+    private fun initializeUndoSend() {
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                undoSendHold.heldMessages.collect { heldMessages -> offerUndoSend(heldMessages.lastOrNull()) }
+            }
+        }
+    }
+
+    private fun offerUndoSend(heldMessage: UndoSendHold.HeldMessage?) {
+        if (heldMessage == offeredUndoSend) return
+        offeredUndoSend = heldMessage
+
+        undoSendSnackbar?.dismiss()
+        val remainingMillis = heldMessage?.let { (it.releaseAtMillis - System.currentTimeMillis()).toInt() } ?: 0
+
+        undoSendSnackbar = heldMessage?.takeIf { remainingMillis > 0 }?.let { held ->
+            Snackbar.make(findViewById(android.R.id.content), R.string.undo_send_sending, remainingMillis)
+                .setAction(R.string.undo_send_action) { undoSend(held) }
+                .apply { show() }
+        }
+    }
+
+    private fun undoSend(heldMessage: UndoSendHold.HeldMessage) {
+        lifecycleScope.launch {
+            val draft = withContext(Dispatchers.IO) {
+                accountManager.getAccount(heldMessage.accountUuid)?.let { account ->
+                    messagingController.undoSend(account, heldMessage.messageId)
+                }
+            }
+
+            if (draft != null) {
+                MessageActions.actionEditDraft(this@MessageHomeActivity, draft)
+            } else {
+                Toast.makeText(this@MessageHomeActivity, R.string.undo_send_too_late, Toast.LENGTH_SHORT).show()
+            }
+        }
     }
 
     private fun initializeFoldableObserver() {

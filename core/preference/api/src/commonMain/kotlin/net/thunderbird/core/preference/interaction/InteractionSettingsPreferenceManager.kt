@@ -15,6 +15,7 @@ enum class InteractionSettingKey(val value: String) {
     ConfirmDeleteFromNotification("confirmDeleteFromNotification"),
     ConfirmMarkAllRead("confirmMarkAllRead"),
     MessageViewPostMarkAsRead("messageViewPostMarkAsReadAction"),
+    UndoSendDelaySeconds("undoSendDelaySeconds"),
 }
 
 interface InteractionSettingsPreferenceManager : PreferenceManager<InteractionSettings>

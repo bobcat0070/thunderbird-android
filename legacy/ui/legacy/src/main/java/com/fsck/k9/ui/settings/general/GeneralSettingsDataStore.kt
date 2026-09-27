@@ -212,6 +212,7 @@ class GeneralSettingsDataStore(
             "message_list_density" -> messageListSettings.uiDensity.toString()
             "post_remove_navigation" -> interactionSettings.messageViewPostRemoveNavigation
             "post_mark_as_unread_navigation" -> interactionSettings.messageViewPostMarkAsUnreadNavigation.name
+            "undo_send_delay" -> interactionSettings.undoSendDelaySeconds.toString()
             else -> defValue
         }
     }
@@ -256,6 +257,7 @@ class GeneralSettingsDataStore(
             "message_list_density" -> updateMessageListDensity(value)
             "post_remove_navigation" -> setMessageViewPostRemoveNavigation(value)
             "post_mark_as_unread_navigation" -> setMessageViewPostMarkAsUnreadNavigation(value)
+            "undo_send_delay" -> setUndoSendDelaySeconds(value.toIntOrNull() ?: 0)
             else -> return
         }
 
@@ -848,6 +850,13 @@ class GeneralSettingsDataStore(
                     isIncognitoKeyboardEnabled = isIncognitoKeyboardEnabled,
                 ),
             )
+        }
+    }
+
+    private fun setUndoSendDelaySeconds(seconds: Int) {
+        skipSaveSettings = true
+        generalSettingsManager.update { settings ->
+            settings.copy(interaction = settings.interaction.copy(undoSendDelaySeconds = seconds))
         }
     }
 

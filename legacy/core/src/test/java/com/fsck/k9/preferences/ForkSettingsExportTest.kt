@@ -199,6 +199,7 @@ class ForkSettingsExportTest : K9RobolectricTest() {
             "directorySearchEnabled" to "true",
             "messageViewSenderAuthenticationVisible" to "true",
             "categoryGroupingEnabled" to "false",
+            "undoSendDelaySeconds" to "30",
             VIEW_CATEGORY_GROUPING_KEY to "unified_sent=GROUPED",
             "notifyPersonal" to "false",
             "notifyNotifications" to "false",

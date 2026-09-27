@@ -52,6 +52,7 @@ import net.thunderbird.core.preference.network.NetworkSettingsKt;
 import net.thunderbird.core.preference.storage.Storage;
 import net.thunderbird.core.preference.display.visualSettings.message.list.UiDensity;
 
+import static net.thunderbird.core.preference.interaction.InteractionSettingsKt.INTERACTION_SETTINGS_DEFAULT_UNDO_SEND_DELAY_SECONDS;
 import static net.thunderbird.core.preference.bimi.BimiSettingsKt.BIMI_SETTINGS_DEFAULT_IS_ENABLED;
 import static net.thunderbird.core.preference.directory.DirectorySearchSettingsKt.DIRECTORY_SEARCH_SETTINGS_DEFAULT_IS_ENABLED;
 import static net.thunderbird.core.preference.display.visualSettings.DisplayVisualSettingsKt.DISPLAY_SETTINGS_DEFAULT_MESSAGE_VIEW_SENDER_AUTHENTICATION_VISIBLE;
@@ -121,6 +122,9 @@ class GeneralSettingsDescriptions {
         ));
         s.put("confirmSpam", Settings.versions(
             new V(1, new BooleanSetting(false))
+        ));
+        s.put("undoSendDelaySeconds", Settings.versions(
+            new V(112, new IntegerRangeSetting(0, 60, INTERACTION_SETTINGS_DEFAULT_UNDO_SEND_DELAY_SECONDS))
         ));
         s.put("confirmMarkAllRead", Settings.versions(
             new V(44, new BooleanSetting(true))

@@ -18,6 +18,11 @@ const val INTERACTION_SETTINGS_DEFAULT_CONFIRM_SPAM = false
 const val INTERACTION_SETTINGS_DEFAULT_CONFIRM_DISCARD_MESSAGE = true
 const val INTERACTION_SETTINGS_DEFAULT_CONFIRM_MARK_ALL_READ = true
 
+/**
+ * How long a sent message waits before it goes, so it can still be taken back. 0 turns undo send off.
+ */
+const val INTERACTION_SETTINGS_DEFAULT_UNDO_SEND_DELAY_SECONDS = 10
+
 data class InteractionSettings(
     val useVolumeKeysForNavigation: Boolean = INTERACTION_SETTINGS_DEFAULT_USE_VOLUME_KEYS_NAVIGATION,
     val messageViewPostRemoveNavigation: String = INTERACTION_SETTINGS_DEFAULT_MESSAGE_VIEW_POST_REMOVE_NAVIGATION,
@@ -30,6 +35,7 @@ data class InteractionSettings(
     val isConfirmSpam: Boolean = INTERACTION_SETTINGS_DEFAULT_CONFIRM_SPAM,
     val isConfirmDiscardMessage: Boolean = INTERACTION_SETTINGS_DEFAULT_CONFIRM_DISCARD_MESSAGE,
     val isConfirmMarkAllRead: Boolean = INTERACTION_SETTINGS_DEFAULT_CONFIRM_MARK_ALL_READ,
+    val undoSendDelaySeconds: Int = INTERACTION_SETTINGS_DEFAULT_UNDO_SEND_DELAY_SECONDS,
 )
 
 /**

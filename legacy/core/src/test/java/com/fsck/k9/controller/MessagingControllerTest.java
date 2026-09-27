@@ -1,6 +1,7 @@
 package com.fsck.k9.controller;
 
 
+import kotlin.Unit;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -92,6 +93,7 @@ public class MessagingControllerTest extends K9RobolectricTest {
     private static final int MAXIMUM_SMALL_MESSAGE_SIZE = 1000;
 
     private MessagingController controller;
+    private UndoSendHold undoSendHold;
     private LegacyAccountDto account;
     @Mock
     private BackendManager backendManager;
@@ -159,6 +161,9 @@ public class MessagingControllerTest extends K9RobolectricTest {
 
         final OutboxFolderManager fakeOutboxFolderManager = new FakeOutboxFolderManager(FOLDER_ID);
 
+        // Holds for ten seconds and never lets go on its own, so a test can put a message on hold and keep it there.
+        undoSendHold = new UndoSendHold(() -> 10, () -> 0L, (delayMillis, action) -> Unit.INSTANCE);
+
         controller = new MessagingController(
             appContext,
             notificationController,
@@ -176,7 +181,8 @@ public class MessagingControllerTest extends K9RobolectricTest {
             featureFlagProvider,
             syncLogger,
             notificationManager,
-            fakeOutboxFolderManager
+            fakeOutboxFolderManager,
+            undoSendHold
         );
 
         configureAccount();
@@ -353,6 +359,16 @@ public class MessagingControllerTest extends K9RobolectricTest {
         // The server's copy arrives with the next sync of the Sent folder; keeping this one would show it twice.
         verify(localMessageToSend1).destroy();
         verify(backend, never()).uploadMessage(anyString(), any(Message.class));
+    }
+
+    @Test
+    public void sendPendingMessagesSynchronous_shouldNotSendAMessageStillHeldForUndo() throws MessagingException {
+        setupAccountWithMessageToSend();
+        undoSendHold.hold(account.getUuid(), 42L, () -> { });
+
+        controller.sendPendingMessagesSynchronous(account);
+
+        verify(backend, never()).sendMessage(any(Message.class));
     }
 
     @Test

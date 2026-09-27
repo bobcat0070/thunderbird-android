@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string-array name="undo_send_delay_entries">
+        <item>@string/undo_send_off</item>
+        <item>@string/undo_send_5_seconds</item>
+        <item>@string/undo_send_10_seconds</item>
+        <item>@string/undo_send_20_seconds</item>
+        <item>@string/undo_send_30_seconds</item>
+    </string-array>
+
+    <!-- Seconds a sent message is held for; 0 turns undo send off. -->
+    <string-array name="undo_send_delay_values" translatable="false">
+        <item>0</item>
+        <item>5</item>
+        <item>10</item>
+        <item>20</item>
+        <item>30</item>
+    </string-array>
+</resources>

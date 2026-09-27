@@ -15,6 +15,7 @@ import app.k9mail.feature.account.common.domain.entity.InteractionMode
 import com.fsck.k9.account.AccountRemoverWorker
 import com.fsck.k9.contacts.bimi.BimiLogoLoader
 import com.fsck.k9.contacts.bimi.VmcValidator
+import com.fsck.k9.controller.UndoSendHold
 import com.fsck.k9.job.MailSyncWorker
 import com.fsck.k9.job.SyncDebugWorker
 import com.fsck.k9.mail.Part
@@ -66,6 +67,8 @@ class DependencyInjectionTest {
             injections = injectedParameters(
                 definition<AccountRemoverWorker>(WorkerParameters::class),
                 definition<BimiLogoLoader>(VmcValidator::class),
+                // Its delay and clock are lambdas, supplied where it is declared.
+                definition<UndoSendHold>(Function0::class, Function2::class),
                 definition<ChangelogViewModel>(ChangeLogMode::class),
                 definition<DisplayHtml>(
                     HtmlSettings::class,

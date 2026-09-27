@@ -27,6 +27,7 @@ import android.os.SystemClock;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.VisibleForTesting;
+import androidx.annotation.WorkerThread;
 import app.k9mail.legacy.di.DI;
 import app.k9mail.legacy.mailstore.FolderDetailsAccessor;
 import app.k9mail.legacy.mailstore.MessageStore;
@@ -157,6 +158,7 @@ public class MessagingController implements MessagingControllerRegistry, Messagi
     private final FeatureFlagProvider featureFlagProvider;
     private final Logger syncDebugLogger;
     private final OutboxFolderManager outboxFolderManager;
+    private final UndoSendHold undoSendHold;
     private final NotificationSenderCompat notificationSender;
     private final NotificationDismisserCompat notificationDismisser;
 
@@ -185,7 +187,8 @@ public class MessagingController implements MessagingControllerRegistry, Messagi
         FeatureFlagProvider featureFlagProvider,
         Logger syncDebugLogger,
         NotificationManager notificationManager,
-        OutboxFolderManager outboxFolderManager
+        OutboxFolderManager outboxFolderManager,
+        UndoSendHold undoSendHold
     ) {
         this.context = context;
         this.notificationController = notificationController;
@@ -204,6 +207,7 @@ public class MessagingController implements MessagingControllerRegistry, Messagi
         this.notificationSender = new NotificationSenderCompat(notificationManager);
         this.notificationDismisser = new NotificationDismisserCompat(notificationManager);
         this.outboxFolderManager = outboxFolderManager;
+        this.undoSendHold = undoSendHold;
 
         controllerThread = new Thread(new Runnable() {
             @Override
@@ -1690,9 +1694,67 @@ public class MessagingController implements MessagingControllerRegistry, Messagi
 
             recordRecipients(message);
 
-            sendPendingMessages(account, listener);
+            // Held for a moment when undo send is on, so it can still be taken back - which needs a Drafts folder
+            // to put it back in. Sent once the hold runs out.
+            boolean isHeld = account.hasDraftsFolder() &&
+                undoSendHold.hold(account.getUuid(), messageId, () -> sendPendingMessages(account, null));
+            if (!isHeld) {
+                sendPendingMessages(account, listener);
+            }
         } catch (Exception e) {
             Log.e(e, "Error sending message");
+        }
+    }
+
+    /**
+     * Takes back a message that was sent a moment ago and is still being held, turning it back into a draft.
+     *
+     * @return the draft to reopen, or {@code null} when the message has already gone - or could not be made a
+     *   draft, in which case it is sent after all rather than left stranded in the Outbox.
+     */
+    @Nullable
+    @WorkerThread
+    public MessageReference undoSend(LegacyAccountDto account, long messageId) {
+        if (!undoSendHold.cancel(account.getUuid(), messageId)) {
+            return null;
+        }
+
+        try {
+            long outboxFolderId = OutboxFolderManagerKt.getOutboxFolderIdSync(
+                outboxFolderManager,
+                account.getUuid(),
+                false
+            );
+            LocalFolder outbox = localStoreProvider.getInstance(account).getFolder(outboxFolderId);
+            outbox.open();
+
+            MessageStore messageStore = messageStoreManager.getMessageStore(account);
+            String messageServerId = messageStore.getMessageServerId(messageId);
+            LocalMessage message = messageServerId == null ? null : outbox.getMessage(messageServerId);
+            if (message == null) {
+                return null;
+            }
+
+            FetchProfile fetchProfile = new FetchProfile();
+            fetchProfile.add(FetchProfile.Item.ENVELOPE);
+            fetchProfile.add(FetchProfile.Item.BODY);
+            outbox.fetch(Collections.singletonList(message), fetchProfile, null);
+
+            Long draftId = saveDraft(account, message, null, message.getSubject());
+            Long draftsFolderId = account.getDraftsFolderId();
+            String draftServerId = draftId == null ? null : messageStore.getMessageServerId(draftId);
+            if (draftServerId == null || draftsFolderId == null) {
+                sendPendingMessages(account, null);
+                return null;
+            }
+
+            message.destroy();
+
+            return new MessageReference(account.getUuid(), draftsFolderId, draftServerId);
+        } catch (Exception e) {
+            Log.e(e, "Could not take back a sent message; sending it after all");
+            sendPendingMessages(account, null);
+            return null;
         }
     }
 
@@ -1830,6 +1892,10 @@ public class MessagingController implements MessagingControllerRegistry, Messagi
                     // message in the Outbox. This code gets rid of these messages. It'd be preferable if the
                     // placeholder message was never created, though.
                     message.destroy();
+                    continue;
+                }
+                if (undoSendHold.isHeld(account.getUuid(), message.getDatabaseId())) {
+                    // Still within the moment the user has to take it back; it is sent once released.
                     continue;
                 }
                 try {

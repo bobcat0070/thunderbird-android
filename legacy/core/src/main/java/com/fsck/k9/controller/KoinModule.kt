@@ -14,6 +14,7 @@ import com.fsck.k9.notification.NotificationController
 import com.fsck.k9.notification.NotificationStrategy
 import net.thunderbird.core.featureflag.FeatureFlagProvider
 import net.thunderbird.core.logging.Logger
+import net.thunderbird.core.preference.GeneralSettingsManager
 import net.thunderbird.feature.mail.folder.api.OutboxFolderManager
 import net.thunderbird.feature.mail.message.list.LocalDeleteOperationDecider
 import net.thunderbird.feature.mail.message.list.LocalMessageUidPrefixProvider
@@ -42,8 +43,14 @@ val controllerModule = module {
             get<Logger>(named("syncDebug")),
             get<NotificationManager>(),
             get<OutboxFolderManager>(),
+            get<UndoSendHold>(),
         )
     } binds arrayOf(MessagingControllerRegistry::class)
+
+    single {
+        val generalSettingsManager = get<GeneralSettingsManager>()
+        UndoSendHold(delaySeconds = { generalSettingsManager.getConfig().interaction.undoSendDelaySeconds })
+    }
 
     single {
         MessagingControllerWrapper(

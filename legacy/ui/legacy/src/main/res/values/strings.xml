@@ -390,6 +390,15 @@
 
     <!-- Name of the setting to configure the navigation action to perform after the user has deleted or moved a message from the message view screen -->
     <string name="general_settings_post_remove_action_title">After deleting or moving a message</string>
+    <string name="general_settings_undo_send_title">Undo send</string>
+    <string name="undo_send_off">Off</string>
+    <string name="undo_send_5_seconds">5 seconds</string>
+    <string name="undo_send_10_seconds">10 seconds</string>
+    <string name="undo_send_20_seconds">20 seconds</string>
+    <string name="undo_send_30_seconds">30 seconds</string>
+    <string name="undo_send_sending">Sending…</string>
+    <string name="undo_send_action">Undo</string>
+    <string name="undo_send_too_late">The message has already been sent</string>
     <string name="general_settings_post_remove_action_return_to_list">Return to message list</string>
     <string name="general_settings_post_remove_action_show_previous_message">Show previous message</string>
     <string name="general_settings_post_remove_action_show_next_message">Show next message</string>
