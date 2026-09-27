@@ -18,6 +18,13 @@ interface Backend {
     val supportsFolderSubscriptions: Boolean
     val isPushCapable: Boolean
 
+    /**
+     * Whether sending a message also files it in the server's Sent folder, so the app must not upload a copy of its
+     * own.
+     */
+    val savesSentMessages: Boolean
+        get() = false
+
     @Throws(MessagingException::class)
     fun refreshFolderList(): FolderPathDelimiter?
 

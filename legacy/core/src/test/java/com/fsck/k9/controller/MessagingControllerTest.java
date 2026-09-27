@@ -26,6 +26,7 @@ import net.thunderbird.core.common.mail.Flag;
 import net.thunderbird.core.common.exception.MessagingException;
 import com.fsck.k9.mail.ServerSettings;
 import com.fsck.k9.mailstore.LocalFolder;
+import com.fsck.k9.mail.Message;
 import com.fsck.k9.mailstore.LocalMessage;
 import com.fsck.k9.mailstore.LocalStore;
 import com.fsck.k9.mailstore.recipients.RecipientIndex;
@@ -63,6 +64,7 @@ import org.robolectric.RuntimeEnvironment;
 import org.robolectric.shadows.ShadowLog;
 
 import static java.util.Collections.emptyList;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
@@ -337,6 +339,20 @@ public class MessagingControllerTest extends K9RobolectricTest {
         controller.sendPendingMessagesSynchronous(account);
 
         verifyNoMoreInteractions(listener);
+    }
+
+    @Test
+    public void sendPendingMessagesSynchronous_whenServerFilesItsOwnSentCopy_shouldNotUploadAnother()
+        throws MessagingException {
+        setupAccountWithMessageToSend();
+        account.setUploadSentMessages(true);
+        when(backend.getSavesSentMessages()).thenReturn(true);
+
+        controller.sendPendingMessagesSynchronous(account);
+
+        // The server's copy arrives with the next sync of the Sent folder; keeping this one would show it twice.
+        verify(localMessageToSend1).destroy();
+        verify(backend, never()).uploadMessage(anyString(), any(Message.class));
     }
 
     @Test

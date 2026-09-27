@@ -226,7 +226,8 @@ class AccountSettingsFragment : PreferenceFragmentCompat(), ConfirmationDialogFr
 
     private fun initializeUploadSentMessages(account: LegacyAccountDto) {
         findPreference<Preference>(PREFERENCE_UPLOAD_SENT_MESSAGES)?.apply {
-            if (!messagingController.supportsUpload(account)) {
+            // Nothing to choose when the server files sent mail itself.
+            if (!messagingController.supportsUpload(account) || messagingController.savesSentMessages(account)) {
                 remove()
             }
         }

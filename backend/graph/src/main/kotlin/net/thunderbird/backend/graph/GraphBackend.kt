@@ -77,6 +77,9 @@ class GraphBackend internal constructor(
      */
     override val isPushCapable = pushSupport != null
 
+    /** `sendMail` always files the message in Sent Items; an upload of the app's own would be a second copy. */
+    override val savesSentMessages = true
+
     override fun refreshFolderList(): FolderPathDelimiter {
         // Contacts ride along with the folder refresh: it is already the point where the app has decided to talk
         // to the server, and the store decides whether enough time has passed to ask again.

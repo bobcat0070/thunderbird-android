@@ -1858,6 +1858,10 @@ public class MessagingController implements MessagingControllerRegistry, Messagi
         if (!account.hasSentFolder() || !account.isUploadSentMessages()) {
             Log.i("Not uploading sent message; deleting local message");
             message.destroy();
+        } else if (savesSentMessages(account)) {
+            // The server's own copy arrives with the next sync of the Sent folder.
+            Log.i("Server files sent messages itself; deleting local message");
+            message.destroy();
         } else {
             long sentFolderId = account.getSentFolderId();
             LocalFolder sentFolder = localStore.getFolder(sentFolderId);
@@ -1943,6 +1947,10 @@ public class MessagingController implements MessagingControllerRegistry, Messagi
 
     public boolean supportsUpload(LegacyAccountDto account) {
         return getBackend(account).getSupportsUpload();
+    }
+
+    public boolean savesSentMessages(LegacyAccountDto account) {
+        return getBackend(account).getSavesSentMessages();
     }
 
     public boolean supportsFolderSubscriptions(LegacyAccountDto account) {
