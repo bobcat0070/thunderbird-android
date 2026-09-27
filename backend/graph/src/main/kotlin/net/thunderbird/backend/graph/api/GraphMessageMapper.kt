@@ -89,6 +89,12 @@ private fun GraphMessage.applyInternetHeaders(message: MimeMessage) {
 }
 
 /**
+ * The flags Graph stores for a message, and so the only ones [toFlags] can say anything about. Others, like answered
+ * and forwarded, are kept only on the device, where a message lacking them in [toFlags] means nothing.
+ */
+internal val GRAPH_SYNCED_FLAGS: Set<Flag> = setOf(Flag.SEEN, Flag.FLAGGED)
+
+/**
  * Maps the Graph message state onto the flags the app tracks.
  *
  * Graph has no equivalent of the IMAP `\Answered` flag on the message resource, so replies are not reflected here.

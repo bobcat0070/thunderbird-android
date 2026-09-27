@@ -183,6 +183,37 @@ class GraphSyncTest {
     }
 
     @Test
+    fun `a flag Graph does not store should survive a remote change to the message`() {
+        createFolderWithMessage()
+        val folder = backendStorage.getFolder(FOLDER_ID)
+        folder.setMessageFlag("existing", Flag.ANSWERED, true)
+        val deltaLink = "${server.url("/v1.0/")}me/mailFolders/$FOLDER_ID/messages/delta?\$deltatoken=t1"
+        givenCompletedFullRound(deltaLink)
+        server.enqueue(
+            MockResponse().setBody(
+                deltaResponse(
+                    messages = listOf(
+                        message(
+                            "existing",
+                            subject = "Existing",
+                            isRead = true,
+                            receivedDateTime = "2026-01-01T00:00:00Z",
+                        ),
+                    ),
+                    deltaLink = deltaLink,
+                ),
+            ),
+        )
+
+        createTestSubject().sync(FOLDER_ID, syncConfig(), listener)
+
+        // Graph has no answered flag, so its silence about one is not a report that it was cleared.
+        val flags = folder.getMessageFlags("existing")
+        assertThat(flags).contains(Flag.ANSWERED)
+        assertThat(flags).contains(Flag.SEEN)
+    }
+
+    @Test
     fun `a message with preview text should still be stored as headers-only`() {
         createFolder()
         enqueueWindowProbe()
@@ -565,7 +596,7 @@ class GraphSyncTest {
         syncRemoteDeletions = true,
         maximumAutoDownloadMessageSize = 0,
         defaultVisibleLimit = defaultVisibleLimit,
-        syncFlags = setOf(Flag.SEEN, Flag.FLAGGED),
+        syncFlags = setOf(Flag.SEEN, Flag.FLAGGED, Flag.ANSWERED, Flag.FORWARDED),
     )
 
     private fun message(

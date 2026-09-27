@@ -5,6 +5,7 @@ import com.fsck.k9.backend.api.BackendStorage
 import com.fsck.k9.backend.api.SyncConfig
 import com.fsck.k9.backend.api.SyncListener
 import com.fsck.k9.mail.MessageDownloadState
+import net.thunderbird.backend.graph.api.GRAPH_SYNCED_FLAGS
 import net.thunderbird.backend.graph.api.GraphApiClient
 import net.thunderbird.backend.graph.api.GraphMessage
 import net.thunderbird.backend.graph.api.receivedDate
@@ -270,6 +271,9 @@ internal class GraphSync(
 
     /**
      * Applies remote flag changes to messages that are already stored locally.
+     *
+     * Only for the flags Graph stores: the app also syncs answered and forwarded, which Graph has no place for, and
+     * reading their absence as "cleared" would wipe them from every message a sync touches.
      */
     private fun updateFlags(
         folderServerId: String,
@@ -285,7 +289,7 @@ internal class GraphSync(
             val localFlags = backendFolder.getMessageFlags(graphMessage.id)
             var changed = false
 
-            for (flag in syncConfig.syncFlags) {
+            for (flag in syncConfig.syncFlags intersect GRAPH_SYNCED_FLAGS) {
                 val remoteValue = flag in remoteFlags
                 if (remoteValue != flag in localFlags) {
                     backendFolder.setMessageFlag(graphMessage.id, flag, remoteValue)
