@@ -248,8 +248,11 @@ open class MessageHomeActivity :
         undoSendSnackbar?.dismiss()
         val remainingMillis = heldMessage?.let { (it.releaseAtMillis - System.currentTimeMillis()).toInt() } ?: 0
 
+        // In the message list's coordinator when it is on screen, so the compose button moves up out of the way
+        // instead of sitting on top of "Undo" and taking the tap.
+        val host = findViewById<View>(R.id.message_list_coordinator) ?: findViewById(android.R.id.content)
         undoSendSnackbar = heldMessage?.takeIf { remainingMillis > 0 }?.let { held ->
-            Snackbar.make(findViewById(android.R.id.content), R.string.undo_send_sending, remainingMillis)
+            Snackbar.make(host, R.string.undo_send_sending, remainingMillis)
                 .setAction(R.string.undo_send_action) { undoSend(held) }
                 .apply { show() }
         }
