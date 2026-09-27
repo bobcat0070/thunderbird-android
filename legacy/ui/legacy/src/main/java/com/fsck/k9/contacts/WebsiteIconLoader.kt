@@ -1,7 +1,6 @@
 package com.fsck.k9.contacts
 
 import android.graphics.Bitmap
-import android.graphics.BitmapFactory
 import java.security.MessageDigest
 import net.thunderbird.core.logging.Logger
 import net.thunderbird.core.preference.GeneralSettingsManager
@@ -199,7 +198,7 @@ class WebsiteIconLoader(
 
     private fun isEnabled(): Boolean = generalSettingsManager.getConfig().websiteIcon.isEnabled
 
-    private fun decode(bytes: ByteArray): Bitmap? = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+    private fun decode(bytes: ByteArray): Bitmap? = decodeBoundedBitmap(bytes)
 
     /**
      * What the service said about exactly one domain.
@@ -242,7 +241,7 @@ class WebsiteIconLoader(
 
             if (!response.isSuccessful) {
                 // Not remembered: a rate limit or an outage says nothing about this domain.
-                logger.debug(TAG) { "Website icon service responded ${response.code} for $url" }
+                logger.debug(TAG) { "Website icon service responded ${response.code}" }
                 return FetchResult.Unavailable
             }
 

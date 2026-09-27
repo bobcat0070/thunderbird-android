@@ -1,7 +1,6 @@
 package com.fsck.k9.contacts
 
 import android.graphics.Bitmap
-import android.graphics.BitmapFactory
 import java.security.MessageDigest
 import net.thunderbird.core.preference.GeneralSettingsManager
 import net.thunderbird.core.logging.Logger
@@ -89,7 +88,7 @@ class GravatarLoader(
         return cache.get(CACHE_PREFIX + address)?.isNotEmpty() == true
     }
 
-    private fun decode(bytes: ByteArray): Bitmap? = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+    private fun decode(bytes: ByteArray): Bitmap? = decodeBoundedBitmap(bytes)
 
     private fun fetch(address: String, size: Int, apiKey: String): Bitmap? {
         val url = "$baseUrl${address.sha256()}?s=$size&d=404"
@@ -114,7 +113,7 @@ class GravatarLoader(
                 !response.isSuccessful -> {
                     // Not remembered as a miss: a rate limit or an outage says nothing about this address.
                     // The URL is safe to log: it carries the hash, never the address.
-                    logger.debug(TAG) { "Gravatar responded ${response.code} for $url" }
+                    logger.debug(TAG) { "Gravatar responded ${response.code}" }
                     null
                 }
 
