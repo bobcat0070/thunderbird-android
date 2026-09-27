@@ -89,10 +89,39 @@ private fun GraphMessage.applyInternetHeaders(message: MimeMessage) {
 }
 
 /**
- * The flags Graph stores for a message, and so the only ones [toFlags] can say anything about. Others, like answered
- * and forwarded, are kept only on the device, where a message lacking them in [toFlags] means nothing.
+ * The flags Graph stores for a message in full, so the server's value simply replaces the local one.
  */
 internal val GRAPH_SYNCED_FLAGS: Set<Flag> = setOf(Flag.SEEN, Flag.FLAGGED)
+
+/**
+ * The flags the server can only add. Exchange records what was last done with a message - replied or forwarded -
+ * as a single value, so a message replied to and then forwarded reads as only forwarded. Taking that absence as the
+ * reply being undone would wipe it; the server's word is taken only when it says a thing happened.
+ */
+internal val GRAPH_ADDITIVE_FLAGS: Set<Flag> = setOf(Flag.ANSWERED, Flag.FORWARDED)
+
+/**
+ * The MAPI property Exchange records the last action on a message in (PidTagLastVerbExecuted).
+ */
+internal const val LAST_VERB_EXECUTED_PROPERTY = "Integer 0x1081"
+
+/**
+ * The MAPI property Outlook picks a message's icon by (PidTagIconIndex), set beside the last action so Outlook shows
+ * the replied or forwarded arrow for a reply sent from here.
+ */
+internal const val ICON_INDEX_PROPERTY = "Integer 0x1080"
+
+internal const val LAST_VERB_REPLY_TO_SENDER = 102
+internal const val LAST_VERB_REPLY_TO_ALL = 103
+internal const val LAST_VERB_FORWARD = 104
+internal const val ICON_INDEX_REPLIED = 261
+internal const val ICON_INDEX_FORWARDED = 262
+
+/**
+ * Asks Graph to return the last action on each message along with it.
+ */
+internal const val MESSAGE_ENVELOPE_EXPAND =
+    "singleValueExtendedProperties(\$filter=id eq '$LAST_VERB_EXECUTED_PROPERTY')"
 
 /**
  * Maps the Graph message state onto the flags the app tracks.
@@ -104,7 +133,19 @@ internal fun GraphMessage.toFlags(): Set<Flag> {
         if (isRead == true) add(Flag.SEEN)
         if (isDraft == true) add(Flag.DRAFT)
         if (flag?.flagStatus == FLAG_STATUS_FLAGGED) add(Flag.FLAGGED)
+
+        when (lastVerbExecuted()) {
+            LAST_VERB_REPLY_TO_SENDER, LAST_VERB_REPLY_TO_ALL -> add(Flag.ANSWERED)
+            LAST_VERB_FORWARD -> add(Flag.FORWARDED)
+        }
     }
+}
+
+private fun GraphMessage.lastVerbExecuted(): Int? {
+    return singleValueExtendedProperties
+        .firstOrNull { it.id.equals(LAST_VERB_EXECUTED_PROPERTY, ignoreCase = true) }
+        ?.value
+        ?.toIntOrNull()
 }
 
 /**

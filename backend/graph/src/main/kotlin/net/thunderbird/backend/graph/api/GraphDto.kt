@@ -58,6 +58,12 @@ internal data class GraphMessage(
     val flag: GraphFollowupFlag? = null,
 
     /**
+     * MAPI properties Graph has no field for, when asked for with `$expand` - here, what was last done with the
+     * message, which is how Outlook knows it was replied to or forwarded.
+     */
+    val singleValueExtendedProperties: List<GraphExtendedProperty> = emptyList(),
+
+    /**
      * Present only in delta responses, marking a message that is no longer in the folder.
      */
     @SerialName("@removed") val removed: GraphRemoved? = null,
@@ -69,6 +75,12 @@ internal data class GraphMessage(
 @Serializable
 internal data class GraphRemoved(
     val reason: String? = null,
+)
+
+@Serializable
+internal data class GraphExtendedProperty(
+    val id: String? = null,
+    val value: String? = null,
 )
 
 @Serializable

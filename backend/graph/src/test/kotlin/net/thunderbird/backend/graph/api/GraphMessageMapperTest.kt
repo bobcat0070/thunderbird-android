@@ -1,12 +1,35 @@
 package net.thunderbird.backend.graph.api
 
 import assertk.assertThat
+import assertk.assertions.containsOnly
 import assertk.assertions.isEqualTo
 import assertk.assertions.isNull
 import com.fsck.k9.mail.internet.MessageExtractor
 import kotlin.test.Test
+import net.thunderbird.core.common.mail.Flag
 
 class GraphMessageMapperTest {
+
+    @Test
+    fun `a message Outlook recorded as replied to should be answered`() {
+        val message = GraphMessage(
+            id = "m1",
+            isRead = true,
+            singleValueExtendedProperties = listOf(GraphExtendedProperty(id = "Integer 0x1081", value = "103")),
+        )
+
+        assertThat(message.toFlags()).containsOnly(Flag.SEEN, Flag.ANSWERED)
+    }
+
+    @Test
+    fun `a message Outlook recorded as forwarded should be forwarded`() {
+        val message = GraphMessage(
+            id = "m1",
+            singleValueExtendedProperties = listOf(GraphExtendedProperty(id = "integer 0x1081", value = "104")),
+        )
+
+        assertThat(message.toFlags()).containsOnly(Flag.FORWARDED)
+    }
 
     @Test
     fun `body preview should become the message text so the list can show a preview`() {

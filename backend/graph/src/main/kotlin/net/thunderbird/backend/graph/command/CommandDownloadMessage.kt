@@ -5,6 +5,7 @@ import com.fsck.k9.mail.MessageDownloadState
 import com.fsck.k9.mail.internet.MimeMessage
 import net.thunderbird.backend.graph.api.GraphApiClient
 import net.thunderbird.backend.graph.api.GraphMessage
+import net.thunderbird.backend.graph.api.MESSAGE_ENVELOPE_EXPAND
 import net.thunderbird.backend.graph.api.pathSegment
 import net.thunderbird.backend.graph.api.toEnvelopeMessage
 
@@ -48,6 +49,7 @@ internal class CommandDownloadMessage(
     private fun fetchEnvelope(messageServerId: String): MimeMessage {
         val url = client.url("me/messages/${pathSegment(messageServerId)}") {
             addQueryParameter("\$select", MESSAGE_ENVELOPE_SELECT)
+            addQueryParameter("\$expand", MESSAGE_ENVELOPE_EXPAND)
         }
 
         val graphMessage = client.json.decodeFromString<GraphMessage>(client.getString(url))

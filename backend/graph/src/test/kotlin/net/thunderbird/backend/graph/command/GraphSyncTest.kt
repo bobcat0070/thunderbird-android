@@ -214,6 +214,82 @@ class GraphSyncTest {
     }
 
     @Test
+    fun `a message replied to in Outlook should be marked answered here`() {
+        createFolderWithMessage()
+        val deltaLink = "${server.url("/v1.0/")}me/mailFolders/$FOLDER_ID/messages/delta?\$deltatoken=t1"
+        givenCompletedFullRound(deltaLink)
+        server.enqueue(
+            MockResponse().setBody(
+                """
+                {
+                  "value": [{
+                    "id": "existing",
+                    "isRead": true,
+                    "receivedDateTime": "2026-01-01T00:00:00Z",
+                    "singleValueExtendedProperties": [{"id": "Integer 0x1081", "value": "102"}]
+                  }],
+                  "@odata.deltaLink": "$deltaLink"
+                }
+                """.trimIndent(),
+            ),
+        )
+
+        createTestSubject().sync(FOLDER_ID, syncConfig(), listener)
+
+        assertThat(backendStorage.getFolder(FOLDER_ID).getMessageFlags("existing")).contains(Flag.ANSWERED)
+    }
+
+    @Test
+    fun `a later forward in Outlook should not clear a reply made here`() {
+        // Exchange records only the last action, so a forward after a reply reads as a forward alone.
+        createFolderWithMessage()
+        val folder = backendStorage.getFolder(FOLDER_ID)
+        folder.setMessageFlag("existing", Flag.ANSWERED, true)
+        val deltaLink = "${server.url("/v1.0/")}me/mailFolders/$FOLDER_ID/messages/delta?\$deltatoken=t1"
+        givenCompletedFullRound(deltaLink)
+        server.enqueue(
+            MockResponse().setBody(
+                """
+                {
+                  "value": [{
+                    "id": "existing",
+                    "receivedDateTime": "2026-01-01T00:00:00Z",
+                    "singleValueExtendedProperties": [{"id": "Integer 0x1081", "value": "104"}]
+                  }],
+                  "@odata.deltaLink": "$deltaLink"
+                }
+                """.trimIndent(),
+            ),
+        )
+
+        createTestSubject().sync(FOLDER_ID, syncConfig(), listener)
+
+        val flags = folder.getMessageFlags("existing")
+        assertThat(flags).contains(Flag.ANSWERED)
+        assertThat(flags).contains(Flag.FORWARDED)
+    }
+
+    @Test
+    fun `the delta round should ask for the last action on each message`() {
+        createFolder()
+        enqueueWindowProbe()
+        server.enqueue(
+            MockResponse().setBody(
+                deltaResponse(
+                    messages = listOf(message("m1", subject = "One")),
+                    deltaLink = "${server.url("/v1.0/")}me/mailFolders/$FOLDER_ID/messages/delta?\$deltatoken=t1",
+                ),
+            ),
+        )
+
+        createTestSubject().sync(FOLDER_ID, syncConfig(), listener)
+
+        server.takeRequest() // window probe
+        assertThat(server.takeRequest().requestUrl?.queryParameter("\$expand"))
+            .isEqualTo("singleValueExtendedProperties(\$filter=id eq 'Integer 0x1081')")
+    }
+
+    @Test
     fun `a message with preview text should still be stored as headers-only`() {
         createFolder()
         enqueueWindowProbe()

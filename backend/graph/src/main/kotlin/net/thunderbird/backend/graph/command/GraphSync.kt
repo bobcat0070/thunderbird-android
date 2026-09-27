@@ -5,6 +5,7 @@ import com.fsck.k9.backend.api.BackendStorage
 import com.fsck.k9.backend.api.SyncConfig
 import com.fsck.k9.backend.api.SyncListener
 import com.fsck.k9.mail.MessageDownloadState
+import net.thunderbird.backend.graph.api.GRAPH_ADDITIVE_FLAGS
 import net.thunderbird.backend.graph.api.GRAPH_SYNCED_FLAGS
 import net.thunderbird.backend.graph.api.GraphApiClient
 import net.thunderbird.backend.graph.api.GraphMessage
@@ -51,13 +52,13 @@ internal const val FOLDER_EXTRA_SYNC_FORMAT = "graphSyncFormat"
  * used to classify a message, version 4 the classification itself, version 5 a revision of the
  * classification rules, and version 6 stores envelopes as headers-only so that opening one downloads the
  * body instead of offering a button, version 7 the sender's authentication result, version 8 a
- * revision of the classification rules, and version 9 refills windows that earlier versions cut short at
- * Graph's page-size and delta-round limits.
+ * revision of the classification rules, version 9 refills windows that earlier versions cut short at
+ * Graph's page-size and delta-round limits, and version 10 reads which messages were replied to or forwarded.
  *
  * A change to the classification rules also needs a bump: the headers a verdict was derived from are not
  * kept, so the only way to re-classify stored mail is to fetch its envelope again and re-save it.
  */
-internal const val SYNC_FORMAT_VERSION = 9
+internal const val SYNC_FORMAT_VERSION = 10
 
 /**
  * Synchronizes a single folder with Microsoft Graph.
@@ -293,6 +294,13 @@ internal class GraphSync(
                 val remoteValue = flag in remoteFlags
                 if (remoteValue != flag in localFlags) {
                     backendFolder.setMessageFlag(graphMessage.id, flag, remoteValue)
+                    changed = true
+                }
+            }
+
+            for (flag in syncConfig.syncFlags intersect GRAPH_ADDITIVE_FLAGS) {
+                if (flag in remoteFlags && flag !in localFlags) {
+                    backendFolder.setMessageFlag(graphMessage.id, flag, true)
                     changed = true
                 }
             }

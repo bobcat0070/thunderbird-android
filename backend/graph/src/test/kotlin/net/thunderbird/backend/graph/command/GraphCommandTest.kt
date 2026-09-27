@@ -54,8 +54,30 @@ class GraphCommandTest {
 
     @Test
     fun `a flag Graph does not model should not produce a request`() {
-        // Answered has no Graph equivalent, so it is tracked locally only.
+        // Deleted has no Graph equivalent, so it is tracked locally only.
+        CommandSetFlag(createClient()).setFlag(listOf("m1"), Flag.DELETED, newState = true)
+
+        assertThat(server.requestCount).isEqualTo(0)
+    }
+
+    @Test
+    fun `replying should be recorded the way Outlook records it`() {
+        server.enqueue(batchResponse("""{"id":"0","status":200}"""))
+
         CommandSetFlag(createClient()).setFlag(listOf("m1"), Flag.ANSWERED, newState = true)
+
+        val body = server.takeRequest().body.readUtf8()
+        assertThat(body).contains("\"Integer 0x1081\"")
+        assertThat(body).contains("\"102\"")
+        // The icon is what makes Outlook show the replied arrow.
+        assertThat(body).contains("\"Integer 0x1080\"")
+        assertThat(body).contains("\"261\"")
+    }
+
+    @Test
+    fun `clearing replied should stay on the device`() {
+        // Exchange keeps only the last action and cannot record that none was taken.
+        CommandSetFlag(createClient()).setFlag(listOf("m1"), Flag.ANSWERED, newState = false)
 
         assertThat(server.requestCount).isEqualTo(0)
     }

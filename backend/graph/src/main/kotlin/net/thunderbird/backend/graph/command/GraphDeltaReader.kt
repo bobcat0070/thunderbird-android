@@ -4,6 +4,7 @@ import java.util.Date
 import net.thunderbird.backend.graph.api.GraphApiClient
 import net.thunderbird.backend.graph.api.GraphCollection
 import net.thunderbird.backend.graph.api.GraphMessage
+import net.thunderbird.backend.graph.api.MESSAGE_ENVELOPE_EXPAND
 import net.thunderbird.backend.graph.api.pathSegment
 import net.thunderbird.backend.graph.api.receivedDate
 import okhttp3.HttpUrl
@@ -94,6 +95,7 @@ internal class GraphDeltaReader(
 
         val url = client.url("me/mailFolders/${pathSegment(folderServerId)}/messages/delta") {
             addQueryParameter("\$select", MESSAGE_ENVELOPE_SELECT)
+            addQueryParameter("\$expand", MESSAGE_ENVELOPE_EXPAND)
             addQueryParameter("\$orderby", "receivedDateTime desc")
 
             if (windowStart != null) {
@@ -155,6 +157,7 @@ internal class GraphDeltaReader(
 
         var url: HttpUrl? = client.url("me/mailFolders/${pathSegment(folderServerId)}/messages") {
             addQueryParameter("\$select", MESSAGE_ENVELOPE_SELECT)
+            addQueryParameter("\$expand", MESSAGE_ENVELOPE_EXPAND)
             addQueryParameter(
                 "\$filter",
                 "receivedDateTime ge ${windowStart.toInstant()} and " +
