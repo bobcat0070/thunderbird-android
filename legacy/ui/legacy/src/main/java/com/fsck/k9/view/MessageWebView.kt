@@ -100,15 +100,16 @@ class MessageWebView : WebView, KoinComponent, ThunderbirdWebViewSettings {
         attachmentResolver: AttachmentResolver?,
         onPageFinishedListener: OnPageFinishedListener?,
     ) {
-        setWebViewClient(attachmentResolver, onPageFinishedListener)
+        setWebViewClient(attachmentResolver, onPageFinishedListener, htmlText)
         setHtmlContent(htmlText)
     }
 
     private fun setWebViewClient(
         attachmentResolver: AttachmentResolver?,
         onPageFinishedListener: OnPageFinishedListener?,
+        htmlText: String,
     ) {
-        val webViewClient = webViewClientFactory.create(attachmentResolver, onPageFinishedListener)
+        val webViewClient = webViewClientFactory.create(attachmentResolver, onPageFinishedListener, htmlText)
         setWebViewClient(webViewClient)
     }
 

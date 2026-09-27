@@ -19,8 +19,13 @@ val viewModule = module {
     }
     factory { ReplyToParser() }
     factory<ReplyActionStrategy<LegacyAccountDto, Message>> { LegacyReplyActionStrategy(replyRoParser = get()) }
-    factory { (attachmentResolver: AttachmentResolver?, onPageFinishedListener: OnPageFinishedListener?) ->
-        K9WebViewClient(clipboardManager = get(), attachmentResolver, onPageFinishedListener)
+    factory { parameters ->
+        K9WebViewClient(
+            clipboardManager = get(),
+            attachmentResolver = parameters.values.getOrNull(0) as AttachmentResolver?,
+            onPageFinishedListener = parameters.values.getOrNull(1) as OnPageFinishedListener?,
+            displayedHtml = parameters.values.getOrNull(2) as String?,
+        )
     }
     factory { WebViewClientFactory() }
     factory { UserInputEmailAddressParser() }

@@ -1,5 +1,8 @@
 package com.fsck.k9.view
 
+import com.fsck.k9.message.html.findDeceptiveLinks
+import com.fsck.k9.message.html.hostOf
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
@@ -27,7 +30,16 @@ class K9WebViewClient(
     private val clipboardManager: ClipboardManager,
     private val attachmentResolver: AttachmentResolver?,
     private val onPageFinishedListener: OnPageFinishedListener?,
+    private val displayedHtml: String? = null,
 ) : WebViewClient() {
+
+    /**
+     * The links in the message that name one site while going to another, worked out the first time a link is
+     * opened rather than on every message shown.
+     */
+    private val deceptiveLinks: Map<String, String> by lazy {
+        displayedHtml?.let(::findDeceptiveLinks).orEmpty()
+    }
 
     @Deprecated("Deprecated in parent class")
     override fun shouldOverrideUrlLoading(webView: WebView, url: String): Boolean {
@@ -49,7 +61,7 @@ class K9WebViewClient(
                 true
             }
             else -> {
-                openUrl(webView.context, uri)
+                openUrlUnlessDeceptive(webView.context, uri)
                 true
             }
         }
@@ -58,6 +70,25 @@ class K9WebViewClient(
     private fun copyUrlToClipboard(context: Context, uri: Uri) {
         val label = context.getString(R.string.webview_contextmenu_link_clipboard_label)
         clipboardManager.setText(label, uri.toString())
+    }
+
+    /**
+     * Opens a link, first asking when its text named a different site from the one it goes to - which is what
+     * nearly every phishing link looks like.
+     */
+    private fun openUrlUnlessDeceptive(context: Context, uri: Uri) {
+        val shownSite = hostOf(uri.toString())?.let { host -> deceptiveLinks[host] }
+        if (shownSite == null) {
+            openUrl(context, uri)
+            return
+        }
+
+        MaterialAlertDialogBuilder(context)
+            .setTitle(R.string.deceptive_link_title)
+            .setMessage(context.getString(R.string.deceptive_link_message, shownSite, uri.host.orEmpty()))
+            .setPositiveButton(R.string.deceptive_link_open_anyway) { _, _ -> openUrl(context, uri) }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
     }
 
     private fun openUrl(context: Context, uri: Uri) {
