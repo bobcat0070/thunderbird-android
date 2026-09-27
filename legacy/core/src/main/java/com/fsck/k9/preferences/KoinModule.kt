@@ -62,8 +62,10 @@ val preferencesModule = module {
         FolderSettingsProvider(
             remoteFolderDetailsRepository = get(),
             folderPinSettings = getOrNull(),
+            categoryGroupingStore = get(),
         )
     }
+    single<CategoryGroupingStore> { PreferencesCategoryGroupingStore(preferences = get()) }
     // Taught classification rules travel with the other settings; see ExternalGlobalSettings. Named, because
     // several definitions bind that type and Koin refuses a second unnamed one at startup; getAll() still finds
     // every one of them.

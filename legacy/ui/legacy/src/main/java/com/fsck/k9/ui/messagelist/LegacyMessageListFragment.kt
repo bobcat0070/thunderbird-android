@@ -62,6 +62,7 @@ import com.fsck.k9.helper.Utility
 import com.fsck.k9.helper.mapToSet
 import com.fsck.k9.mail.AuthType
 import com.fsck.k9.mailstore.LocalStoreProvider
+import com.fsck.k9.preferences.CategoryGroupingStore
 import com.fsck.k9.search.getLegacyAccounts
 import com.fsck.k9.search.unifiedSpecialFolder
 import com.fsck.k9.ui.BuildConfig
@@ -176,6 +177,7 @@ class LegacyMessageListFragment :
     private val pinnedFolderRepository: PinnedFolderRepository by inject()
     private val sortTypeToastProvider: SortTypeToastProvider by inject()
     private val messageListPreferencesManager: MessageListPreferencesManager by inject()
+    private val categoryGroupingStore: CategoryGroupingStore by inject()
     private val folderNameFormatter: FolderNameFormatter by inject { parametersOf(requireContext()) }
     private val messagingController: MessagingControllerWrapper by inject()
     private val messagingControllerRegistry: MessagingControllerRegistry by inject()
@@ -848,8 +850,39 @@ class LegacyMessageListFragment :
     private val isCategoryListEligible: Boolean
         get() = !isThreadDisplay && !localSearch.isManualSearch && displayedClassification == null
 
+    private val categoryGroupingPreference by lazy {
+        CategoryGroupingPreference(
+            store = categoryGroupingStore,
+            isGroupedByDefault = { messageListPreferencesManager.getConfig().isCategoryGroupingEnabled },
+            setGroupedByDefault = { isEnabled ->
+                messageListPreferencesManager.save(
+                    messageListPreferencesManager.getConfig().copy(isCategoryGroupingEnabled = isEnabled),
+                )
+            },
+        )
+    }
+
+    /**
+     * The list a grouping choice made here belongs to: this folder, or this named view, like the unified inbox.
+     */
+    private val categoryGroupingScope: CategoryGroupingScope
+        get() {
+            val folder = currentFolder
+            val folderServerId = folder?.serverId
+            val accountUuid = account?.uuid
+
+            return when {
+                isSingleFolderMode && folder != null && folderServerId != null && accountUuid != null -> {
+                    CategoryGroupingScope.Folder(accountUuid, folderServerId, folder.type)
+                }
+
+                localSearch.id.isNotBlank() -> CategoryGroupingScope.View(localSearch.id)
+                else -> CategoryGroupingScope.Elsewhere
+            }
+        }
+
     private val isGroupingEnabled: Boolean
-        get() = messageListPreferencesManager.getConfig().isCategoryGroupingEnabled
+        get() = categoryGroupingPreference.isGrouped(categoryGroupingScope)
 
     private fun updateViewItems(messageListItems: List<MessageListItem>) {
         adapter.viewItems = buildList {
@@ -871,9 +904,7 @@ class LegacyMessageListFragment :
     }
 
     override fun onGroupingToggled(isEnabled: Boolean) {
-        messageListPreferencesManager.save(
-            messageListPreferencesManager.getConfig().copy(isCategoryGroupingEnabled = isEnabled),
-        )
+        categoryGroupingPreference.setGrouped(categoryGroupingScope, isEnabled)
 
         currentMessageListItems?.let { updateViewItems(it) }
     }

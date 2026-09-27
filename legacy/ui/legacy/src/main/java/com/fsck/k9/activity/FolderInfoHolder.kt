@@ -17,7 +17,13 @@ class FolderInfoHolder(
     val databaseId = localFolder.databaseId
 
     @JvmField
-    val displayName = getDisplayName(account, localFolder)
+    val serverId: String? = localFolder.serverId
+
+    @JvmField
+    val type: FolderType = getFolderType(outboxFolderManager, account, localFolder.databaseId)
+
+    @JvmField
+    val displayName = getDisplayName(localFolder)
 
     @JvmField
     var loading = false
@@ -25,12 +31,12 @@ class FolderInfoHolder(
     @JvmField
     var moreMessages = localFolder.hasMoreMessages()
 
-    private fun getDisplayName(account: LegacyAccount, localFolder: LocalFolder): String {
+    private fun getDisplayName(localFolder: LocalFolder): String {
         val folderId = localFolder.databaseId
         val folder = Folder(
             id = folderId,
             name = localFolder.name,
-            type = getFolderType(outboxFolderManager, account, folderId),
+            type = type,
             isLocalOnly = localFolder.isLocalOnly,
         )
         return folderNameFormatter.displayName(folder)

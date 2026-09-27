@@ -8,6 +8,7 @@ import net.thunderbird.feature.mail.folder.api.data.repository.RemoteFolderDetai
 class FolderSettingsProvider(
     private val remoteFolderDetailsRepository: RemoteFolderDetailsRepository,
     private val folderPinSettings: FolderPinSettings? = null,
+    private val categoryGroupingStore: CategoryGroupingStore? = null,
 ) {
     suspend fun getFolderSettings(account: LegacyAccountDto): List<FolderSettings> {
         return remoteFolderDetailsRepository
@@ -34,7 +35,8 @@ class FolderSettingsProvider(
             isNotificationsEnabled == getDefaultValue("notificationsEnabled") &&
             isPushEnabled == getDefaultValue("pushEnabled") &&
             isPinnedForFiling == getDefaultValue("pinnedForFiling") &&
-            isPinnedToDrawer == getDefaultValue("pinnedToDrawer")
+            isPinnedToDrawer == getDefaultValue("pinnedToDrawer") &&
+            categoryGrouping == getDefaultValue(FOLDER_CATEGORY_GROUPING_KEY)
     }
 
     private fun getDefaultValue(key: String): Any? {
@@ -55,6 +57,8 @@ class FolderSettingsProvider(
             isPushEnabled,
             isPinnedForFiling = folderPinSettings?.isPinnedForFiling(accountUuid, folder.id) == true,
             isPinnedToDrawer = folderPinSettings?.isPinnedToDrawer(accountUuid, folder.id) == true,
+            categoryGrouping = categoryGroupingStore?.getFolderGrouping(accountUuid, folder.serverId)
+                ?: CategoryGrouping.DEFAULT,
         )
     }
 }
@@ -69,4 +73,5 @@ data class FolderSettings(
     val isPushEnabled: Boolean,
     val isPinnedForFiling: Boolean = false,
     val isPinnedToDrawer: Boolean = false,
+    val categoryGrouping: CategoryGrouping = CategoryGrouping.DEFAULT,
 )

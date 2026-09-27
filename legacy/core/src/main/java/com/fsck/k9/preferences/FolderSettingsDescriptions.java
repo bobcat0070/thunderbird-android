@@ -68,6 +68,9 @@ class FolderSettingsDescriptions {
         s.put("pinnedToDrawer", Settings.versions(
             new V(112, new BooleanSetting(false))
         ));
+        s.put(CategoryGroupingStoreKt.FOLDER_CATEGORY_GROUPING_KEY, Settings.versions(
+            new V(112, new EnumSetting<>(CategoryGrouping.class, CategoryGrouping.DEFAULT))
+        ));
 
         SETTINGS = Collections.unmodifiableMap(s);
 

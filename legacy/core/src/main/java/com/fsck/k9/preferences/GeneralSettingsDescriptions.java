@@ -387,6 +387,9 @@ class GeneralSettingsDescriptions {
         s.put("categoryGroupingEnabled", Settings.versions(
             new V(112, new BooleanSetting(MESSAGE_LIST_SETTINGS_DEFAULT_IS_CATEGORY_GROUPING_ENABLED))
         ));
+        s.put(CategoryGroupingStoreKt.VIEW_CATEGORY_GROUPING_KEY, Settings.versions(
+            new V(112, new StringSetting(""))
+        ));
         s.put("notifyPersonal", Settings.versions(
             new V(112, new BooleanSetting(NOTIFICATION_PREFERENCE_DEFAULT_IS_NOTIFY_PERSONAL))
         ));

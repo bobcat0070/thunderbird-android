@@ -434,6 +434,7 @@ class SettingsExporter(
         writeFolderSetting(serializer, "pushEnabled", folder.isPushEnabled.toString())
         writeFolderSetting(serializer, "pinnedForFiling", folder.isPinnedForFiling.toString())
         writeFolderSetting(serializer, "pinnedToDrawer", folder.isPinnedToDrawer.toString())
+        writeFolderSetting(serializer, FOLDER_CATEGORY_GROUPING_KEY, folder.categoryGrouping.name)
 
         serializer.endTag(null, FOLDER_ELEMENT)
     }
