@@ -19,6 +19,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.PriorityBlockingQueue;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import android.content.Context;
@@ -132,6 +133,11 @@ public class MessagingController implements MessagingControllerRegistry, Messagi
     public static final Set<Flag> SYNC_FLAGS = EnumSet.of(Flag.SEEN, Flag.FLAGGED, Flag.ANSWERED, Flag.FORWARDED);
 
     private static final long FOLDER_LIST_STALENESS_THRESHOLD = 30 * 60 * 1000L;
+
+    /**
+     * How long taking back a sent message waits for its draft to be uploaded before reopening it anyway.
+     */
+    private static final long DRAFT_UPLOAD_WAIT_SECONDS = 15;
 
     private final Context context;
     private final NotificationController notificationController;
@@ -1707,6 +1713,19 @@ public class MessagingController implements MessagingControllerRegistry, Messagi
     }
 
     /**
+     * Waits until the background commands queued so far have run, or the time is up.
+     */
+    private void awaitBackgroundCommands(long timeoutSeconds) {
+        CountDownLatch done = new CountDownLatch(1);
+        putBackground("awaitBackgroundCommands", null, done::countDown);
+        try {
+            done.await(timeoutSeconds, TimeUnit.SECONDS);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
+    }
+
+    /**
      * Takes back a message that was sent a moment ago and is still being held, turning it back into a draft.
      *
      * @return the draft to reopen, or {@code null} when the message has already gone - or could not be made a
@@ -1742,15 +1761,19 @@ public class MessagingController implements MessagingControllerRegistry, Messagi
 
             Long draftId = saveDraft(account, message, null, message.getSubject());
             Long draftsFolderId = account.getDraftsFolderId();
-            String draftServerId = draftId == null ? null : messageStore.getMessageServerId(draftId);
-            if (draftServerId == null || draftsFolderId == null) {
+            if (draftId == null || draftsFolderId == null) {
                 sendPendingMessages(account, null);
                 return null;
             }
 
             message.destroy();
 
-            return new MessageReference(account.getUuid(), draftsFolderId, draftServerId);
+            // Saving the draft also queued its upload, which swaps its temporary server ID for the one the server
+            // gives it. Reopened under the temporary one, the draft would not be found - so wait for the upload.
+            awaitBackgroundCommands(DRAFT_UPLOAD_WAIT_SECONDS);
+            String draftServerId = messageStore.getMessageServerId(draftId);
+
+            return draftServerId == null ? null : new MessageReference(account.getUuid(), draftsFolderId, draftServerId);
         } catch (Exception e) {
             Log.e(e, "Could not take back a sent message; sending it after all");
             sendPendingMessages(account, null);

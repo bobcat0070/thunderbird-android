@@ -32,7 +32,9 @@ import com.fsck.k9.mailstore.LocalMessage;
 import com.fsck.k9.mailstore.LocalStore;
 import com.fsck.k9.mailstore.recipients.RecipientIndex;
 import com.fsck.k9.mailstore.LocalStoreProvider;
+import app.k9mail.legacy.mailstore.ListenableMessageStore;
 import app.k9mail.legacy.mailstore.MessageStoreManager;
+import app.k9mail.legacy.message.controller.MessageReference;
 import com.fsck.k9.mailstore.OutboxState;
 import com.fsck.k9.mailstore.OutboxStateRepository;
 import com.fsck.k9.mailstore.SaveMessageDataCreator;
@@ -45,6 +47,7 @@ import net.thunderbird.core.logging.Logger;
 import net.thunderbird.components.core.outcome.Outcome;
 import net.thunderbird.feature.mail.message.list.LocalDeleteOperationDecider;
 import net.thunderbird.feature.mail.folder.api.OutboxFolderManager;
+import net.thunderbird.feature.mail.folder.api.OutboxFolderManagerKt;
 import net.thunderbird.feature.mail.message.list.LocalMessageUidPrefixProvider;
 import net.thunderbird.feature.notification.api.NotificationManager;
 import net.thunderbird.feature.notification.testing.fake.FakeInAppOnlyNotification;
@@ -65,6 +68,7 @@ import org.robolectric.RuntimeEnvironment;
 import org.robolectric.shadows.ShadowLog;
 
 import static java.util.Collections.emptyList;
+import static org.junit.Assert.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyInt;
@@ -94,6 +98,7 @@ public class MessagingControllerTest extends K9RobolectricTest {
 
     private MessagingController controller;
     private UndoSendHold undoSendHold;
+    private OutboxFolderManager outboxFolderManager;
     private LegacyAccountDto account;
     @Mock
     private BackendManager backendManager;
@@ -159,7 +164,7 @@ public class MessagingControllerTest extends K9RobolectricTest {
             id -> Outcome.Companion.success(new FakeInAppOnlyNotification())
         );
 
-        final OutboxFolderManager fakeOutboxFolderManager = new FakeOutboxFolderManager(FOLDER_ID);
+        outboxFolderManager = new FakeOutboxFolderManager(FOLDER_ID);
 
         // Holds for ten seconds and never lets go on its own, so a test can put a message on hold and keep it there.
         undoSendHold = new UndoSendHold(() -> 10, () -> 0L, (delayMillis, action) -> Unit.INSTANCE);
@@ -181,7 +186,7 @@ public class MessagingControllerTest extends K9RobolectricTest {
             featureFlagProvider,
             syncLogger,
             notificationManager,
-            fakeOutboxFolderManager,
+            outboxFolderManager,
             undoSendHold
         );
 
@@ -369,6 +374,33 @@ public class MessagingControllerTest extends K9RobolectricTest {
         controller.sendPendingMessagesSynchronous(account);
 
         verify(backend, never()).sendMessage(any(Message.class));
+    }
+
+    @Test
+    public void undoSend_shouldReopenTheDraftUnderTheIdItHasOnceUploaded() throws MessagingException {
+        // Saving the draft starts uploading it, and the upload swaps its temporary server ID for the real one.
+        // Reopened under the temporary one, it would not be found.
+        long draftsFolderId = 30L;
+        long draftId = 99L;
+        String[] draftServerId = { "K9LOCAL:draft" };
+        account.setDraftsFolderId(draftsFolderId);
+        OutboxFolderManagerKt.getOutboxFolderIdSync(outboxFolderManager, account.getUuid(), true);
+        ListenableMessageStore messageStore = mock(ListenableMessageStore.class);
+        when(messageStoreManager.getMessageStore(account)).thenReturn(messageStore);
+        when(messageStore.getMessageServerId(42L)).thenReturn("localMessageToSend1");
+        when(messageStore.getMessageServerId(draftId)).thenAnswer(invocation -> draftServerId[0]);
+        when(messageStore.saveLocalMessage(eq(draftsFolderId), any(), nullable(Long.class))).thenReturn(draftId);
+        when(localFolder.getMessage("localMessageToSend1")).thenReturn(localMessageToSend1);
+        when(backend.getSupportsUpload()).thenReturn(true);
+        when(localStore.getPendingCommands()).thenAnswer(invocation -> {
+            draftServerId[0] = "uploaded-draft";
+            return emptyList();
+        });
+        undoSendHold.hold(account.getUuid(), 42L, () -> { });
+
+        MessageReference draft = controller.undoSend(account, 42L);
+
+        assertEquals(new MessageReference(account.getUuid(), draftsFolderId, "uploaded-draft"), draft);
     }
 
     @Test
