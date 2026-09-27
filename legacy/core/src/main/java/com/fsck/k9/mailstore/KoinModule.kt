@@ -114,8 +114,8 @@ val mailStoreModule = module {
     single { KnownContacts(contactRepository = get()) }
     single {
         KnownCorrespondents(
-            accountManager = get(),
-            messageListRepository = get(),
+            recipientIndex = get(),
+            sentMailRecipientScanner = get(),
         )
     }
     single { ReclassificationTracker(context = get()) }
