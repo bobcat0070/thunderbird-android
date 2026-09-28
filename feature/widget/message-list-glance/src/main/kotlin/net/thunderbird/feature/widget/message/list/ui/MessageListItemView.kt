@@ -41,7 +41,12 @@ internal fun MessageListItemView(item: MessageListItem) {
     Row(
         GlanceModifier.Companion.fillMaxWidth().wrapContentHeight().clickable {
             CoroutineScope(Dispatchers.IO).launch {
-                val intent = MessageHomeActivity.Companion.actionDisplayMessageIntent(context, item.messageReference)
+                val intent = MessageHomeActivity.Companion.actionDisplayMessageIntent(
+                    context = context,
+                    messageReference = item.messageReference,
+                    // A conversation opens as it does in the app: all of its messages, not just the newest.
+                    threadRoot = item.threadRoot.takeIf { item.threadCount > 1 },
+                )
                 PendingIntentCompat.getActivity(
                     context,
                     Random.Default.nextInt(),

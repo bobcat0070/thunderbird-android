@@ -76,6 +76,7 @@ private fun generateMessageListItem(
         isRead = isRead,
         hasAttachments = false,
         threadCount = 0,
+        threadRoot = 0,
         accountColor = color,
         uniqueId = 0,
         messageReference = MessageReference("accountUuid", 123, "messageServerId"),

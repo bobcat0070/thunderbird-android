@@ -14,6 +14,10 @@ internal data class MessageListItem(
     val isRead: Boolean,
     val hasAttachments: Boolean,
     val threadCount: Int,
+    /**
+     * The conversation this message is part of, opened in place of the message when [threadCount] is above one.
+     */
+    val threadRoot: Long,
     val accountColor: Int,
     val messageReference: MessageReference,
     val uniqueId: Long,

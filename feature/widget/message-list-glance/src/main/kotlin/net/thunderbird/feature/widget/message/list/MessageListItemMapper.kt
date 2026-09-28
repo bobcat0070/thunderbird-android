@@ -49,6 +49,7 @@ internal class MessageListItemMapper(
             isRead = message.isRead,
             hasAttachments = message.hasAttachments,
             threadCount = message.threadCount,
+            threadRoot = message.threadRoot,
             accountColor = account.profile.color,
             messageReference = MessageReference(account.uuid, message.folderId, message.messageServerId),
             uniqueId = uniqueId,

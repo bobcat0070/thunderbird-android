@@ -115,7 +115,11 @@ internal class MessageListRemoteViewFactory(private val context: Context) : Remo
             remoteView.setInt(R.id.attachment, "setVisibility", View.GONE)
         }
 
-        val intent = MessageHomeActivity.actionDisplayMessageTemplateFillIntent(item.messageReference)
+        // A conversation opens as it does in the app: all of its messages, not just the newest.
+        val intent = MessageHomeActivity.actionDisplayMessageTemplateFillIntent(
+            messageReference = item.messageReference,
+            threadRoot = item.threadRoot.takeIf { item.threadCount > 1 },
+        )
         remoteView.setOnClickFillInIntent(R.id.mail_list_item, intent)
 
         remoteView.setInt(R.id.chip, "setBackgroundColor", item.accountColor)

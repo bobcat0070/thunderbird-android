@@ -166,6 +166,17 @@ open class MessageHomeActivity :
     private var messageReference: MessageReference? = null
 
     /**
+     * The thread to open over the message list at launch, instead of [messageReference] on its own - what tapping a
+     * conversation in the list does.
+     */
+    private var threadRoot: Long? = null
+
+    /**
+     * Whether [threadRoot] still has to be opened, which waits until the message list it goes over is displayed.
+     */
+    private var isLaunchThreadPending = false
+
+    /**
      * If this is `true`, only the message view will be displayed and pressing the back button will finish the Activity.
      */
     private var messageViewOnly = false
@@ -216,6 +227,7 @@ open class MessageHomeActivity :
         initializeLayout()
         initializeFragments()
         displayViews()
+        openLaunchThread()
         initializeFoldableObserver()
         initializeUndoSend()
 
@@ -352,6 +364,7 @@ open class MessageHomeActivity :
         removeMessageViewContainerFragment()
 
         messageReference = null
+        threadRoot = null
         search = null
 
         if (!decodeExtras(intent)) {
@@ -365,6 +378,7 @@ open class MessageHomeActivity :
         initializeDisplayMode(null)
         initializeFragments()
         displayViews()
+        openLaunchThread()
     }
 
     private fun findFragments() {
@@ -403,11 +417,27 @@ open class MessageHomeActivity :
             this.messageListFragment = messageListFragment
         }
 
-        // Check if the fragment wasn't restarted and has a MessageReference in the arguments.
-        // If so, open the referenced message.
-        if (!hasMessageListFragment && messageViewContainerFragment == null && messageReference != null) {
-            openMessage(messageReference!!)
+        // Check if the fragment wasn't restarted and has a thread or MessageReference in the arguments.
+        // If so, open the referenced thread or message.
+        if (!hasMessageListFragment && messageViewContainerFragment == null) {
+            if (threadRoot != null) {
+                isLaunchThreadPending = true
+            } else {
+                messageReference?.let(::openMessage)
+            }
         }
+    }
+
+    /**
+     * Opens the conversation asked for at launch, over the message list - as tapping it in the list does. Only once
+     * that list is displayed: before, the list screen it pushes would be used before it was attached.
+     */
+    private fun openLaunchThread() {
+        if (!isLaunchThreadPending) return
+        isLaunchThreadPending = false
+
+        val accountUuid = messageReference?.accountUuid
+        threadRoot?.let { threadRoot -> accountUuid?.let { showThread(it, threadRoot) } }
     }
 
     /**
@@ -436,7 +466,9 @@ open class MessageHomeActivity :
             }
         }
 
-        displayMode = if (messageViewContainerFragment != null || messageReference != null) {
+        // A conversation opens as a list of its messages, so asking for one is not asking for the message view.
+        val isOpeningMessage = messageReference != null && threadRoot == null
+        displayMode = if (messageViewContainerFragment != null || isOpeningMessage) {
             DisplayMode.MESSAGE_VIEW
         } else {
             DisplayMode.MESSAGE_LIST
@@ -523,6 +555,7 @@ open class MessageHomeActivity :
         singleFolderMode = search.folderIds.size == 1
         noThreading = launchData.noThreading
         messageReference = launchData.messageReference
+        threadRoot = launchData.threadRoot
         messageViewOnly = launchData.messageViewOnly
 
         return true
@@ -641,6 +674,7 @@ open class MessageHomeActivity :
                 return LaunchData(
                     search = search,
                     messageReference = messageReference,
+                    threadRoot = intent.getLongExtra(EXTRA_THREAD_ROOT, NO_THREAD_ROOT).takeIf { it != NO_THREAD_ROOT },
                     messageViewOnly = intent.getBooleanExtra(EXTRA_MESSAGE_VIEW_ONLY, false),
                 )
             }
@@ -1301,11 +1335,15 @@ open class MessageHomeActivity :
     }
 
     override fun showThread(account: LegacyAccount, threadRootId: Long) {
+        showThread(account.uuid, threadRootId)
+    }
+
+    private fun showThread(accountUuid: String, threadRootId: Long) {
         showMessageViewPlaceHolder()
 
         val tmpSearch = LocalMessageSearch().apply {
-            id = search?.id ?: "ShowThread-${account.uuid}-$threadRootId"
-            addAccountUuid(account.uuid)
+            id = search?.id ?: "ShowThread-$accountUuid-$threadRootId"
+            addAccountUuid(accountUuid)
             and(MessageSearchField.THREAD_ID, threadRootId.toString(), SearchAttribute.EQUALS)
         }
 
@@ -1598,6 +1636,7 @@ open class MessageHomeActivity :
         val search: LocalMessageSearch,
         val account: LegacyAccountDto? = null,
         val messageReference: MessageReference? = null,
+        val threadRoot: Long? = null,
         val noThreading: Boolean = false,
         val messageViewOnly: Boolean = false,
     )
@@ -1611,6 +1650,8 @@ open class MessageHomeActivity :
 
         const val EXTRA_ACCOUNT = "account_uuid"
         private const val EXTRA_MESSAGE_REFERENCE = "message_reference"
+        private const val EXTRA_THREAD_ROOT = "thread_root"
+        private const val NO_THREAD_ROOT = -1L
         private const val EXTRA_MESSAGE_VIEW_ONLY = "message_view_only"
 
         // used for remote search
@@ -1715,14 +1756,20 @@ open class MessageHomeActivity :
             }
         }
 
+        /**
+         * @param threadRoot the conversation [messageReference] is part of, to open that - as tapping it in the list
+         *   does - rather than the one message.
+         */
         fun actionDisplayMessageIntent(
             context: Context,
             messageReference: MessageReference,
             openInUnifiedInbox: Boolean = false,
             messageViewOnly: Boolean = false,
+            threadRoot: Long? = null,
         ): Intent {
             return actionDisplayMessageTemplateIntent(context, openInUnifiedInbox, messageViewOnly).apply {
                 putExtra(EXTRA_MESSAGE_REFERENCE, messageReference.toIdentityString())
+                threadRoot?.let { putExtra(EXTRA_THREAD_ROOT, it) }
             }
         }
 
@@ -1747,9 +1794,16 @@ open class MessageHomeActivity :
             }
         }
 
-        fun actionDisplayMessageTemplateFillIntent(messageReference: MessageReference): Intent {
+        /**
+         * @param threadRoot see [actionDisplayMessageIntent].
+         */
+        fun actionDisplayMessageTemplateFillIntent(
+            messageReference: MessageReference,
+            threadRoot: Long? = null,
+        ): Intent {
             return Intent().apply {
                 putExtra(EXTRA_MESSAGE_REFERENCE, messageReference.toIdentityString())
+                threadRoot?.let { putExtra(EXTRA_THREAD_ROOT, it) }
             }
         }
 

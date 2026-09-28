@@ -118,6 +118,7 @@ class WidgetCategoryFilterTest {
         isRead = false,
         hasAttachments = false,
         threadCount = 0,
+        threadRoot = 0,
         accountColor = 0,
         messageReference = MessageReference("account", 1L, "uid$uniqueId"),
         uniqueId = uniqueId,
