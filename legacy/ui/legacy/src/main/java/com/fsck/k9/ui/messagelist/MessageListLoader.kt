@@ -31,9 +31,12 @@ class MessageListLoader(
     private val contactLetterBitmapCreator: ContactLetterBitmapCreator,
 ) {
 
-    fun getMessageList(config: MessageListConfig): MessageListInfo {
+    /**
+     * @param limit the most messages to load, the first ones in the list's order; `null` for all of them.
+     */
+    fun getMessageList(config: MessageListConfig, limit: Int? = null): MessageListInfo {
         return try {
-            getMessageListInfo(config)
+            getMessageListInfo(config, limit)
         } catch (e: Exception) {
             Log.e(e, "Error while fetching message list")
 
@@ -42,20 +45,26 @@ class MessageListLoader(
         }
     }
 
-    private fun getMessageListInfo(config: MessageListConfig): MessageListInfo {
+    private fun getMessageListInfo(config: MessageListConfig, limit: Int?): MessageListInfo {
         val accounts = config.search.getLegacyAccounts(accountManager)
+        // Each account's first messages are enough to find the first of all of them.
         val messageListItems = accounts
             .flatMap { account ->
-                loadMessageListForAccount(account, config)
+                loadMessageListForAccount(account, config, limit)
             }
             .sortedWith(config)
+            .let { items -> if (limit != null) items.take(limit) else items }
 
         val hasMoreMessages = loadHasMoreMessages(accounts, config.search.folderIds)
 
         return MessageListInfo(messageListItems, hasMoreMessages)
     }
 
-    private fun loadMessageListForAccount(account: LegacyAccount, config: MessageListConfig): List<MessageListItem> {
+    private fun loadMessageListForAccount(
+        account: LegacyAccount,
+        config: MessageListConfig,
+        limit: Int?,
+    ): List<MessageListItem> {
         val accountUuid = account.uuid
         val threadId = getThreadId(config.search)
         val sortOrder = buildSortOrder(config)
@@ -77,12 +86,19 @@ class MessageListLoader(
 
             config.showingThreadedList -> {
                 val (selection, selectionArgs) = buildSelection(account, config)
-                messageListRepository.getThreadedMessages(accountUuid, selection, selectionArgs, sortOrder, mapper)
+                messageListRepository.getThreadedMessages(
+                    accountUuid,
+                    selection,
+                    selectionArgs,
+                    sortOrder,
+                    mapper,
+                    limit,
+                )
             }
 
             else -> {
                 val (selection, selectionArgs) = buildSelection(account, config)
-                messageListRepository.getMessages(accountUuid, selection, selectionArgs, sortOrder, mapper)
+                messageListRepository.getMessages(accountUuid, selection, selectionArgs, sortOrder, mapper, limit)
             }
         }
     }

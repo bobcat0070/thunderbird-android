@@ -19,6 +19,7 @@ internal class RetrieveMessageListOperations(private val lockableDatabase: Locka
         selectionArgs: Array<String>,
         sortOrder: String,
         mapper: MessageMapper<out T?>,
+        limit: Int? = null,
     ): List<T> {
         return lockableDatabase.execute(false) { database ->
             database.rawQuery(
@@ -49,7 +50,7 @@ LEFT JOIN FOLDERS ON (folders.id = messages.folder_id)
 WHERE
   ($selection)
   AND empty = 0 AND deleted = 0
-ORDER BY $sortOrder
+ORDER BY $sortOrder${limitClause(limit)}
                 """,
                 selectionArgs,
             ).use { cursor ->
@@ -71,6 +72,7 @@ ORDER BY $sortOrder
         selectionArgs: Array<String>,
         sortOrder: String,
         mapper: MessageMapper<out T?>,
+        limit: Int? = null,
     ): List<T> {
         val orderBy = SqlWhereClause.addPrefixToSelection(
             AGGREGATED_MESSAGES_COLUMNS,
@@ -135,7 +137,7 @@ JOIN messages ON (
 )
 JOIN folders ON (folders.id = messages.folder_id)
 GROUP BY threads.root
-ORDER BY $orderBy
+ORDER BY $orderBy${limitClause(limit)}
                 """,
                 selectionArgs,
             ).use { cursor ->
@@ -272,3 +274,9 @@ private val AGGREGATED_MESSAGES_COLUMNS = arrayOf(
     "answered",
     "forwarded",
 )
+
+/**
+ * A `LIMIT` for the end of a query, or nothing when every row is wanted. The value is an [Int], so nothing a caller
+ * passes can reach the SQL as text.
+ */
+private fun limitClause(limit: Int?): String = limit?.let { " LIMIT $it" }.orEmpty()

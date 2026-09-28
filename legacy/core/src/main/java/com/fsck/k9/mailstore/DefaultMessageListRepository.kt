@@ -50,12 +50,13 @@ class DefaultMessageListRepository(
         selectionArgs: Array<String>,
         sortOrder: String,
         messageMapper: MessageMapper<T>,
+        limit: Int?,
     ): List<T> {
         val messageStore = messageStoreManager.getMessageStore(accountUuid)
         val cache = MessageListCache.getCache(accountUuid)
 
         val mapper = if (cache.isEmpty()) messageMapper else CacheAwareMessageMapper(cache, messageMapper)
-        return messageStore.getMessages(selection, selectionArgs, sortOrder, mapper)
+        return messageStore.getMessages(selection, selectionArgs, sortOrder, mapper, limit)
     }
 
     /**
@@ -67,12 +68,13 @@ class DefaultMessageListRepository(
         selectionArgs: Array<String>,
         sortOrder: String,
         messageMapper: MessageMapper<T>,
+        limit: Int?,
     ): List<T> {
         val messageStore = messageStoreManager.getMessageStore(accountUuid)
         val cache = MessageListCache.getCache(accountUuid)
 
         val mapper = if (cache.isEmpty()) messageMapper else CacheAwareMessageMapper(cache, messageMapper)
-        return messageStore.getThreadedMessages(selection, selectionArgs, sortOrder, mapper)
+        return messageStore.getThreadedMessages(selection, selectionArgs, sortOrder, mapper, limit)
     }
 
     /**

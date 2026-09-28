@@ -8,6 +8,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.plus
+import kotlinx.coroutines.withContext
 import net.thunderbird.core.android.account.LegacyAccountManager
 
 class MessageListLiveData(
@@ -43,7 +44,30 @@ class MessageListLiveData(
         super.onActive()
 
         registerMessageListChangedListenerAsync()
-        loadMessageListAsync()
+
+        if (value == null) {
+            showNewestMessagesThenAll()
+        } else {
+            loadMessageListAsync()
+        }
+    }
+
+    /**
+     * Shows the newest messages before the whole list has loaded.
+     *
+     * A large list - a unified inbox holds thousands of messages - takes a second or more to read, and until then the
+     * screen is blank. The newest [FIRST_LOAD_LIMIT] take a fraction of that and fill the screen; the rest of the list
+     * follows below them. The short list is shown only if the whole one has not arrived first.
+     */
+    private fun showNewestMessagesThenAll() {
+        coroutineScope.launch(Dispatchers.Main) {
+            val newestMessages = withContext(Dispatchers.IO) {
+                messageListLoader.getMessageList(config, limit = FIRST_LOAD_LIMIT)
+            }
+            if (value == null) value = newestMessages
+
+            loadMessageListAsync()
+        }
     }
 
     override fun onInactive() {
@@ -63,3 +87,8 @@ class MessageListLiveData(
 }
 
 private const val PAUSE_BETWEEN_LOADS_MILLIS = 500L
+
+/**
+ * How many messages are shown before the rest of a list has loaded: a few screens' worth.
+ */
+private const val FIRST_LOAD_LIMIT = 100

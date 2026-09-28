@@ -21,6 +21,7 @@ import org.koin.core.context.startKoin
 import org.koin.core.context.stopKoin
 import org.koin.dsl.module
 import org.mockito.kotlin.any
+import org.mockito.kotlin.anyOrNull
 import org.mockito.kotlin.doAnswer
 import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.eq
@@ -120,17 +121,23 @@ class MessageListRepositoryTest {
             setValueForThreads(listOf(THREAD_ROOT), Flag.FLAGGED, false)
         }
 
-        val result = messageListRepository.getMessages(accountUuid, SELECTION, SELECTION_ARGS, SORT_ORDER) { message ->
-            MessageData(
-                messageId = message.id,
-                folderId = message.folderId,
-                threadRoot = message.threadRoot,
-                isRead = message.isRead,
-                isStarred = message.isStarred,
-                isAnswered = message.isAnswered,
-                isForwarded = message.isForwarded,
-            )
-        }
+        val result = messageListRepository.getMessages(
+            accountUuid,
+            SELECTION,
+            SELECTION_ARGS,
+            SORT_ORDER,
+            messageMapper = { message ->
+                MessageData(
+                    messageId = message.id,
+                    folderId = message.folderId,
+                    threadRoot = message.threadRoot,
+                    isRead = message.isRead,
+                    isStarred = message.isStarred,
+                    isAnswered = message.isAnswered,
+                    isForwarded = message.isForwarded,
+                )
+            },
+        )
 
         assertThat(result).containsExactly(
             MessageData(
@@ -153,9 +160,15 @@ class MessageListRepositoryTest {
         )
         hideMessage(MESSAGE_ID, FOLDER_ID)
 
-        val result = messageListRepository.getMessages(accountUuid, SELECTION, SELECTION_ARGS, SORT_ORDER) { message ->
-            message.id
-        }
+        val result = messageListRepository.getMessages(
+            accountUuid,
+            SELECTION,
+            SELECTION_ARGS,
+            SORT_ORDER,
+            messageMapper = { message ->
+                message.id
+            },
+        )
 
         assertThat(result).containsExactly(MESSAGE_ID_2)
     }
@@ -168,9 +181,15 @@ class MessageListRepositoryTest {
         )
         hideMessage(MESSAGE_ID, FOLDER_ID_2)
 
-        val result = messageListRepository.getMessages(accountUuid, SELECTION, SELECTION_ARGS, SORT_ORDER) { message ->
-            message.id
-        }
+        val result = messageListRepository.getMessages(
+            accountUuid,
+            SELECTION,
+            SELECTION_ARGS,
+            SORT_ORDER,
+            messageMapper = { message ->
+                message.id
+            },
+        )
 
         assertThat(result).containsExactly(MESSAGE_ID, MESSAGE_ID_2)
     }
@@ -198,17 +217,18 @@ class MessageListRepositoryTest {
             SELECTION,
             SELECTION_ARGS,
             SORT_ORDER,
-        ) { message ->
-            MessageData(
-                messageId = message.id,
-                folderId = message.folderId,
-                threadRoot = message.threadRoot,
-                isRead = message.isRead,
-                isStarred = message.isStarred,
-                isAnswered = message.isAnswered,
-                isForwarded = message.isForwarded,
-            )
-        }
+            messageMapper = { message ->
+                MessageData(
+                    messageId = message.id,
+                    folderId = message.folderId,
+                    threadRoot = message.threadRoot,
+                    isRead = message.isRead,
+                    isStarred = message.isStarred,
+                    isAnswered = message.isAnswered,
+                    isForwarded = message.isForwarded,
+                )
+            },
+        )
 
         assertThat(result).containsExactly(
             MessageData(
@@ -236,9 +256,10 @@ class MessageListRepositoryTest {
             SELECTION,
             SELECTION_ARGS,
             SORT_ORDER,
-        ) { message ->
-            message.id
-        }
+            messageMapper = { message ->
+                message.id
+            },
+        )
 
         assertThat(result).containsExactly(MESSAGE_ID_2)
     }
@@ -256,9 +277,10 @@ class MessageListRepositoryTest {
             SELECTION,
             SELECTION_ARGS,
             SORT_ORDER,
-        ) { message ->
-            message.id
-        }
+            messageMapper = { message ->
+                message.id
+            },
+        )
 
         assertThat(result).containsExactly(MESSAGE_ID, MESSAGE_ID_2)
     }
@@ -361,7 +383,7 @@ class MessageListRepositoryTest {
 
     private fun addMessages(vararg messages: MessageData) {
         messageStore.stub {
-            on { getMessages<Any>(eq(SELECTION), eq(SELECTION_ARGS), eq(SORT_ORDER), any()) } doAnswer {
+            on { getMessages<Any>(eq(SELECTION), eq(SELECTION_ARGS), eq(SORT_ORDER), any(), anyOrNull()) } doAnswer {
                 val mapper: MessageMapper<Any?> = it.getArgument(3)
 
                 runMessageMapper(messages, mapper)
@@ -371,7 +393,9 @@ class MessageListRepositoryTest {
 
     private fun addThreadedMessages(vararg messages: MessageData) {
         messageStore.stub {
-            on { getThreadedMessages<Any>(eq(SELECTION), eq(SELECTION_ARGS), eq(SORT_ORDER), any()) } doAnswer {
+            on {
+                getThreadedMessages<Any>(eq(SELECTION), eq(SELECTION_ARGS), eq(SORT_ORDER), any(), anyOrNull())
+            } doAnswer {
                 val mapper: MessageMapper<Any?> = it.getArgument(3)
 
                 runMessageMapper(messages, mapper)

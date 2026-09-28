@@ -162,8 +162,9 @@ class K9MessageStore(
         selectionArgs: Array<String>,
         sortOrder: String,
         messageMapper: MessageMapper<out T?>,
+        limit: Int?,
     ): List<T> {
-        return retrieveMessageListOperations.getMessages(selection, selectionArgs, sortOrder, messageMapper)
+        return retrieveMessageListOperations.getMessages(selection, selectionArgs, sortOrder, messageMapper, limit)
     }
 
     override fun <T> getThreadedMessages(
@@ -171,8 +172,15 @@ class K9MessageStore(
         selectionArgs: Array<String>,
         sortOrder: String,
         messageMapper: MessageMapper<out T?>,
+        limit: Int?,
     ): List<T> {
-        return retrieveMessageListOperations.getThreadedMessages(selection, selectionArgs, sortOrder, messageMapper)
+        return retrieveMessageListOperations.getThreadedMessages(
+            selection,
+            selectionArgs,
+            sortOrder,
+            messageMapper,
+            limit,
+        )
     }
 
     override fun <T> getThread(threadId: Long, sortOrder: String, messageMapper: MessageMapper<out T?>): List<T> {

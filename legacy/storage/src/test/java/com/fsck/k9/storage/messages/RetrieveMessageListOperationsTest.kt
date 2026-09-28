@@ -145,9 +145,8 @@ class RetrieveMessageListOperationsTest : RobolectricTest() {
             selection = "folder_id = ? AND read = 0",
             selectionArgs = arrayOf(folderId.toString()),
             sortOrder = "date DESC, id DESC",
-        ) { message ->
-            message.id
-        }
+            mapper = { message -> message.id },
+        )
 
         assertThat(result).containsExactly(messageId3, messageId1)
     }
@@ -495,6 +494,47 @@ class RetrieveMessageListOperationsTest : RobolectricTest() {
     }
 
     @Test
+    fun `getMessages() with a limit should return only the first messages in sort order`() {
+        // How a list is first shown: its newest messages, before the rest have been read.
+        val folderId = sqliteDatabase.createFolder()
+        val oldest = sqliteDatabase.createMessage(folderId, uid = "uid1", date = 100L)
+        val middle = sqliteDatabase.createMessage(folderId, uid = "uid2", date = 200L)
+        val newest = sqliteDatabase.createMessage(folderId, uid = "uid3", date = 300L)
+        listOf(oldest, middle, newest).forEach { sqliteDatabase.createThread(it) }
+
+        val result = retrieveMessageListOperations.getMessages(
+            selection = "folder_id = ?",
+            selectionArgs = arrayOf(folderId.toString()),
+            sortOrder = "date DESC, id DESC",
+            mapper = { message -> message.id },
+            limit = 2,
+        )
+
+        assertThat(result).containsExactly(newest, middle)
+    }
+
+    @Test
+    fun `getThreadedMessages() with a limit should return only the first threads in sort order`() {
+        val folderId = sqliteDatabase.createFolder()
+        val oldest = sqliteDatabase.createMessage(folderId, uid = "uid1", date = 100L)
+        val newest = sqliteDatabase.createMessage(folderId, uid = "uid2", date = 300L)
+        val reply = sqliteDatabase.createMessage(folderId, uid = "uid3", date = 200L)
+        sqliteDatabase.createThread(oldest)
+        val newestThread = sqliteDatabase.createThread(newest)
+        sqliteDatabase.createThread(reply, root = newestThread)
+
+        val result = retrieveMessageListOperations.getThreadedMessages(
+            selection = "folder_id = ?",
+            selectionArgs = arrayOf(folderId.toString()),
+            sortOrder = "date DESC, id DESC",
+            mapper = { message -> message.id },
+            limit = 1,
+        )
+
+        assertThat(result).containsExactly(newest)
+    }
+
+    @Test
     fun `getMessages() should select by message id when the column is qualified`() {
         // How the sent mail scanner reads what it has not counted yet. A bare "id" is ambiguous here, because the
         // query joins tables that have an id column of their own.
@@ -508,7 +548,8 @@ class RetrieveMessageListOperationsTest : RobolectricTest() {
             selection = "messages.folder_id = ? AND messages.id > ?",
             selectionArgs = arrayOf(folderId.toString(), olderMessageId.toString()),
             sortOrder = "id ASC",
-        ) { message -> message.id }
+            mapper = { message -> message.id },
+        )
 
         assertThat(result).containsExactly(newerMessageId)
     }

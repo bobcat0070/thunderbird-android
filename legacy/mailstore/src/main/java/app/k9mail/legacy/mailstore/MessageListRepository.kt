@@ -12,6 +12,7 @@ interface MessageListRepository {
         selectionArgs: Array<String>,
         sortOrder: String,
         messageMapper: MessageMapper<T>,
+        limit: Int? = null,
     ): List<T>
 
     fun <T> getThreadedMessages(
@@ -20,6 +21,7 @@ interface MessageListRepository {
         selectionArgs: Array<String>,
         sortOrder: String,
         messageMapper: MessageMapper<T>,
+        limit: Int? = null,
     ): List<T>
 
     fun <T> getThread(

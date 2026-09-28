@@ -185,6 +185,7 @@ interface MessageStore {
         selectionArgs: Array<String>,
         sortOrder: String,
         messageMapper: MessageMapper<out T?>,
+        limit: Int? = null,
     ): List<T>
 
     /**
@@ -195,6 +196,7 @@ interface MessageStore {
         selectionArgs: Array<String>,
         sortOrder: String,
         messageMapper: MessageMapper<out T?>,
+        limit: Int? = null,
     ): List<T>
 
     /**
