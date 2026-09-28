@@ -494,6 +494,25 @@ class RetrieveMessageListOperationsTest : RobolectricTest() {
         assertThat(result).containsExactly(messageId2, messageId3)
     }
 
+    @Test
+    fun `getMessages() should select by message id when the column is qualified`() {
+        // How the sent mail scanner reads what it has not counted yet. A bare "id" is ambiguous here, because the
+        // query joins tables that have an id column of their own.
+        val folderId = sqliteDatabase.createFolder()
+        val olderMessageId = sqliteDatabase.createMessage(folderId, uid = "uid1")
+        sqliteDatabase.createThread(olderMessageId)
+        val newerMessageId = sqliteDatabase.createMessage(folderId, uid = "uid2")
+        sqliteDatabase.createThread(newerMessageId)
+
+        val result = retrieveMessageListOperations.getMessages(
+            selection = "messages.folder_id = ? AND messages.id > ?",
+            selectionArgs = arrayOf(folderId.toString(), olderMessageId.toString()),
+            sortOrder = "id ASC",
+        ) { message -> message.id }
+
+        assertThat(result).containsExactly(newerMessageId)
+    }
+
     private fun <T> getMessagesFromFolder(folderId: Long, mapper: MessageMapper<T?>): List<T> {
         return retrieveMessageListOperations.getMessages(
             selection = "folder_id = ?",

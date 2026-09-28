@@ -98,7 +98,8 @@ class SentMailRecipientScanner(
 
         val sent = messageListRepository.getMessages(
             accountUuid = accountUuid,
-            selection = "folder_id = ? AND id > ?",
+            // Qualified: the message list query joins tables that have an id column of their own.
+            selection = "messages.folder_id = ? AND messages.id > ?",
             selectionArgs = arrayOf(folderId.toString(), lastScannedId.toString()),
             sortOrder = "id ASC",
             messageMapper = { message ->
