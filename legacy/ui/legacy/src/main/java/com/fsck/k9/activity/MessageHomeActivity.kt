@@ -817,11 +817,13 @@ open class MessageHomeActivity :
         search.addAllowedFolder(folderId)
 
         performSearch(search)
+        // Committed now rather than once the drawer has closed, so the list loads while it closes: waiting left the
+        // screen blank for as long as a large list took to load after the drawer was gone.
+        commitOpenFolderTransaction()
     }
 
     private fun openFolderImmediately(folderId: Long) {
         openFolder(account!!.uuid, folderId)
-        commitOpenFolderTransaction()
     }
 
     private fun commitOpenFolderTransaction() {
@@ -841,12 +843,16 @@ open class MessageHomeActivity :
             createUnifiedFolderSearch(kind)
         }
 
-        actionDisplaySearch(
-            this,
-            search,
-            false,
-            false,
-        )
+        // Switched in place, as a folder is, rather than by relaunching this activity: that tore down the list at
+        // once and left the screen blank until the new one had been built and loaded. Committed at once for the same
+        // reason as a folder, see openFolder().
+        if (displayMode == DisplayMode.SPLIT_VIEW) {
+            removeMessageViewContainerFragment()
+            showMessageViewPlaceHolder()
+        }
+
+        performSearch(search)
+        commitOpenFolderTransaction()
     }
 
     private fun launchManageFoldersScreen() {
