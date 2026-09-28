@@ -221,7 +221,13 @@ class DefaultSpecialFolderUpdater(
         }
 
         if (folderId != null) {
-            val partialUpdate = PartialUpdatableFolderDetails(folderId = folderId, visible = true)
+            val partialUpdate = PartialUpdatableFolderDetails(
+                folderId = folderId,
+                visible = true,
+                // Synchronized in the background so the sent mail that suggestions of who to write to are built
+                // from is actually on the device. Existing accounts got the same once, in a storage migration.
+                syncEnabled = if (type == FolderType.SENT) true else null,
+            )
             folderDetailsRepository.update(accountId, partialUpdate)
         }
 

@@ -84,6 +84,22 @@ class DefaultSpecialFolderUpdaterTest {
     }
 
     @Test
+    fun `updateSpecialFoldersSync should sync a newly chosen sent folder in the background`() = runTest {
+        // Arrange
+        val sentFolder = createRemoteFolder(id = 3, type = FolderType.SENT, serverId = "Sent")
+        val trashFolder = createRemoteFolder(id = 4, type = FolderType.TRASH, serverId = "Trash")
+        remoteFolderQueryRepository.remoteFolders = listOf(sentFolder, trashFolder)
+
+        // Act
+        subject.updateSpecialFoldersSync()
+
+        // Assert
+        val syncEnabledByFolder = folderDetailsRepository.partialUpdates.associate { it.folderId to it.syncEnabled }
+        assertThat(syncEnabledByFolder[3L]).isEqualTo(true)
+        assertThat(syncEnabledByFolder[4L]).isNull()
+    }
+
+    @Test
     fun `updateSpecialFolders should update all folders asynchronously`() = runTest {
         // Arrange
         val inboxFolder = createRemoteFolder(id = 1, type = FolderType.INBOX, serverId = "INBOX")
@@ -214,6 +230,8 @@ class DefaultSpecialFolderUpdaterTest {
     }
 
     private class FakeFolderDetailsRepository : FolderDetailsRepository {
+        val partialUpdates = mutableListOf<PartialUpdatableFolderDetails>()
+
         override suspend fun findById(accountId: AccountId, folderId: Long): Outcome<FolderDetails?, FolderError> =
             Outcome.success(null)
 
@@ -223,7 +241,10 @@ class DefaultSpecialFolderUpdaterTest {
         override suspend fun update(
             accountId: AccountId,
             partialUpdate: PartialUpdatableFolderDetails,
-        ): Outcome<Unit, FolderError> = Outcome.success(Unit)
+        ): Outcome<Unit, FolderError> {
+            partialUpdates += partialUpdate
+            return Outcome.success(Unit)
+        }
     }
 
     private class FakeLegacyAccountManager(
