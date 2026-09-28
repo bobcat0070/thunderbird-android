@@ -36,13 +36,19 @@ internal class MessageListWidget : GlanceAppWidget(), KoinComponent {
 
     companion object {
         private var lastMailList = emptyList<MessageListItem>()
-        private const val MESSAGE_COUNT = 100
 
         /**
-         * How many rows get a picture. The whole list reaches the home screen in one update, and Android refuses
-         * an update over about a megabyte, so pictures go only to the rows a person sees without scrolling.
+         * How many messages the widget lists. The whole list reaches the home screen in one update, and the launcher
+         * refuses one much over half a megabyte - and then stops taking updates for any widget at all. A row takes
+         * about 4 KB, so a hundred of them with pictures made an update of 548 KB, which was refused.
          */
-        private const val PICTURE_ROWS = 20
+        private const val MESSAGE_COUNT = 40
+
+        /**
+         * How many rows get a picture: the rows a person sees without scrolling. Each picture adds 16 KB to the
+         * update, see [MESSAGE_COUNT].
+         */
+        private const val PICTURE_ROWS = 8
 
         /**
          * The size pictures are scaled to before they are sent, well above the size they are drawn at but a
