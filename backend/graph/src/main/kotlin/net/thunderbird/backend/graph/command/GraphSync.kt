@@ -79,6 +79,11 @@ internal class GraphSync(
      */
     private val readLastActions: (folderServerId: String, messages: List<GraphMessage>) -> List<GraphMessage> =
         GraphLastActionReader(client, logger)::withLastActions,
+    /**
+     * Adds, once per folder, the replied and forwarded arrows of messages stored before they were read at all.
+     */
+    private val backfillLastActions: (String, BackendFolder, SyncConfig, SyncListener) -> Unit =
+        GraphLastActionBackfill(GraphLastActionReader(client, logger))::backfillIfDue,
 ) {
     private val deltaReader = GraphDeltaReader(client)
 
@@ -127,6 +132,14 @@ internal class GraphSync(
             )
 
             updateFlags(folderServerId, backendFolder, round.messages, syncConfig, listener)
+
+            // A full round has just read the last action of everything it holds. After an incremental one, the
+            // messages stored before any were read get theirs, once.
+            if (isIncremental) {
+                backfillLastActions(folderServerId, backendFolder, syncConfig, listener)
+            } else {
+                backendFolder.setFolderExtraString(FOLDER_EXTRA_LAST_ACTIONS_BACKFILLED, BACKFILL_DONE)
+            }
 
             if (syncConfig.syncRemoteDeletions) {
                 removeMessages(folderServerId, backendFolder, round.removedMessageServerIds, listener)

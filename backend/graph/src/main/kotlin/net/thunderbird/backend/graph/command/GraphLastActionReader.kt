@@ -1,5 +1,6 @@
 package net.thunderbird.backend.graph.command
 
+import java.util.Date
 import kotlinx.serialization.json.decodeFromJsonElement
 import net.thunderbird.backend.graph.api.GraphApiClient
 import net.thunderbird.backend.graph.api.GraphCollection
@@ -54,6 +55,25 @@ internal class GraphLastActionReader(
         }
     }
 
+    /**
+     * Reads the last actions of messages already stored, from a listing of the folder back to [since].
+     *
+     * @return the property of each message found, by message id, or `null` when it could not be read.
+     */
+    @Suppress("TooGenericExceptionCaught")
+    fun lastActionsOfStored(
+        folderServerId: String,
+        messageIds: Set<String>,
+        since: Date?,
+    ): Map<String, List<GraphExtendedProperty>>? {
+        return try {
+            listFolder(folderServerId, messageIds, since)
+        } catch (e: Exception) {
+            logger.warn(throwable = e) { "Could not read which stored messages were replied to or forwarded" }
+            null
+        }
+    }
+
     @Suppress("TooGenericExceptionCaught")
     private fun readLastActions(
         folderServerId: String,
@@ -63,7 +83,11 @@ internal class GraphLastActionReader(
             val lastActions = if (messages.size <= MAX_MESSAGES_LOOKED_UP_ONE_BY_ONE) {
                 lookUpEach(messages)
             } else {
-                listFolder(folderServerId, messages)
+                listFolder(
+                    folderServerId = folderServerId,
+                    wanted = messages.mapTo(HashSet()) { it.id },
+                    oldest = messages.mapNotNull { it.receivedDate() }.minOrNull(),
+                )
             }
             logger.debug {
                 val found = lastActions.values.count { it.isNotEmpty() }
@@ -91,11 +115,9 @@ internal class GraphLastActionReader(
 
     private fun listFolder(
         folderServerId: String,
-        messages: List<GraphMessage>,
+        wanted: Set<String>,
+        oldest: Date?,
     ): Map<String, List<GraphExtendedProperty>> {
-        val wanted = messages.mapTo(HashSet()) { it.id }
-        val oldest = messages.mapNotNull { it.receivedDate() }.minOrNull()
-
         var url: HttpUrl? = client.url("me/mailFolders/${pathSegment(folderServerId)}/messages") {
             addQueryParameter("\$select", "id")
             addQueryParameter("\$expand", MESSAGE_ENVELOPE_EXPAND)

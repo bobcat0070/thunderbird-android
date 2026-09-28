@@ -88,11 +88,13 @@ class GraphLastActionReaderTest {
 /**
  * Answers last action lookups, whether made message by message in a batch or by listing the folder, from [verbs].
  */
-private class FakeLastActionGraph : Dispatcher() {
+internal class FakeLastActionGraph : Dispatcher() {
     val verbs = mutableMapOf<String, Int>()
     var isRefusing = false
+    var requestCount = 0
 
     override fun dispatch(request: RecordedRequest): MockResponse {
+        requestCount++
         val isBatch = request.requestUrl?.encodedPath?.endsWith("/\$batch") == true
 
         return when {
