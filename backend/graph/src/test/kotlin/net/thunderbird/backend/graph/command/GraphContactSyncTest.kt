@@ -15,6 +15,8 @@ import okhttp3.OkHttpClient
 import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
 
+private const val CONTACT_FOLDER_ID = "contacts-folder-id"
+
 class GraphContactSyncTest {
     private val server = MockWebServer()
 
@@ -26,6 +28,7 @@ class GraphContactSyncTest {
     @Test
     fun `a first sync should read the whole address book and remember where it got to`() {
         val store = FakeContactStore()
+        enqueueDefaultFolder()
         server.enqueue(
             MockResponse().setBody(
                 """
@@ -56,6 +59,7 @@ class GraphContactSyncTest {
     @Test
     fun `a deleted contact should be reported as removed`() {
         val store = FakeContactStore()
+        enqueueDefaultFolder()
         server.enqueue(
             MockResponse().setBody(
                 """
@@ -74,6 +78,7 @@ class GraphContactSyncTest {
     @Test
     fun `several pages should be followed before the round ends`() {
         val store = FakeContactStore()
+        enqueueDefaultFolder()
         server.enqueue(
             MockResponse().setBody(
                 """
@@ -95,6 +100,36 @@ class GraphContactSyncTest {
 
         assertThat(store.changed.flatMap { it.addresses })
             .containsExactly("one@example.com", "two@example.com")
+    }
+
+    @Test
+    fun `a first sync should read the delta of the default contacts folder`() {
+        // Graph has no delta of /me/contacts; asking for one is refused with 400 Bad Request.
+        val store = FakeContactStore()
+        enqueueDefaultFolder()
+        server.enqueue(MockResponse().setBody("""{"value":[],"@odata.deltaLink":"${server.url("/v1.0/")}d?t=2"}"""))
+
+        createTestSubject(store).syncIfDue()
+
+        server.takeRequest() // default folder lookup
+        val deltaRequest = server.takeRequest()
+        assertThat(deltaRequest.requestUrl?.encodedPath)
+            .isEqualTo("/v1.0/me/contactFolders/$CONTACT_FOLDER_ID/contacts/delta")
+        // Delta takes no $top; the page size is asked for in a header.
+        assertThat(deltaRequest.requestUrl?.queryParameter("\$top")).isNull()
+        assertThat(deltaRequest.getHeader("Prefer")).isEqualTo("odata.maxpagesize=100")
+        assertThat(store.savedDeltaLink).isEqualTo("${server.url("/v1.0/")}d?t=2")
+    }
+
+    @Test
+    fun `an empty address book should be read no further`() {
+        val store = FakeContactStore()
+        server.enqueue(MockResponse().setBody("""{"value":[]}"""))
+
+        createTestSubject(store).syncIfDue()
+
+        assertThat(server.requestCount).isEqualTo(1)
+        assertThat(store.reported).isEmpty()
     }
 
     @Test
@@ -168,6 +203,13 @@ class GraphContactSyncTest {
         server.enqueue(MockResponse().setResponseCode(403))
 
         assertThat(createTestSubject(FakeContactStore()).searchDirectory("sam")).isEmpty()
+    }
+
+    /**
+     * What Graph answers when asked which folder the default contacts are in.
+     */
+    private fun enqueueDefaultFolder() {
+        server.enqueue(MockResponse().setBody("""{"value":[{"id":"1","parentFolderId":"$CONTACT_FOLDER_ID"}]}"""))
     }
 
     private fun createTestSubject(store: GraphContactStore) = GraphContactSync(

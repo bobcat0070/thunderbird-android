@@ -2,9 +2,15 @@ package net.thunderbird.backend.graph.api
 
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import okhttp3.HttpUrl
 
 private const val CONTACT_SELECT = "id,displayName,emailAddresses"
 private const val CONTACT_PAGE_SIZE = 100
+
+/**
+ * Page size for a contacts delta round. Delta takes no `$top`; the page size is asked for with this header.
+ */
+private val CONTACT_PAGE_HEADERS = mapOf("Prefer" to "odata.maxpagesize=$CONTACT_PAGE_SIZE")
 
 /**
  * How many pages one round of contact reading will walk.
@@ -64,23 +70,26 @@ internal class GraphContactReader(
     /**
      * Reads contacts, from scratch or from where the last round finished.
      *
+     * Delta is offered per contact folder only - there is no delta of `/me/contacts` - so a first round reads the
+     * default Contacts folder, the one `/me/contacts` lists.
+     *
      * @param deltaLink what the previous round returned, or `null` to read the whole address book.
      */
     fun readContacts(deltaLink: String?): GraphContactRound {
-        var url = if (deltaLink != null) {
-            client.absoluteUrl(deltaLink)
-        } else {
-            client.url("me/contacts/delta") {
-                addQueryParameter("\$select", CONTACT_SELECT)
-                addQueryParameter("\$top", CONTACT_PAGE_SIZE.toString())
-            }
-        }
+        // An address book with no contacts has nothing to read, and no folder to read it from yet.
+        val url = startUrl(deltaLink) ?: return GraphContactRound(emptyList(), deltaLink = null)
 
+        return readRound(url)
+    }
+
+    private fun readRound(startUrl: HttpUrl): GraphContactRound {
+        var url = startUrl
         val contacts = mutableListOf<GraphContact>()
         var page = 0
 
         while (page < MAX_CONTACT_PAGES) {
-            val collection = client.json.decodeFromString<GraphCollection<GraphContactDto>>(client.getString(url))
+            val body = client.getString(url, CONTACT_PAGE_HEADERS)
+            val collection = client.json.decodeFromString<GraphCollection<GraphContactDto>>(body)
             contacts += collection.value.map { it.toContact() }
 
             val nextLink = collection.nextLink
@@ -95,6 +104,32 @@ internal class GraphContactReader(
         // Out of pages rather than out of contacts: no delta link is returned, so the next round starts again
         // from where this one began rather than believing it has seen everything.
         return GraphContactRound(contacts, deltaLink = null)
+    }
+
+    private fun startUrl(deltaLink: String?): HttpUrl? {
+        if (deltaLink != null) return client.absoluteUrl(deltaLink)
+
+        return defaultContactFolderId()?.let { folderId ->
+            client.url("me/contactFolders/${pathSegment(folderId)}/contacts/delta") {
+                addQueryParameter("\$select", CONTACT_SELECT)
+            }
+        }
+    }
+
+    /**
+     * Finds the default Contacts folder by asking one of its contacts where it lives, since Graph gives that folder
+     * no name to ask for it by.
+     */
+    private fun defaultContactFolderId(): String? {
+        val url = client.url("me/contacts") {
+            addQueryParameter("\$select", "parentFolderId")
+            addQueryParameter("\$top", "1")
+        }
+
+        return client.json.decodeFromString<GraphCollection<GraphContactDto>>(client.getString(url))
+            .value
+            .firstOrNull()
+            ?.parentFolderId
     }
 
     /**
@@ -128,6 +163,7 @@ internal class GraphContactReader(
 @Serializable
 internal data class GraphContactDto(
     val id: String = "",
+    val parentFolderId: String? = null,
     val displayName: String? = null,
     val emailAddresses: List<GraphEmailAddressDto> = emptyList(),
     @SerialName("@removed") val removed: GraphRemovedDto? = null,
