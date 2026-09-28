@@ -47,6 +47,8 @@ internal class MessageListItemMapper(
             subject = message.subject.orEmpty(),
             preview = previewText,
             isRead = message.isRead,
+            isAnswered = message.isAnswered,
+            isForwarded = message.isForwarded,
             hasAttachments = message.hasAttachments,
             threadCount = message.threadCount,
             threadRoot = message.threadRoot,

@@ -74,6 +74,8 @@ private fun generateMessageListItem(
         subject = subject,
         preview = preview,
         isRead = isRead,
+        isAnswered = false,
+        isForwarded = false,
         hasAttachments = false,
         threadCount = 0,
         threadRoot = 0,

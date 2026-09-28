@@ -115,6 +115,14 @@ internal class MessageListRemoteViewFactory(private val context: Context) : Remo
             remoteView.setInt(R.id.attachment, "setVisibility", View.GONE)
         }
 
+        val lastActionIcon = item.lastActionIcon()
+        if (lastActionIcon != null) {
+            remoteView.setImageViewResource(R.id.last_action, lastActionIcon)
+            remoteView.setInt(R.id.last_action, "setVisibility", View.VISIBLE)
+        } else {
+            remoteView.setInt(R.id.last_action, "setVisibility", View.GONE)
+        }
+
         // A conversation opens as it does in the app: all of its messages, not just the newest.
         val intent = MessageHomeActivity.actionDisplayMessageTemplateFillIntent(
             messageReference = item.messageReference,

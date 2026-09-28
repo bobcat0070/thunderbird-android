@@ -116,6 +116,8 @@ class WidgetCategoryFilterTest {
         subject = "Subject $uniqueId",
         preview = "",
         isRead = false,
+        isAnswered = false,
+        isForwarded = false,
         hasAttachments = false,
         threadCount = 0,
         threadRoot = 0,

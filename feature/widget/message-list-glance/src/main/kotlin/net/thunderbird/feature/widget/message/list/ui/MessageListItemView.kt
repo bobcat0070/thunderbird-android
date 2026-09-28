@@ -6,6 +6,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.app.PendingIntentCompat
+import androidx.glance.ColorFilter
 import androidx.glance.GlanceModifier
 import androidx.glance.GlanceTheme
 import androidx.glance.Image
@@ -33,6 +34,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import net.thunderbird.feature.widget.message.list.MessageListItem
+import net.thunderbird.feature.widget.message.list.lastActionIcon
 
 @Suppress("LongMethod")
 @Composable
@@ -69,7 +71,20 @@ internal fun MessageListItemView(item: MessageListItem) {
         }
         Column(GlanceModifier.Companion.fillMaxWidth().padding(vertical = 4.dp, horizontal = 4.dp)) {
             Row(GlanceModifier.Companion.fillMaxWidth()) {
-                Row(GlanceModifier.Companion.defaultWeight(), horizontalAlignment = Alignment.Companion.Start) {
+                Row(
+                    GlanceModifier.Companion.defaultWeight(),
+                    horizontalAlignment = Alignment.Companion.Start,
+                    verticalAlignment = Alignment.Companion.CenterVertically,
+                ) {
+                    // Replied to, forwarded or both, as in the message list.
+                    item.lastActionIcon()?.let { icon ->
+                        Image(
+                            provider = ImageProvider(icon),
+                            contentDescription = null,
+                            modifier = GlanceModifier.Companion.size(16.dp).padding(end = 4.dp),
+                            colorFilter = ColorFilter.tint(GlanceTheme.colors.primary),
+                        )
+                    }
                     Text(
                         item.subject,
                         style = TextStyle(color = GlanceTheme.colors.primary, fontSize = 16.sp),

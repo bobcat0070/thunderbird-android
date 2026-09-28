@@ -75,6 +75,20 @@
             tools:text="3"
             />
 
+        <!-- Replied to, forwarded or both, as in the message list. Decorative, like the attachment icon. -->
+        <ImageView
+            android:id="@+id/last_action"
+            android:layout_width="16dp"
+            android:layout_height="16dp"
+            android:layout_alignBottom="@+id/mail_date"
+            android:layout_marginStart="4dp"
+            android:layout_toStartOf="@id/thread_count"
+            android:importantForAccessibility="no"
+            android:visibility="gone"
+            tools:src="@drawable/ic_reply"
+            tools:visibility="visible"
+            />
+
         <TextView
             android:id="@+id/sender"
             android:layout_width="wrap_content"
@@ -82,7 +96,7 @@
             android:layout_alignParentStart="true"
             android:layout_alignParentTop="true"
             android:layout_gravity="start"
-            android:layout_toStartOf="@id/thread_count"
+            android:layout_toStartOf="@id/last_action"
             android:ellipsize="end"
             android:maxLines="1"
             android:textSize="14sp"

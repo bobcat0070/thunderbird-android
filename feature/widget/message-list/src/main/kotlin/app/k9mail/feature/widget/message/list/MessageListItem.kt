@@ -1,5 +1,7 @@
 package app.k9mail.feature.widget.message.list
 
+import androidx.annotation.DrawableRes
+import app.k9mail.core.ui.legacy.designsystem.atom.icon.Icons
 import app.k9mail.legacy.message.controller.MessageReference
 import com.fsck.k9.mail.Address
 import net.thunderbird.feature.mail.message.classification.api.MessageClass
@@ -12,6 +14,8 @@ internal data class MessageListItem(
     val subject: String,
     val preview: String,
     val isRead: Boolean,
+    val isAnswered: Boolean,
+    val isForwarded: Boolean,
     val hasAttachments: Boolean,
     val threadCount: Int,
     /**
@@ -29,3 +33,15 @@ internal data class MessageListItem(
     val sortIsStarred: Boolean,
     val sortDatabaseId: Long,
 )
+
+/**
+ * The arrow the message list shows for what was done with a message - replied to, forwarded, or both - or `null`
+ * for neither.
+ */
+@DrawableRes
+internal fun MessageListItem.lastActionIcon(): Int? = when {
+    isAnswered && isForwarded -> Icons.Outlined.CompareArrows
+    isAnswered -> Icons.Outlined.Reply
+    isForwarded -> Icons.Outlined.Forward
+    else -> null
+}
