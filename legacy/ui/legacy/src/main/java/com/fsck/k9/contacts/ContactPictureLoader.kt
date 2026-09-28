@@ -162,11 +162,20 @@ class ContactPictureLoader(
         )
     }
 
-    private fun <T> FutureTarget<T>.getOrNull(): T? {
+    /**
+     * The loaded picture as a bitmap of the caller's own.
+     *
+     * The bitmap Glide hands back stays Glide's: once the request is let go, it goes back to Glide's pool and the
+     * next picture is drawn into it. A widget or a notification keeps the bitmap well past that, so every widget
+     * row came to show the picture of the row loaded after it. A copy is taken and the request released at once.
+     */
+    private fun FutureTarget<Bitmap>.getOrNull(): Bitmap? {
         return try {
-            get()
+            get().let { bitmap -> bitmap.copy(bitmap.config ?: Bitmap.Config.ARGB_8888, false) }
         } catch (e: Exception) {
             null
+        } finally {
+            Glide.with(context).clear(this)
         }
     }
 
