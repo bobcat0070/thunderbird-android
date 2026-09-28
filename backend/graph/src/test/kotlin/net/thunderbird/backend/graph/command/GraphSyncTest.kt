@@ -270,7 +270,8 @@ class GraphSyncTest {
     }
 
     @Test
-    fun `the delta round should ask for the last action on each message`() {
+    fun `the delta round should not expand extended properties`() {
+        // Microsoft 365 answers a delta request that expands them with 400 Bad Request, and no mail arrives at all.
         createFolder()
         enqueueWindowProbe()
         server.enqueue(
@@ -285,8 +286,7 @@ class GraphSyncTest {
         createTestSubject().sync(FOLDER_ID, syncConfig(), listener)
 
         server.takeRequest() // window probe
-        assertThat(server.takeRequest().requestUrl?.queryParameter("\$expand"))
-            .isEqualTo("singleValueExtendedProperties(\$filter=id eq 'Integer 0x1081')")
+        assertThat(server.takeRequest().requestUrl?.queryParameter("\$expand")).isNull()
     }
 
     @Test

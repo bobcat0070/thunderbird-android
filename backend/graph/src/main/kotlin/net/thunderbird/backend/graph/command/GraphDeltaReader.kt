@@ -94,9 +94,10 @@ internal class GraphDeltaReader(
         // The later of the two bounds satisfies both the configured sync window and the visible message count.
         val windowStart = listOfNotNull(earliestPollDate, findWindowStart(folderServerId, visibleLimit)).maxOrNull()
 
+        // No $expand: Microsoft 365 answers a delta request that expands extended properties with 400 Bad Request,
+        // documentation notwithstanding - so replying or forwarding in Outlook is not picked up by delta sync.
         val url = client.url("me/mailFolders/${pathSegment(folderServerId)}/messages/delta") {
             addQueryParameter("\$select", MESSAGE_ENVELOPE_SELECT)
-            addQueryParameter("\$expand", MESSAGE_ENVELOPE_EXPAND)
             addQueryParameter("\$orderby", "receivedDateTime desc")
 
             if (windowStart != null) {
