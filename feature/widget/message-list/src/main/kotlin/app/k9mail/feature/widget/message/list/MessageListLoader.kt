@@ -42,6 +42,7 @@ internal class MessageListLoader(
             }
             .filterByCategory(generalSettingsManager.getConfig().widget)
             .sortedWith(config)
+            .take(MESSAGE_COUNT)
 
         return messageListItems
     }
@@ -137,6 +138,16 @@ internal class MessageListLoader(
         }.thenByDescending { it.sortDatabaseId }
 
         return this.sortedWith(comparator)
+    }
+
+    private companion object {
+        /**
+         * How many messages the widget lists. Recent Android versions no longer fetch the rows one at a time as the
+         * widget scrolls: all of them go to the home screen in one update, and the launcher refuses one much over
+         * half a megabyte - and then stops taking updates for any widget at all. The whole Unified Inbox, a few
+         * hundred messages on a test device, already made an update of 575 KB.
+         */
+        const val MESSAGE_COUNT = 100
     }
 }
 
