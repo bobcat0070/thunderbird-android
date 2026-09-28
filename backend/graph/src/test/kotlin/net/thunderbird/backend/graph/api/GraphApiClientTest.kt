@@ -2,9 +2,11 @@ package net.thunderbird.backend.graph.api
 
 import assertk.assertThat
 import assertk.assertions.isEqualTo
+import assertk.assertions.isFalse
 import assertk.assertions.isInstanceOf
 import assertk.assertions.isTrue
 import com.fsck.k9.mail.AuthenticationFailedException
+import java.util.concurrent.TimeUnit
 import kotlin.test.AfterTest
 import kotlin.test.Test
 import kotlin.test.assertFailsWith
@@ -180,14 +182,42 @@ class GraphApiClientTest {
         assertThat(testSubject.absoluteUrl(link).toString()).isEqualTo(link)
     }
 
+    @Test
+    fun `a response that keeps trickling in should be given up on as a temporary failure`() {
+        // Each byte arrives well inside the read timeout, so only a limit on the whole request ends it.
+        val testSubject = createTestSubject(callTimeoutMillis = 500)
+        server.enqueue(MockResponse().setBody("""{"value":[]}""").throttleBody(1, 200, TimeUnit.MILLISECONDS))
+
+        val exception = assertFailsWith<MessagingException> {
+            testSubject.getString(testSubject.url("me/mailFolders/inbox/messages/delta"))
+        }
+
+        assertThat(exception.isPermanentFailure).isFalse()
+    }
+
+    @Test
+    fun `a slow message download should not be cut off by the time limit`() {
+        // A message with large attachments on a slow connection can rightly take a while.
+        val testSubject = createTestSubject(callTimeoutMillis = 300)
+        server.enqueue(MockResponse().setBody("From: a@example.com").throttleBody(4, 100, TimeUnit.MILLISECONDS))
+
+        val content = testSubject.getStream(testSubject.url("me/messages/m1/\$value")) {
+            it.readBytes().decodeToString()
+        }
+
+        assertThat(content).isEqualTo("From: a@example.com")
+    }
+
     private fun createTestSubject(
         tokenProvider: FakeOAuth2TokenProvider = FakeOAuth2TokenProvider(),
+        callTimeoutMillis: Long = 120_000,
     ): GraphApiClient {
         return GraphApiClient(
             okHttpClient = OkHttpClient(),
             tokenProvider = tokenProvider,
             baseUrl = server.url("/v1.0/").toString(),
             sleeper = { sleeps += it },
+            callTimeoutMillis = callTimeoutMillis,
         )
     }
 }

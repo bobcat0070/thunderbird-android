@@ -4,6 +4,7 @@ import com.fsck.k9.mail.AuthenticationFailedException
 import com.fsck.k9.mail.oauth.OAuth2TokenProvider
 import java.io.IOException
 import java.io.InputStream
+import java.util.concurrent.TimeUnit
 import kotlinx.serialization.json.Json
 import net.thunderbird.core.common.exception.MessagingException
 import okhttp3.HttpUrl
@@ -24,6 +25,15 @@ private val JSON_MEDIA_TYPE = "application/json".toMediaType()
  * Graph expects the MIME content to be base64 encoded and the request to be declared as text/plain.
  */
 private val MIME_MEDIA_TYPE = "text/plain".toMediaType()
+
+/**
+ * The longest a request may take from start to its last byte.
+ *
+ * The read timeout alone does not bound a request: a response that keeps trickling in a few bytes at a time never
+ * trips it. One page of mail was seen taking four minutes that way, and because every account's sync waits its turn
+ * behind the one running, nothing else synced meanwhile. A page normally takes about a second.
+ */
+private const val DEFAULT_CALL_TIMEOUT_MILLIS = 120_000L
 
 private const val MAX_AUTH_RETRIES = 1
 internal const val MAX_THROTTLE_RETRIES = 3
@@ -71,6 +81,7 @@ internal class GraphApiClient(
     private val tokenProvider: OAuth2TokenProvider,
     baseUrl: String = GRAPH_BASE_URL,
     private val sleeper: (Long) -> Unit = { Thread.sleep(it) },
+    private val callTimeoutMillis: Long = DEFAULT_CALL_TIMEOUT_MILLIS,
 ) {
     private val baseHttpUrl: HttpUrl = baseUrl.toHttpUrl()
 
@@ -126,10 +137,12 @@ internal class GraphApiClient(
     /**
      * Streams a response body, e.g. the raw MIME content of a message.
      *
-     * The [block] is invoked with the body stream, which is closed when it returns.
+     * The [block] is invoked with the body stream, which is closed when it returns. There is no limit on how long
+     * that takes, since a message with large attachments on a slow connection can rightly take a while; the read
+     * timeout still ends a download that has stopped.
      */
     fun <T> getStream(url: HttpUrl, block: (InputStream) -> T): T {
-        return execute(Request.Builder().url(url).get().build()) { response ->
+        return execute(Request.Builder().url(url).get().build(), hasTimeLimit = false) { response ->
             response.body.byteStream().use(block)
         }
     }
@@ -218,9 +231,11 @@ internal class GraphApiClient(
 
     /**
      * Executes [request] with authentication, token refresh and throttling retries applied.
+     *
+     * @param hasTimeLimit whether the request, response body included, must finish within the call timeout.
      */
     @Suppress("ThrowsCount")
-    private fun <T> execute(request: Request, handler: (Response) -> T): T {
+    private fun <T> execute(request: Request, hasTimeLimit: Boolean = true, handler: (Response) -> T): T {
         var authRetries = 0
         var throttleRetries = 0
 
@@ -231,8 +246,11 @@ internal class GraphApiClient(
                 .header("Accept", "application/json")
                 .build()
 
+            val call = okHttpClient.newCall(authorizedRequest)
+            if (hasTimeLimit) call.timeout().timeout(callTimeoutMillis, TimeUnit.MILLISECONDS)
+
             val response = try {
-                okHttpClient.newCall(authorizedRequest).execute()
+                call.execute()
             } catch (e: IOException) {
                 throw networkFailure(e)
             }
