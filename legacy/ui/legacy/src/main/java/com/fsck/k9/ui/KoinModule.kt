@@ -35,7 +35,7 @@ val uiModule = module {
         )
     }
     single<MessagingControllerMailChecker> { get<MessagingController>() }
-    viewModel { AboutViewModel(appVersionProvider = get()) }
+    viewModel { AboutViewModel(appVersionProvider = get(), buildCommit = get(named("BuildCommit"))) }
     factory(named("MessageView")) { get<DisplayHtmlUiFactory>().createForMessageView() }
     factory { (context: Context) -> SizeFormatter(context.resources) }
     factory { ShareIntentBuilder(resourceProvider = get(), textPartFinder = get(), quoteDateFormatter = get()) }

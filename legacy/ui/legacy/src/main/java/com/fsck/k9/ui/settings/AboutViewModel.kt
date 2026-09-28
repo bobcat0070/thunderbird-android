@@ -7,11 +7,16 @@ import kotlinx.collections.immutable.persistentListOf
 import net.thunderbird.core.common.provider.AppVersionProvider
 import net.thunderbird.core.ui.contract.mvi.BaseViewModel
 
+/**
+ * @param buildCommit the commit the app was built from, shown after the version so one build can be told apart
+ *   from another with the same version number.
+ */
 internal class AboutViewModel(
     appVersionProvider: AppVersionProvider,
+    buildCommit: String,
 ) : BaseViewModel<State, Event, Effect>(
     initialState = State(
-        version = appVersionProvider.getVersionNumber(),
+        version = "${appVersionProvider.getVersionNumber()} ($buildCommit)",
         libraries = USED_LIBRARIES,
     ),
 ) {

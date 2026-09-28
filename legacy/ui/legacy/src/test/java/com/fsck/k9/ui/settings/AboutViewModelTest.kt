@@ -22,6 +22,7 @@ class AboutViewModelTest {
             appVersionProvider = mock<AppVersionProvider> {
                 on { getVersionNumber() } doReturn "9.9.9"
             },
+            buildCommit = "07a2d81",
         )
     }
 
@@ -30,6 +31,11 @@ class AboutViewModelTest {
         val state = viewModel.state.value
         assertThat(state.version, "9.9.9")
         assertThat(state.libraries.isNotEmpty()).isEqualTo(true)
+    }
+
+    @Test
+    fun `version should name the commit the app was built from`() {
+        assertThat(viewModel.state.value.version).isEqualTo("9.9.9 (07a2d81)")
     }
 
     @Test

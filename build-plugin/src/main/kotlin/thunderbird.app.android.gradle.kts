@@ -5,6 +5,17 @@ plugins {
     id("net.thunderbird.gradle.plugin.quality.spotless")
 }
 
+/**
+ * The commit the app is built from, shown beside the version in About so a build can be told apart from the one
+ * before it. "unknown" when the sources are not a git checkout.
+ */
+val buildCommit: String = runCatching {
+    providers.exec {
+        commandLine("git", "rev-parse", "--short", "HEAD")
+        isIgnoreExitValue = true
+    }.standardOutput.asText.get().trim()
+}.getOrNull()?.takeIf { it.isNotEmpty() } ?: "unknown"
+
 android {
     compileSdk = ThunderbirdProjectConfig.Android.sdkCompile
 
@@ -14,6 +25,8 @@ android {
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables.useSupportLibrary = true
+
+        buildConfigField("String", "BUILD_COMMIT", "\"$buildCommit\"")
     }
 
     buildFeatures {

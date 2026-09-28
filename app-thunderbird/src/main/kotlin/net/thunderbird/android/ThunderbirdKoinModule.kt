@@ -27,6 +27,7 @@ val appModule = module {
 
     single(named("ClientInfoAppName")) { BuildConfig.CLIENT_INFO_APP_NAME }
     single(named("ClientInfoAppVersion")) { BuildConfig.VERSION_NAME }
+    single(named("BuildCommit")) { BuildConfig.BUILD_COMMIT }
     single<AppConfig> { appConfig }
     single<OAuthConfigurationFactory> { TbOAuthConfigurationFactory() }
 
