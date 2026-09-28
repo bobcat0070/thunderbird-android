@@ -74,6 +74,11 @@ internal class GraphSync(
     private val backendStorage: BackendStorage,
     private val client: GraphApiClient,
     private val logger: Logger,
+    /**
+     * Adds what was last done with each message - replied to or forwarded - which a delta round cannot return.
+     */
+    private val readLastActions: (folderServerId: String, messages: List<GraphMessage>) -> List<GraphMessage> =
+        GraphLastActionReader(client, logger)::withLastActions,
 ) {
     private val deltaReader = GraphDeltaReader(client)
 
@@ -100,7 +105,9 @@ internal class GraphSync(
             val canResume = visibleLimit <= syncedLimit && !isFormatUpgrade
             val storedDeltaLink = backendFolder.getFolderExtraString(FOLDER_EXTRA_DELTA_LINK)?.takeIf { canResume }
             val isIncremental = storedDeltaLink != null
-            val round = runRound(folderServerId, storedDeltaLink, syncConfig, visibleLimit)
+            val round = runRound(folderServerId, storedDeltaLink, syncConfig, visibleLimit).let {
+                it.copy(messages = readLastActions(folderServerId, it.messages))
+            }
 
             listener.syncAuthenticationSuccess()
 

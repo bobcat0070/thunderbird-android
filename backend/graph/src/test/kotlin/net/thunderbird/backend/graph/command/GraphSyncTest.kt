@@ -663,6 +663,8 @@ class GraphSyncTest {
                 sleeper = { },
             ),
             logger = TestLogger(),
+            // Covered by GraphLastActionReaderTest; here the round's messages carry whatever the test put in them.
+            readLastActions = { _, messages -> messages },
         )
     }
 
