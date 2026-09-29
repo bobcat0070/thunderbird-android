@@ -1,11 +1,32 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- To grant the home screen, which holds the widget, access to the widget's sender pictures. -->
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.HOME" />
+        </intent>
+    </queries>
+
     <application>
 
         <service
             android:name=".MessageListWidgetService"
             android:permission="android.permission.BIND_REMOTEVIEWS"
             />
+
+        <provider
+            android:name=".WidgetPictureFileProvider"
+            android:authorities="${applicationId}.widget.pictures"
+            android:exported="false"
+            android:grantUriPermissions="true"
+            >
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/message_list_widget_picture_paths"
+                />
+        </provider>
 
     </application>
 </manifest>

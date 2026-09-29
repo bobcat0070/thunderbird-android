@@ -24,6 +24,7 @@ internal class MessageListRemoteViewFactory(private val context: Context) : Remo
     private val coreResourceProvider: CoreResourceProvider by inject()
     private val generalSettingsManager: GeneralSettingsManager by inject()
     private val contactPictureLoader: ContactPictureLoader by inject()
+    private val pictureStore by lazy { WidgetPictureStore(context) }
 
     private lateinit var unifiedInboxFolders: LocalMessageSearch
 
@@ -49,6 +50,8 @@ internal class MessageListRemoteViewFactory(private val context: Context) : Remo
     }
 
     private fun loadMessageList() {
+        pictureStore.removeUnusedPictures()
+
         // Read on every refresh rather than once, so turning pictures on or off in the app reaches the widget.
         showContactPictures = generalSettingsManager.getConfig()
             .display
@@ -154,7 +157,8 @@ internal class MessageListRemoteViewFactory(private val context: Context) : Remo
         }
 
         if (picture != null) {
-            remoteView.setImageViewBitmap(R.id.contact_picture, picture)
+            // A link rather than the bitmap itself, see WidgetPictureStore.
+            remoteView.setImageViewUri(R.id.contact_picture, pictureStore.getPictureUri(picture))
             remoteView.setInt(R.id.contact_picture, "setVisibility", View.VISIBLE)
         } else {
             remoteView.setInt(R.id.contact_picture, "setVisibility", View.GONE)
