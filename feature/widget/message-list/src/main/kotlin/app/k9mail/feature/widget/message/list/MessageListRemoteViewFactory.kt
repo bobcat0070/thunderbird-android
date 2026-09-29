@@ -118,6 +118,8 @@ internal class MessageListRemoteViewFactory(private val context: Context) : Remo
         val lastActionIcon = item.lastActionIcon()
         if (lastActionIcon != null) {
             remoteView.setImageViewResource(R.id.last_action, lastActionIcon)
+            // In the row's text color: the icon's own tint is a faint grey on the widget's light background.
+            remoteView.setInt(R.id.last_action, "setColorFilter", textColor)
             remoteView.setInt(R.id.last_action, "setVisibility", View.VISIBLE)
         } else {
             remoteView.setInt(R.id.last_action, "setVisibility", View.GONE)

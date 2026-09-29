@@ -78,8 +78,8 @@
         <!-- Replied to, forwarded or both, as in the message list. Decorative, like the attachment icon. -->
         <ImageView
             android:id="@+id/last_action"
-            android:layout_width="16dp"
-            android:layout_height="16dp"
+            android:layout_width="18dp"
+            android:layout_height="18dp"
             android:layout_alignBottom="@+id/mail_date"
             android:layout_marginStart="4dp"
             android:layout_toStartOf="@id/thread_count"
