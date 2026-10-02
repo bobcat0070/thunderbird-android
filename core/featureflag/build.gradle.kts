@@ -45,6 +45,7 @@ kotlin {
         commonTest.dependencies {
             implementation(projects.core.configstore.testing)
             implementation(projects.core.logging.testing)
+            implementation(libs.ktor.client.mock)
         }
         androidHostTest.dependencies {
             implementation(libs.robolectric)
