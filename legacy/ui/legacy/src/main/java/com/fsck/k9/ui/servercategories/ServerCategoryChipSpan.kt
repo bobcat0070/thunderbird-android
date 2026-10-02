@@ -28,6 +28,17 @@ class ServerCategoryChipSpan(
         end: Int,
         fontMetrics: Paint.FontMetricsInt?,
     ): Int {
+        // A line takes its height from the text on it, and a replacement span counts as none unless it says how
+        // tall it is. Without this, a line holding nothing but labels has no height at all.
+        if (fontMetrics != null) {
+            val textMetrics = paint.fontMetricsInt
+            fontMetrics.top = textMetrics.top
+            fontMetrics.ascent = textMetrics.ascent
+            fontMetrics.descent = textMetrics.descent
+            fontMetrics.bottom = textMetrics.bottom
+            fontMetrics.leading = textMetrics.leading
+        }
+
         return (labelWidth(paint, text, start, end) + END_MARGIN_DP * density).roundToInt()
     }
 
