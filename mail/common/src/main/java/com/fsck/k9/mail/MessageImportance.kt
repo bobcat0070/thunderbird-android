@@ -30,16 +30,19 @@ enum class MessageImportance {
          *   description such as `1 (Highest)`.
          */
         fun fromHeaders(importance: String?, priority: String?): MessageImportance {
-            when (importance?.trim()?.lowercase()) {
-                IMPORTANCE_HIGH -> return HIGH
-                IMPORTANCE_LOW -> return LOW
-                null, "" -> Unit
-                else -> return NORMAL
+            return when (importance?.trim()?.lowercase()) {
+                IMPORTANCE_HIGH -> HIGH
+                IMPORTANCE_LOW -> LOW
+                null, "" -> fromPriority(priority)
+                else -> NORMAL
             }
+        }
 
-            val priorityLevel = priority?.trim()?.firstOrNull()?.digitToIntOrNull() ?: return NORMAL
+        private fun fromPriority(priority: String?): MessageImportance {
+            val priorityLevel = priority?.trim()?.firstOrNull()?.digitToIntOrNull()
 
             return when {
+                priorityLevel == null -> NORMAL
                 priorityLevel < PRIORITY_NORMAL -> HIGH
                 priorityLevel > PRIORITY_NORMAL -> LOW
                 else -> NORMAL

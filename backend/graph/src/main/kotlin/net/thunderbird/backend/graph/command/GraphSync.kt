@@ -54,8 +54,8 @@ internal const val FOLDER_EXTRA_SYNC_FORMAT = "graphSyncFormat"
  * classification rules, and version 6 stores envelopes as headers-only so that opening one downloads the
  * body instead of offering a button, version 7 the sender's authentication result, version 8 a
  * revision of the classification rules, version 9 refills windows that earlier versions cut short at
- * Graph's page-size and delta-round limits, version 10 reads which messages were replied to or forwarded, and version 11 the importance and the Outlook
- * categories of a message.
+ * Graph's page-size and delta-round limits, version 10 reads which messages were replied to or forwarded, and
+ * version 11 the importance and the Outlook categories of a message.
  *
  * A change to the classification rules also needs a bump: the headers a verdict was derived from are not
  * kept, so the only way to re-classify stored mail is to fetch its envelope again and re-save it.
@@ -352,21 +352,21 @@ internal class GraphSync(
         listener: SyncListener,
     ) {
         for (graphMessage in messages) {
-            val categories = graphMessage.serverCategories() ?: continue
+            val categories = graphMessage.serverCategories()
             val wasStored = graphMessage.id in storedMessageServerIds
 
-            if (!wasStored) {
-                if (categories.isNotEmpty() && backendFolder.isMessagePresent(graphMessage.id)) {
+            // A message this round added has no categories stored yet, so one without any needs nothing done.
+            if (categories == null || (!wasStored && categories.isEmpty())) continue
+
+            if (backendFolder.isMessagePresent(graphMessage.id)) {
+                val storedCategories =
+                    if (wasStored) backendFolder.getMessageServerCategories(graphMessage.id) else emptyList()
+
+                if (storedCategories != categories) {
                     backendFolder.setMessageServerCategories(graphMessage.id, categories)
+                    if (wasStored) listener.syncFlagChanged(folderServerId, graphMessage.id)
                 }
-                continue
             }
-
-            if (!backendFolder.isMessagePresent(graphMessage.id)) continue
-            if (backendFolder.getMessageServerCategories(graphMessage.id) == categories) continue
-
-            backendFolder.setMessageServerCategories(graphMessage.id, categories)
-            listener.syncFlagChanged(folderServerId, graphMessage.id)
         }
     }
 

@@ -15,16 +15,23 @@ object ServerCategoryColor {
     private const val LIGHTNESS = 0.42f
     private const val FULL_CIRCLE = 360
 
+    private const val HUE_RED = 4f
+    private const val HUE_ORANGE = 28f
+    private const val HUE_YELLOW = 46f
+    private const val HUE_GREEN = 130f
+    private const val HUE_BLUE = 212f
+    private const val HUE_PURPLE = 276f
+
     /**
      * The hues of the colours Outlook names its preset categories after, for mailboxes in English.
      */
     private val NAMED_HUES = mapOf(
-        "red" to 4f,
-        "orange" to 28f,
-        "yellow" to 46f,
-        "green" to 130f,
-        "blue" to 212f,
-        "purple" to 276f,
+        "red" to HUE_RED,
+        "orange" to HUE_ORANGE,
+        "yellow" to HUE_YELLOW,
+        "green" to HUE_GREEN,
+        "blue" to HUE_BLUE,
+        "purple" to HUE_PURPLE,
     )
 
     private val WORD_SEPARATORS = Regex("[^\\p{L}]+")

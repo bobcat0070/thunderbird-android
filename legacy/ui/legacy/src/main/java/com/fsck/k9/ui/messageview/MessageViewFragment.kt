@@ -650,11 +650,10 @@ class MessageViewFragment :
     }
 
     private fun onServerCategoriesResult(requestKey: String, result: Bundle) {
-        val message = this.message ?: return
+        val message = this.message
         val categories = result.getStringArrayList(ServerCategoriesDialogFragment.RESULT_CATEGORIES)
             ?.let(ServerCategoriesColumn::normalize)
-            ?: return
-        if (categories == serverCategories) return
+        if (message == null || categories == null || categories == serverCategories) return
 
         serverCategories = categories
         messageTopView.messageHeaderView.setServerCategories(categories)

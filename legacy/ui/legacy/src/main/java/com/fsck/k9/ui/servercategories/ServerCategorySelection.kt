@@ -25,12 +25,13 @@ data class ServerCategorySelection(
      */
     fun add(name: String): ServerCategorySelection {
         val category = name.trim()
-        if (category.isEmpty()) return this
-
         val existing = options.firstOrNull { it.equals(category, ignoreCase = true) }
-        if (existing != null) return select(existing, isSelected = true)
 
-        return ServerCategorySelection(options = options + category, selected = selected + category)
+        return when {
+            category.isEmpty() -> this
+            existing != null -> select(existing, isSelected = true)
+            else -> ServerCategorySelection(options = options + category, selected = selected + category)
+        }
     }
 
     /**

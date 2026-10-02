@@ -104,11 +104,19 @@ fun SQLiteDatabase.createMessage(
         classificationSignal?.let { put("classification_signal", it) }
         classifierVersion?.let { put("classifier_version", it) }
         senderAuthenticated?.let { put("sender_authenticated", if (it) 1 else 0) }
-        importance?.let { put("importance", it) }
-        serverCategories?.let { put("server_categories", it) }
+        putIfGiven("importance", importance)
+        putIfGiven("server_categories", serverCategories)
     }
 
     return insert("messages", null, values)
+}
+
+private fun ContentValues.putIfGiven(column: String, value: Int?) {
+    if (value != null) put(column, value)
+}
+
+private fun ContentValues.putIfGiven(column: String, value: String?) {
+    if (value != null) put(column, value)
 }
 
 fun SQLiteDatabase.readMessages(): List<MessageEntry> {
