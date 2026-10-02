@@ -10,6 +10,7 @@ import net.thunderbird.backend.graph.api.GRAPH_SYNCED_FLAGS
 import net.thunderbird.backend.graph.api.GraphApiClient
 import net.thunderbird.backend.graph.api.GraphMessage
 import net.thunderbird.backend.graph.api.receivedDate
+import net.thunderbird.backend.graph.api.serverCategories
 import net.thunderbird.backend.graph.api.toEnvelopeMessage
 import net.thunderbird.backend.graph.api.toFlags
 import net.thunderbird.core.common.exception.MessagingException
@@ -53,12 +54,13 @@ internal const val FOLDER_EXTRA_SYNC_FORMAT = "graphSyncFormat"
  * classification rules, and version 6 stores envelopes as headers-only so that opening one downloads the
  * body instead of offering a button, version 7 the sender's authentication result, version 8 a
  * revision of the classification rules, version 9 refills windows that earlier versions cut short at
- * Graph's page-size and delta-round limits, and version 10 reads which messages were replied to or forwarded.
+ * Graph's page-size and delta-round limits, version 10 reads which messages were replied to or forwarded, and version 11 the importance and the Outlook
+ * categories of a message.
  *
  * A change to the classification rules also needs a bump: the headers a verdict was derived from are not
  * kept, so the only way to re-classify stored mail is to fetch its envelope again and re-save it.
  */
-internal const val SYNC_FORMAT_VERSION = 10
+internal const val SYNC_FORMAT_VERSION = 11
 
 /**
  * Synchronizes a single folder with Microsoft Graph.
@@ -116,6 +118,7 @@ internal class GraphSync(
 
             listener.syncAuthenticationSuccess()
 
+            val storedMessageServerIds = backendFolder.getMessageServerIds()
             val messagesToSave = selectMessagesToSave(backendFolder, round.messages, visibleLimit, isIncremental)
             val newMessageCount = saveMessages(
                 folderServerId = folderServerId,
@@ -132,6 +135,7 @@ internal class GraphSync(
             )
 
             updateFlags(folderServerId, backendFolder, round.messages, syncConfig, listener)
+            updateCategories(folderServerId, backendFolder, round.messages, storedMessageServerIds, listener)
 
             // A full round has just read the last action of everything it holds. After an incremental one, the
             // messages stored before any were read get theirs, once.
@@ -328,6 +332,41 @@ internal class GraphSync(
             if (changed) {
                 listener.syncFlagChanged(folderServerId, graphMessage.id)
             }
+        }
+    }
+
+    /**
+     * Stores the Outlook categories of the messages a round returned.
+     *
+     * Apart from the envelope, because categories are assigned long after a message arrived, and saving the
+     * envelope again would write over a body that has been downloaded since.
+     *
+     * @param storedMessageServerIds the messages that were stored before this round, whose categories may have
+     *   changed. Anything else was added by this round and has none stored yet.
+     */
+    private fun updateCategories(
+        folderServerId: String,
+        backendFolder: BackendFolder,
+        messages: List<GraphMessage>,
+        storedMessageServerIds: Set<String>,
+        listener: SyncListener,
+    ) {
+        for (graphMessage in messages) {
+            val categories = graphMessage.serverCategories() ?: continue
+            val wasStored = graphMessage.id in storedMessageServerIds
+
+            if (!wasStored) {
+                if (categories.isNotEmpty() && backendFolder.isMessagePresent(graphMessage.id)) {
+                    backendFolder.setMessageServerCategories(graphMessage.id, categories)
+                }
+                continue
+            }
+
+            if (!backendFolder.isMessagePresent(graphMessage.id)) continue
+            if (backendFolder.getMessageServerCategories(graphMessage.id) == categories) continue
+
+            backendFolder.setMessageServerCategories(graphMessage.id, categories)
+            listener.syncFlagChanged(folderServerId, graphMessage.id)
         }
     }
 

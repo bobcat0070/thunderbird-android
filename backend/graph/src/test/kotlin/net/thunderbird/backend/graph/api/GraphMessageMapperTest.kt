@@ -4,6 +4,8 @@ import assertk.assertThat
 import assertk.assertions.containsOnly
 import assertk.assertions.isEqualTo
 import assertk.assertions.isNull
+import com.fsck.k9.mail.MessageImportance
+import com.fsck.k9.mail.importance
 import com.fsck.k9.mail.internet.MessageExtractor
 import kotlin.test.Test
 import net.thunderbird.core.common.mail.Flag
@@ -26,6 +28,48 @@ class GraphMessageMapperTest {
         message.setServerRelevance("other")
 
         assertThat(message.getHeader("X-Thunderbird-Server-Relevance").toList()).isEqualTo(listOf("other"))
+    }
+
+    @Test
+    fun `the importance Graph reports should be stated in the headers of the envelope`() {
+        val envelope = GraphMessage(id = "m1", importance = "high").toEnvelopeMessage()
+
+        assertThat(envelope.importance).isEqualTo(MessageImportance.HIGH)
+    }
+
+    @Test
+    fun `the importance Graph reports should replace what the headers said`() {
+        val message = com.fsck.k9.mail.internet.MimeMessage().apply {
+            addHeader("Importance", "high")
+            addHeader("X-Priority", "1")
+        }
+
+        message.setServerImportance("normal")
+
+        assertThat(message.importance).isEqualTo(MessageImportance.NORMAL)
+    }
+
+    @Test
+    fun `importance Graph did not send should leave the headers alone`() {
+        val message = com.fsck.k9.mail.internet.MimeMessage().apply {
+            addHeader("Importance", "low")
+        }
+
+        message.setServerImportance(null)
+
+        assertThat(message.importance).isEqualTo(MessageImportance.LOW)
+    }
+
+    @Test
+    fun `categories should be trimmed and listed once`() {
+        val message = GraphMessage(id = "m1", categories = listOf(" Red category ", "", "Project X", "Project X"))
+
+        assertThat(message.serverCategories()).isEqualTo(listOf("Red category", "Project X"))
+    }
+
+    @Test
+    fun `categories Graph did not send should not read as none`() {
+        assertThat(GraphMessage(id = "m1").serverCategories()).isNull()
     }
 
     @Test

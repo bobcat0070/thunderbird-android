@@ -53,6 +53,27 @@ class GraphCommandTest {
     }
 
     @Test
+    fun `setting categories should patch the whole list`() {
+        server.enqueue(batchResponse("""{"id":"0","status":200}"""))
+
+        CommandSetFlag(createClient()).setCategories(listOf("m1"), listOf("Red category", "Project X"))
+
+        val body = server.takeRequest().body.readUtf8()
+        assertThat(body).contains("\"method\":\"PATCH\"")
+        assertThat(body).contains("/me/messages/m1")
+        assertThat(body).contains("\"categories\":[\"Red category\",\"Project X\"]")
+    }
+
+    @Test
+    fun `removing every category should patch an empty list`() {
+        server.enqueue(batchResponse("""{"id":"0","status":200}"""))
+
+        CommandSetFlag(createClient()).setCategories(listOf("m1"), emptyList())
+
+        assertThat(server.takeRequest().body.readUtf8()).contains("\"categories\":[]")
+    }
+
+    @Test
     fun `a flag Graph does not model should not produce a request`() {
         // Deleted has no Graph equivalent, so it is tracked locally only.
         CommandSetFlag(createClient()).setFlag(listOf("m1"), Flag.DELETED, newState = true)

@@ -5,10 +5,12 @@ import com.fsck.k9.backend.api.SERVER_RELEVANCE_HEADER
 import com.fsck.k9.backend.api.SERVER_RELEVANCE_OTHER
 import com.fsck.k9.mail.Address
 import com.fsck.k9.mail.Message
+import com.fsck.k9.mail.MessageImportance
 import com.fsck.k9.mail.internet.AddressHeaderBuilder
 import com.fsck.k9.mail.internet.MimeMessage
 import com.fsck.k9.mail.internet.MimeMessageHelper
 import com.fsck.k9.mail.internet.TextBody
+import com.fsck.k9.mail.setImportance
 import java.time.Instant
 import java.time.format.DateTimeParseException
 import java.util.Date
@@ -24,6 +26,32 @@ internal fun Message.setServerRelevance(inferenceClassification: String?) {
         SERVER_RELEVANCE_FOCUSED -> addHeader(SERVER_RELEVANCE_HEADER, SERVER_RELEVANCE_FOCUSED)
         SERVER_RELEVANCE_OTHER -> addHeader(SERVER_RELEVANCE_HEADER, SERVER_RELEVANCE_OTHER)
     }
+}
+
+/**
+ * Records the importance Graph reports for a message in the headers the app reads it from.
+ *
+ * Graph's value is the mailbox's own, so it replaces what the headers said. A value Graph did not send leaves the
+ * headers as they are.
+ */
+internal fun Message.setServerImportance(importance: String?) {
+    val serverImportance = when (importance?.lowercase()) {
+        GRAPH_IMPORTANCE_HIGH -> MessageImportance.HIGH
+        GRAPH_IMPORTANCE_LOW -> MessageImportance.LOW
+        GRAPH_IMPORTANCE_NORMAL -> MessageImportance.NORMAL
+        else -> return
+    }
+
+    setImportance(serverImportance)
+}
+
+/**
+ * The Outlook categories of a message, as the app stores them: trimmed, without blanks or repeats.
+ *
+ * @return `null` when Graph did not say which categories the message has.
+ */
+internal fun GraphMessage.serverCategories(): List<String>? {
+    return categories?.map { it.trim() }?.filter { it.isNotEmpty() }?.distinct()
 }
 
 /**
@@ -52,6 +80,7 @@ internal fun GraphMessage.toEnvelopeMessage(): MimeMessage {
 
     applyInternetHeaders(message)
     message.setServerRelevance(inferenceClassification)
+    message.setServerImportance(importance)
 
     bodyPreview?.takeIf { it.isNotBlank() }?.let { preview ->
         MimeMessageHelper.setBody(message, TextBody(preview))
@@ -127,6 +156,10 @@ internal const val LAST_VERB_EXECUTED_PROPERTY = "Integer 0x1081"
  * the replied or forwarded arrow for a reply sent from here.
  */
 internal const val ICON_INDEX_PROPERTY = "Integer 0x1080"
+
+internal const val GRAPH_IMPORTANCE_LOW = "low"
+internal const val GRAPH_IMPORTANCE_NORMAL = "normal"
+internal const val GRAPH_IMPORTANCE_HIGH = "high"
 
 internal const val LAST_VERB_REPLY_TO_SENDER = 102
 internal const val LAST_VERB_REPLY_TO_ALL = 103

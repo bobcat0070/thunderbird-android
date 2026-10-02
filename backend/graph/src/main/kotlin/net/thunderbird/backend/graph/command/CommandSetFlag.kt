@@ -2,6 +2,7 @@ package net.thunderbird.backend.graph.command
 
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import net.thunderbird.backend.graph.api.FLAG_STATUS_FLAGGED
@@ -30,6 +31,7 @@ private const val MAX_UNREAD_PAGES = 50
  * Graph models read state and the follow-up flag directly. Replied and forwarded are written the way Outlook records
  * them, as the message's last action and matching icon, so Outlook shows a reply sent from here. Other flags are
  * tracked locally only, so requests to change them are ignored rather than failing the operation.
+ * Outlook categories are not flags, but they are changed the same way, with a patch to the message.
  *
  * Changes are sent in batches, because marking a whole folder read would otherwise be one request per message and
  * run into Graph throttling.
@@ -39,6 +41,19 @@ internal class CommandSetFlag(
 ) {
     fun setFlag(messageServerIds: List<String>, flag: Flag, newState: Boolean) {
         val patch = flag.toPatch(newState) ?: return
+
+        client.patchMessages(messageServerIds, patch)
+    }
+
+    /**
+     * Replaces the Outlook categories of messages.
+     *
+     * Graph takes the whole list, so an empty one removes every category from the message.
+     */
+    fun setCategories(messageServerIds: List<String>, categories: List<String>) {
+        val patch = buildJsonObject {
+            put("categories", JsonArray(categories.map { JsonPrimitive(it) }))
+        }
 
         client.patchMessages(messageServerIds, patch)
     }

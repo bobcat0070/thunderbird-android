@@ -7,6 +7,8 @@ import net.thunderbird.backend.graph.api.GraphApiClient
 import net.thunderbird.backend.graph.api.GraphMessage
 import net.thunderbird.backend.graph.api.MESSAGE_ENVELOPE_EXPAND
 import net.thunderbird.backend.graph.api.pathSegment
+import net.thunderbird.backend.graph.api.serverCategories
+import net.thunderbird.backend.graph.api.setServerImportance
 import net.thunderbird.backend.graph.api.setServerRelevance
 import net.thunderbird.backend.graph.api.toEnvelopeMessage
 
@@ -22,16 +24,22 @@ internal class CommandDownloadMessage(
     private val client: GraphApiClient,
 ) {
     suspend fun downloadMessageStructure(folderServerId: String, messageServerId: String) {
-        val message = fetchEnvelope(messageServerId)
+        val graphMessage = fetchEnvelope(messageServerId)
+        val backendFolder = backendStorage.getFolder(folderServerId)
 
-        backendStorage.getFolder(folderServerId).saveMessage(message, MessageDownloadState.ENVELOPE)
+        backendFolder.saveMessage(graphMessage.toEnvelopeMessage(), MessageDownloadState.ENVELOPE)
+        graphMessage.serverCategories()?.let { backendFolder.setMessageServerCategories(messageServerId, it) }
     }
 
     suspend fun downloadCompleteMessage(folderServerId: String, messageServerId: String) {
         val message = fetchFullMessage(messageServerId)
         // The raw message says nothing about Focused Inbox, and the stored message is classified again from what
         // is saved here, so where it was sorted is asked for alongside - or opening it would change its category.
-        message.setServerRelevance(fetchInferenceClassification(messageServerId))
+        // Its importance is asked for too, so that what is stored stays the mailbox's value rather than whatever
+        // the raw headers happen to say.
+        val serverState = fetchServerState(messageServerId)
+        message.setServerRelevance(serverState.inferenceClassification)
+        message.setServerImportance(serverState.importance)
 
         backendStorage.getFolder(folderServerId).saveMessage(message, MessageDownloadState.FULL)
     }
@@ -50,22 +58,20 @@ internal class CommandDownloadMessage(
         return message
     }
 
-    private fun fetchInferenceClassification(messageServerId: String): String? {
+    private fun fetchServerState(messageServerId: String): GraphMessage {
         val url = client.url("me/messages/${pathSegment(messageServerId)}") {
-            addQueryParameter("\$select", "inferenceClassification")
+            addQueryParameter("\$select", "inferenceClassification,importance")
         }
 
-        return client.json.decodeFromString<GraphMessage>(client.getString(url)).inferenceClassification
+        return client.json.decodeFromString<GraphMessage>(client.getString(url))
     }
 
-    private fun fetchEnvelope(messageServerId: String): MimeMessage {
+    private fun fetchEnvelope(messageServerId: String): GraphMessage {
         val url = client.url("me/messages/${pathSegment(messageServerId)}") {
             addQueryParameter("\$select", MESSAGE_ENVELOPE_SELECT)
             addQueryParameter("\$expand", MESSAGE_ENVELOPE_EXPAND)
         }
 
-        val graphMessage = client.json.decodeFromString<GraphMessage>(client.getString(url))
-
-        return graphMessage.toEnvelopeMessage()
+        return client.json.decodeFromString<GraphMessage>(client.getString(url))
     }
 }

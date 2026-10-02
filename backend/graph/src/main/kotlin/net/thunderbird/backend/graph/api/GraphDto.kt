@@ -73,6 +73,17 @@ internal data class GraphMessage(
     val inferenceClassification: String? = null,
 
     /**
+     * How important the sender marked the message: `low`, `normal` or `high`.
+     */
+    val importance: String? = null,
+
+    /**
+     * The names of the Outlook categories assigned to the message, or `null` when the response did not include
+     * them - which says nothing about the message and must not be read as "none".
+     */
+    val categories: List<String>? = null,
+
+    /**
      * Present only in delta responses, marking a message that is no longer in the folder.
      */
     @SerialName("@removed") val removed: GraphRemoved? = null,

@@ -5,8 +5,14 @@ import assertk.assertThat
 import assertk.assertions.contains
 import assertk.assertions.isEqualTo
 import assertk.assertions.isNotNull
+import com.fsck.k9.backend.api.BackendFolder
+import com.fsck.k9.backend.api.BackendStorage
 import com.fsck.k9.backend.api.FolderInfo
 import com.fsck.k9.mail.FolderType
+import com.fsck.k9.mail.Message
+import com.fsck.k9.mail.MessageDownloadState
+import com.fsck.k9.mail.MessageImportance
+import com.fsck.k9.mail.importance
 import com.fsck.k9.mail.internet.BinaryTempFileBody
 import java.io.File
 import kotlin.test.AfterTest
@@ -49,7 +55,36 @@ class CommandDownloadMessageTest {
         assertThat(server.takeRequest().path).isNotNull().contains("/me/messages/m1/\$value")
         assertThat(backendStorage.getFolder(FOLDER_ID).getMessageFlags("m1")).contains(Flag.X_DOWNLOADED_FULL)
         // Where Focused Inbox put it, so opening the message does not change how it is classified.
-        assertThat(server.takeRequest().requestUrl?.queryParameter("\$select")).isEqualTo("inferenceClassification")
+        assertThat(server.takeRequest().requestUrl?.queryParameter("\$select"))
+            .isEqualTo("inferenceClassification,importance")
+    }
+
+    @Test
+    fun `a downloaded message should keep the importance the mailbox holds for it`() = runTest {
+        createFolder()
+        server.enqueue(MockResponse().setBody(RAW_MIME))
+        server.enqueue(MockResponse().setBody("""{"id":"m1","importance":"high"}"""))
+        val savedMessages = mutableListOf<Message>()
+        val testSubject = createTestSubject(RecordingBackendStorage(backendStorage, savedMessages))
+
+        testSubject.downloadCompleteMessage(FOLDER_ID, "m1")
+
+        assertThat(savedMessages.single().importance).isEqualTo(MessageImportance.HIGH)
+    }
+
+    @Test
+    fun `downloading structure should store the categories of the message`() = runTest {
+        createFolder()
+        server.enqueue(
+            MockResponse().setBody(
+                """{"id":"m1","subject":"Structure only","categories":["Red category"]}""",
+            ),
+        )
+
+        createTestSubject().downloadMessageStructure(FOLDER_ID, "m1")
+
+        assertThat(backendStorage.getFolder(FOLDER_ID).getMessageServerCategories("m1"))
+            .isEqualTo(listOf("Red category"))
     }
 
     @Test
@@ -86,7 +121,7 @@ class CommandDownloadMessageTest {
         }
     }
 
-    private fun createTestSubject() = CommandDownloadMessage(
+    private fun createTestSubject(backendStorage: BackendStorage = this.backendStorage) = CommandDownloadMessage(
         backendStorage = backendStorage,
         client = GraphApiClient(
             okHttpClient = OkHttpClient(),
@@ -105,5 +140,24 @@ class CommandDownloadMessageTest {
 
             The message body.
         """.trimIndent()
+    }
+}
+
+/**
+ * Hands out folders that note what is saved to them, to see a message the way the command stored it.
+ */
+private class RecordingBackendStorage(
+    private val delegate: BackendStorage,
+    private val savedMessages: MutableList<Message>,
+) : BackendStorage by delegate {
+    override fun getFolder(folderServerId: String): BackendFolder {
+        val folder = delegate.getFolder(folderServerId)
+
+        return object : BackendFolder by folder {
+            override suspend fun saveMessage(message: Message, downloadState: MessageDownloadState) {
+                savedMessages += message
+                folder.saveMessage(message, downloadState)
+            }
+        }
     }
 }

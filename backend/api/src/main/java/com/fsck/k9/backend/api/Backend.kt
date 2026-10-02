@@ -25,6 +25,13 @@ interface Backend {
     val savesSentMessages: Boolean
         get() = false
 
+    /**
+     * Whether messages carry categories that are kept on the server and can be changed from here, as Outlook's
+     * are.
+     */
+    val supportsServerCategories: Boolean
+        get() = false
+
     @Throws(MessagingException::class)
     fun refreshFolderList(): FolderPathDelimiter?
 
@@ -42,6 +49,16 @@ interface Backend {
 
     @Throws(MessagingException::class)
     fun setFlag(folderServerId: String, messageServerIds: List<String>, flag: Flag, newState: Boolean)
+
+    /**
+     * Replaces the categories of the given messages on the server.
+     *
+     * Only called for a backend that [supportsServerCategories].
+     */
+    @Throws(MessagingException::class)
+    fun setServerCategories(folderServerId: String, messageServerIds: List<String>, categories: List<String>) {
+        throw UnsupportedOperationException("This backend does not keep categories on the server")
+    }
 
     @Throws(MessagingException::class)
     fun markAllAsRead(folderServerId: String)

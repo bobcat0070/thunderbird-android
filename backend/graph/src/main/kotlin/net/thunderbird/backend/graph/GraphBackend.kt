@@ -85,6 +85,9 @@ class GraphBackend internal constructor(
     /** `sendMail` always files the message in Sent Items; an upload of the app's own would be a second copy. */
     override val savesSentMessages = true
 
+    /** Outlook categories are a property of the message, read with it and written back with a patch. */
+    override val supportsServerCategories = true
+
     override fun refreshFolderList(): FolderPathDelimiter {
         // Contacts ride along with the folder refresh: it is already the point where the app has decided to talk
         // to the server, and the store decides whether enough time has passed to ask again.
@@ -125,6 +128,14 @@ class GraphBackend internal constructor(
 
     override fun setFlag(folderServerId: String, messageServerIds: List<String>, flag: Flag, newState: Boolean) {
         commandSetFlag.setFlag(messageServerIds, flag, newState)
+    }
+
+    override fun setServerCategories(
+        folderServerId: String,
+        messageServerIds: List<String>,
+        categories: List<String>,
+    ) {
+        commandSetFlag.setCategories(messageServerIds, categories)
     }
 
     override fun markAllAsRead(folderServerId: String) {

@@ -104,6 +104,112 @@ class GraphSyncTest {
     }
 
     @Test
+    fun `the categories of a new message should be stored with it`() = runTest {
+        createFolder()
+        enqueueWindowProbe()
+        server.enqueue(
+            MockResponse().setBody(
+                deltaResponse(
+                    messages = listOf(
+                        message("m1", subject = "Labelled", categories = listOf("Red category", "Project X")),
+                        message("m2", subject = "Plain", categories = emptyList()),
+                    ),
+                    deltaLink = "${server.url("/v1.0/")}me/mailFolders/$FOLDER_ID/messages/delta?\$deltatoken=t1",
+                ),
+            ),
+        )
+
+        createTestSubject().sync(FOLDER_ID, syncConfig(), listener)
+
+        val folder = backendStorage.getFolder(FOLDER_ID)
+        assertThat(folder.getMessageServerCategories("m1")).isEqualTo(listOf("Red category", "Project X"))
+        assertThat(folder.getMessageServerCategories("m2")).isEmpty()
+    }
+
+    @Test
+    fun `a category assigned in Outlook should reach a message that is already stored`() = runTest {
+        createFolderWithMessage()
+        val deltaLink = "${server.url("/v1.0/")}me/mailFolders/$FOLDER_ID/messages/delta?\$deltatoken=t1"
+        givenCompletedFullRound(deltaLink)
+        server.enqueue(
+            MockResponse().setBody(
+                deltaResponse(
+                    messages = listOf(message("existing", subject = "Existing", categories = listOf("Blue category"))),
+                    deltaLink = deltaLink,
+                ),
+            ),
+        )
+
+        createTestSubject().sync(FOLDER_ID, syncConfig(), listener)
+
+        assertThat(backendStorage.getFolder(FOLDER_ID).getMessageServerCategories("existing"))
+            .isEqualTo(listOf("Blue category"))
+        assertThat(listener.changedMessages).containsExactly("existing")
+    }
+
+    @Test
+    fun `a category removed in Outlook should be removed from the stored message`() = runTest {
+        createFolderWithMessage()
+        backendStorage.getFolder(FOLDER_ID).setMessageServerCategories("existing", listOf("Blue category"))
+        val deltaLink = "${server.url("/v1.0/")}me/mailFolders/$FOLDER_ID/messages/delta?\$deltatoken=t1"
+        givenCompletedFullRound(deltaLink)
+        server.enqueue(
+            MockResponse().setBody(
+                deltaResponse(
+                    messages = listOf(message("existing", subject = "Existing", categories = emptyList())),
+                    deltaLink = deltaLink,
+                ),
+            ),
+        )
+
+        createTestSubject().sync(FOLDER_ID, syncConfig(), listener)
+
+        assertThat(backendStorage.getFolder(FOLDER_ID).getMessageServerCategories("existing")).isEmpty()
+    }
+
+    @Test
+    fun `a change that does not mention categories should leave the stored ones alone`() = runTest {
+        createFolderWithMessage()
+        backendStorage.getFolder(FOLDER_ID).setMessageServerCategories("existing", listOf("Blue category"))
+        val deltaLink = "${server.url("/v1.0/")}me/mailFolders/$FOLDER_ID/messages/delta?\$deltatoken=t1"
+        givenCompletedFullRound(deltaLink)
+        server.enqueue(
+            MockResponse().setBody(
+                deltaResponse(
+                    messages = listOf(message("existing", subject = "Existing", isRead = true)),
+                    deltaLink = deltaLink,
+                ),
+            ),
+        )
+
+        createTestSubject().sync(FOLDER_ID, syncConfig(), listener)
+
+        assertThat(backendStorage.getFolder(FOLDER_ID).getMessageServerCategories("existing"))
+            .isEqualTo(listOf("Blue category"))
+    }
+
+    @Test
+    fun `sync should ask for importance and categories`() = runTest {
+        createFolder()
+        enqueueWindowProbe()
+        server.enqueue(
+            MockResponse().setBody(
+                deltaResponse(
+                    messages = emptyList(),
+                    deltaLink = "${server.url("/v1.0/")}me/mailFolders/$FOLDER_ID/messages/delta?\$deltatoken=t1",
+                ),
+            ),
+        )
+
+        createTestSubject().sync(FOLDER_ID, syncConfig(), listener)
+
+        server.takeRequest() // window probe
+        val select = server.takeRequest().requestUrl?.queryParameter("\$select").orEmpty().split(",")
+        assertThat(select).contains("importance")
+        assertThat(select).contains("categories")
+    }
+
+    @Test
     fun `removed messages should be deleted locally`() = runTest {
         createFolderWithMessage()
         val deltaLink = "${server.url("/v1.0/")}me/mailFolders/$FOLDER_ID/messages/delta?\$deltatoken=t1"
@@ -685,8 +791,12 @@ class GraphSyncTest {
         isRead: Boolean = false,
         receivedDateTime: String = "2026-01-01T12:00:00Z",
         bodyPreview: String? = null,
+        categories: List<String>? = null,
     ): String {
         val bodyPreviewField = bodyPreview?.let { """"bodyPreview": "$it",""" }.orEmpty()
+        val categoriesField = categories
+            ?.let { names -> """"categories": [${names.joinToString(",") { "\"$it\"" }}],""" }
+            .orEmpty()
 
         return """
             {
@@ -695,6 +805,7 @@ class GraphSyncTest {
               "isRead": $isRead,
               "receivedDateTime": "$receivedDateTime",
               $bodyPreviewField
+              $categoriesField
               "from": {"emailAddress": {"name": "Sender", "address": "sender@example.com"}}
             }
         """.trimIndent()
@@ -716,6 +827,7 @@ class GraphSyncTest {
     private class RecordingSyncListener : SyncListener {
         val newMessages = mutableListOf<String>()
         val removedMessages = mutableListOf<String>()
+        val changedMessages = mutableListOf<String>()
         val failures = mutableListOf<String>()
 
         override fun syncStarted(folderServerId: String) = Unit
@@ -737,7 +849,10 @@ class GraphSyncTest {
             removedMessages += messageServerId
         }
 
-        override fun syncFlagChanged(folderServerId: String, messageServerId: String) = Unit
+        override fun syncFlagChanged(folderServerId: String, messageServerId: String) {
+            changedMessages += messageServerId
+        }
+
         override fun syncFinished(folderServerId: String) = Unit
         override fun syncFailed(folderServerId: String, message: String, exception: Exception?) {
             failures += message
