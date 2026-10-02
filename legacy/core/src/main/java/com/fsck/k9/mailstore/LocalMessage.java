@@ -4,12 +4,15 @@ package com.fsck.k9.mailstore;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.util.Collections;
 import java.util.Date;
+import java.util.List;
 import java.util.Objects;
 import android.content.ContentValues;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import androidx.annotation.VisibleForTesting;
+import app.k9mail.legacy.mailstore.ServerCategoriesColumn;
 import app.k9mail.legacy.message.controller.MessageReference;
 import com.fsck.k9.core.BuildConfig;
 import com.fsck.k9.mail.Address;
@@ -38,6 +41,7 @@ public class LocalMessage extends MimeMessage {
     private long messagePartId;
     private MessageClass classification = MessageClass.UNKNOWN;
     private boolean senderAuthenticated = false;
+    private List<String> serverCategories = Collections.emptyList();
     private MessageReference messageReference;
     private int attachmentCount;
     private String subject;
@@ -151,6 +155,7 @@ public class LocalMessage extends MimeMessage {
 
         classification = MessageClassificationKt.messageClassOrUnknown(cursor.getString(LocalStore.MSG_INDEX_CLASSIFICATION));
         senderAuthenticated = cursor.getInt(LocalStore.MSG_INDEX_SENDER_AUTHENTICATED) == 1;
+        serverCategories = ServerCategoriesColumn.decode(cursor.getString(LocalStore.MSG_INDEX_SERVER_CATEGORIES));
 
         headerNeedsUpdating = false;
     }
@@ -174,6 +179,15 @@ public class LocalMessage extends MimeMessage {
      */
     public boolean isSenderAuthenticated() {
         return senderAuthenticated;
+    }
+
+    /**
+     * The categories the server keeps on this message, such as the ones assigned in Outlook.
+     *
+     * Unrelated to {@link #getClassification()}, which the app works out for itself.
+     */
+    public List<String> getServerCategories() {
+        return serverCategories;
     }
 
     @VisibleForTesting

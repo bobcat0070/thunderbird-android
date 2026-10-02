@@ -42,6 +42,26 @@ class MoveMessageOperationsTest : RobolectricTest() {
     }
 
     @Test
+    fun `a moved message should keep its importance and server categories`() {
+        val originalMessageId = sqliteDatabase.createMessage(
+            folderId = SOURCE_FOLDER_ID,
+            uid = "uid1",
+            importance = 1,
+            serverCategories = "Red category",
+        )
+        sqliteDatabase.createThread(messageId = originalMessageId)
+
+        val destinationMessageId = moveMessageOperations.moveMessage(
+            messageId = originalMessageId,
+            destinationFolderId = DESTINATION_FOLDER_ID,
+        )
+
+        val destinationMessage = sqliteDatabase.readMessages().first { it.id == destinationMessageId }
+        assertThat(destinationMessage.importance).isEqualTo(1)
+        assertThat(destinationMessage.serverCategories).isEqualTo("Red category")
+    }
+
+    @Test
     fun `move message not part of a thread`() {
         val originalMessageId = sqliteDatabase.createMessage(
             folderId = SOURCE_FOLDER_ID,

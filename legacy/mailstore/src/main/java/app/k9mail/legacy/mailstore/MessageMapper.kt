@@ -3,6 +3,7 @@ package app.k9mail.legacy.mailstore
 import app.k9mail.legacy.message.extractors.PreviewResult
 import com.fsck.k9.mail.Address
 import net.thunderbird.feature.mail.message.classification.api.MessageClass
+import com.fsck.k9.mail.MessageImportance
 
 fun interface MessageMapper<T> {
     fun map(message: MessageDetailsAccessor): T
@@ -42,4 +43,15 @@ interface MessageDetailsAccessor {
      * apart from mail that only claims to be from it.
      */
     val isSenderAuthenticated: Boolean
+
+    /**
+     * How important the sender marked this message.
+     */
+    val importance: MessageImportance
+
+    /**
+     * The categories the server keeps on this message, such as the ones assigned in Outlook. Unrelated to
+     * [classification], which the app works out for itself.
+     */
+    val serverCategories: List<String>
 }

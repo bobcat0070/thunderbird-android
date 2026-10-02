@@ -84,6 +84,14 @@ class K9BackendFolder(
         messageStore.setMessageFlag(folderId, messageServerId, flag, value)
     }
 
+    override fun getMessageServerCategories(messageServerId: String): List<String> {
+        return messageStore.getMessageServerCategories(folderId, messageServerId)
+    }
+
+    override fun setMessageServerCategories(messageServerId: String, categories: List<String>) {
+        messageStore.setMessageServerCategories(folderId, messageServerId, categories)
+    }
+
     override suspend fun saveMessage(message: LegacyMessage, downloadState: MessageDownloadState) {
         requireMessageServerId(message)
 

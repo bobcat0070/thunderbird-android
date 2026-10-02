@@ -53,6 +53,30 @@ class CopyMessageOperationsTest : RobolectricTest() {
     }
 
     @Test
+    fun `a copied message should keep its importance and server categories`() {
+        val messagePartId = sqliteDatabase.createMessagePart(
+            mimeType = "text/plain",
+            dataLocation = DataLocation.IN_DATABASE,
+            data = "Text".toByteArray(),
+            header = "Message-ID: <msg0001@domain.example>\n".crlf(),
+        )
+        val messageId = sqliteDatabase.createMessage(
+            folderId = 1,
+            messageIdHeader = "<msg0001@domain.example>",
+            messagePartId = messagePartId,
+            importance = 1,
+            serverCategories = "Red category",
+        )
+        sqliteDatabase.createThread(messageId)
+
+        val destinationMessageId = copyMessageOperations.copyMessage(messageId = messageId, destinationFolderId = 2)
+
+        val destinationMessage = sqliteDatabase.readMessages().first { it.id == destinationMessageId }
+        assertThat(destinationMessage.importance).isEqualTo(1)
+        assertThat(destinationMessage.serverCategories).isEqualTo("Red category")
+    }
+
+    @Test
     fun `copy message that is part of a thread`() {
         val sourceMessagePartId1 = sqliteDatabase.createMessagePart(
             seq = 0,

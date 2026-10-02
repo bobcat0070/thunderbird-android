@@ -60,6 +60,7 @@ class K9MessageStore(
     private val reclassifyMessageOperations = ReclassifyMessageOperations(database)
     private val retrieveMessageOperations = RetrieveMessageOperations(database, localMessageUidPrefixProvider)
     private val retrieveMessageListOperations = RetrieveMessageListOperations(database)
+    private val serverCategoryOperations = ServerCategoryOperations(database)
     private val deleteMessageOperations = DeleteMessageOperations(database, attachmentFileManager)
     private val createFolderOperations = CreateFolderOperations(database, accountId)
     private val retrieveFolderOperations = RetrieveFolderOperations(database)
@@ -91,6 +92,22 @@ class K9MessageStore(
 
     override fun setMessageFlag(folderId: Long, messageServerId: String, flag: Flag, set: Boolean) {
         flagMessageOperations.setMessageFlag(folderId, messageServerId, flag, set)
+    }
+
+    override fun getMessageServerCategories(folderId: Long, messageServerId: String): List<String> {
+        return serverCategoryOperations.getMessageServerCategories(folderId, messageServerId)
+    }
+
+    override fun setMessageServerCategories(folderId: Long, messageServerId: String, categories: List<String>) {
+        serverCategoryOperations.setMessageServerCategories(folderId, messageServerId, categories)
+    }
+
+    override fun setServerCategories(messageIds: Collection<Long>, categories: List<String>) {
+        serverCategoryOperations.setServerCategories(messageIds, categories)
+    }
+
+    override fun getServerCategories(): List<String> {
+        return serverCategoryOperations.getServerCategories()
     }
 
     override fun setNewMessageState(folderId: Long, messageServerId: String, newMessage: Boolean) {

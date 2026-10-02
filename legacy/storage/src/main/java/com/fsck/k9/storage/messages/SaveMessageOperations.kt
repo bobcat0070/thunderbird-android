@@ -421,6 +421,9 @@ internal class SaveMessageOperations(
             put("classification_signal", classification.signal.name)
             put("classifier_version", CLASSIFIER_VERSION)
             put("sender_authenticated", if (messageData.isSenderAuthenticated) 1 else 0)
+            // The categories a server keeps on the message are not written here: they are not part of the
+            // message, and saving it again - when its body is downloaded - must leave them as they are.
+            put("importance", messageData.importance.toDatabaseValue())
 
             val previewResult = messageData.previewResult
             put("preview_type", previewResult.previewType.toDatabaseValue())

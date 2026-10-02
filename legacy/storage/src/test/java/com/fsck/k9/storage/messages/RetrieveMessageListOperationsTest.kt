@@ -17,6 +17,7 @@ import net.thunderbird.core.logging.testing.TestLogger
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
+import com.fsck.k9.mail.MessageImportance
 
 class RetrieveMessageListOperationsTest : RobolectricTest() {
     private lateinit var sqliteDatabase: SQLiteDatabase
@@ -552,6 +553,55 @@ class RetrieveMessageListOperationsTest : RobolectricTest() {
         )
 
         assertThat(result).containsExactly(newerMessageId)
+    }
+
+    @Test
+    fun `getMessages() should return importance and server categories`() {
+        val folderId = sqliteDatabase.createFolder()
+        val messageId = sqliteDatabase.createMessage(
+            folderId,
+            uid = "uid1",
+            importance = 1,
+            serverCategories = "Red category\nProject X",
+        )
+        sqliteDatabase.createThread(messageId)
+
+        val result = getMessagesFromFolder(folderId) { message ->
+            message.importance to message.serverCategories
+        }
+
+        assertThat(result).containsExactly(MessageImportance.HIGH to listOf("Red category", "Project X"))
+    }
+
+    @Test
+    fun `getMessages() should return normal importance and no categories for a message without either`() {
+        val folderId = sqliteDatabase.createFolder()
+        val messageId = sqliteDatabase.createMessage(folderId, uid = "uid1")
+        sqliteDatabase.createThread(messageId)
+
+        val result = getMessagesFromFolder(folderId) { message ->
+            message.importance to message.serverCategories
+        }
+
+        assertThat(result).containsExactly(MessageImportance.NORMAL to emptyList<String>())
+    }
+
+    @Test
+    fun `getThreadedMessages() should return importance and server categories`() {
+        val folderId = sqliteDatabase.createFolder()
+        val messageId = sqliteDatabase.createMessage(
+            folderId,
+            uid = "uid1",
+            importance = -1,
+            serverCategories = "Blue category",
+        )
+        sqliteDatabase.createThread(messageId)
+
+        val result = getThreadedMessagesFromFolder(folderId) { message ->
+            message.importance to message.serverCategories
+        }
+
+        assertThat(result).containsExactly(MessageImportance.LOW to listOf("Blue category"))
     }
 
     private fun <T> getMessagesFromFolder(folderId: Long, mapper: MessageMapper<T?>): List<T> {

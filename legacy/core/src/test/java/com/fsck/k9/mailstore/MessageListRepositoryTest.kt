@@ -27,6 +27,7 @@ import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.eq
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.stub
+import com.fsck.k9.mail.MessageImportance
 
 private const val MESSAGE_ID = 1L
 private const val MESSAGE_ID_2 = 2L
@@ -437,6 +438,8 @@ class MessageListRepositoryTest {
                     override val threadCount = 0
                     override val classification = MessageClass.UNKNOWN
                     override val isSenderAuthenticated = false
+                    override val importance = MessageImportance.NORMAL
+                    override val serverCategories = emptyList<String>()
                 },
             )
         }

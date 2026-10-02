@@ -8,6 +8,7 @@ import com.fsck.k9.message.extractors.AttachmentCounter
 import com.fsck.k9.message.extractors.MessageFulltextCreator
 import com.fsck.k9.message.extractors.MessagePreviewCreator
 import net.thunderbird.feature.mail.message.classification.api.MessageClassifier
+import com.fsck.k9.mail.importance
 
 @Suppress("LongParameterList")
 class SaveMessageDataCreator(
@@ -66,6 +67,7 @@ class SaveMessageDataCreator(
                 encryptionType = encryptionResult.encryptionType,
                 classification = classification,
                 isSenderAuthenticated = isSenderAuthenticated,
+                importance = message.importance,
             )
         } else {
             SaveMessageData(
@@ -80,6 +82,7 @@ class SaveMessageDataCreator(
                 encryptionType = null,
                 classification = classification,
                 isSenderAuthenticated = isSenderAuthenticated,
+                importance = message.importance,
             )
         }
     }

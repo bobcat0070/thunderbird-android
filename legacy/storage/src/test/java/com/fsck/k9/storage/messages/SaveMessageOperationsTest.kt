@@ -28,6 +28,7 @@ import org.junit.After
 import org.junit.Before
 import org.junit.Test
 import org.mockito.Mockito.mock
+import com.fsck.k9.mail.MessageImportance
 
 class SaveMessageOperationsTest : RobolectricTest() {
 
@@ -323,6 +324,35 @@ class SaveMessageOperationsTest : RobolectricTest() {
         val message3 = messages.first { it.id == thread3.messageId }
         assertThat(message3.empty).isEqualTo(0)
         assertThat(message3.uid).isEqualTo("uid1")
+    }
+
+    @Test
+    fun `save message should store its importance`() {
+        val messageData = buildMessage {
+            textBody("urgent")
+        }.toSaveMessageData().copy(importance = MessageImportance.HIGH)
+
+        saveMessageOperations.saveRemoteMessage(folderId = 1, messageServerId = "uid1", messageData)
+
+        assertThat(sqliteDatabase.readMessages().single().importance).isEqualTo(1)
+    }
+
+    @Test
+    fun `saving a message again should keep the categories its server holds for it`() {
+        // Categories are stored apart from the message. Downloading the body of a message saves it again, and
+        // that must not cost the message its categories.
+        val envelopeData = buildMessage {
+            textBody("preview")
+        }.toSaveMessageData(downloadState = MessageDownloadState.ENVELOPE)
+        saveMessageOperations.saveRemoteMessage(folderId = 1, messageServerId = "uid1", envelopeData)
+        sqliteDatabase.execSQL("UPDATE messages SET server_categories = 'Red category' WHERE uid = 'uid1'")
+        val fullMessageData = buildMessage {
+            textBody("the whole message")
+        }.toSaveMessageData(downloadState = MessageDownloadState.FULL)
+
+        saveMessageOperations.saveRemoteMessage(folderId = 1, messageServerId = "uid1", fullMessageData)
+
+        assertThat(sqliteDatabase.readMessages().single().serverCategories).isEqualTo("Red category")
     }
 
     @Test

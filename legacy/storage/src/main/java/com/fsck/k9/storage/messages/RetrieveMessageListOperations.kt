@@ -11,6 +11,8 @@ import com.fsck.k9.mailstore.LockableDatabase
 import net.thunderbird.feature.mail.message.classification.api.MessageClass
 import net.thunderbird.feature.mail.message.classification.api.messageClassOrUnknown
 import net.thunderbird.feature.search.legacy.sql.SqlWhereClause
+import com.fsck.k9.mail.MessageImportance
+import app.k9mail.legacy.mailstore.ServerCategoriesColumn
 
 internal class RetrieveMessageListOperations(private val lockableDatabase: LockableDatabase) {
 
@@ -43,7 +45,9 @@ SELECT
   attachment_count, 
   root,
   classification,
-  sender_authenticated
+  sender_authenticated,
+  importance,
+  server_categories
 FROM messages
 JOIN threads ON (threads.message_id = messages.id)
 LEFT JOIN FOLDERS ON (folders.id = messages.folder_id)
@@ -103,7 +107,9 @@ SELECT
   root, 
   aggregated.thread_count AS thread_count,
   classification,
-  sender_authenticated
+  sender_authenticated,
+  importance,
+  server_categories
 FROM (
   SELECT 
     threads.root AS thread_root,
@@ -177,7 +183,9 @@ SELECT
   attachment_count, 
   root,
   classification,
-  sender_authenticated
+  sender_authenticated,
+  importance,
+  server_categories
 FROM threads 
 JOIN messages ON (messages.id = threads.message_id)
 LEFT JOIN FOLDERS ON (folders.id = messages.folder_id)
@@ -262,6 +270,22 @@ private class CursorMessageAccessor(val cursor: Cursor, val includesThreadCount:
             val columnIndex = cursor.getColumnIndex("sender_authenticated")
 
             return columnIndex >= 0 && cursor.getInt(columnIndex) == 1
+        }
+
+    override val importance: MessageImportance
+        get() {
+            val columnIndex = cursor.getColumnIndex("importance")
+            if (columnIndex < 0) return MessageImportance.NORMAL
+
+            return importanceFromDatabaseValue(cursor.getInt(columnIndex))
+        }
+
+    override val serverCategories: List<String>
+        get() {
+            val columnIndex = cursor.getColumnIndex("server_categories")
+            if (columnIndex < 0) return emptyList()
+
+            return ServerCategoriesColumn.decode(cursor.getStringOrNull(columnIndex))
         }
 }
 

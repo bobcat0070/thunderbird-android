@@ -50,6 +50,16 @@ class NotifierMessageStore(
         notifyChange()
     }
 
+    override fun setMessageServerCategories(folderId: Long, messageServerId: String, categories: List<String>) {
+        messageStore.setMessageServerCategories(folderId, messageServerId, categories)
+        notifyChange()
+    }
+
+    override fun setServerCategories(messageIds: Collection<Long>, categories: List<String>) {
+        messageStore.setServerCategories(messageIds, categories)
+        notifyChange()
+    }
+
     override fun setNewMessageState(folderId: Long, messageServerId: String, newMessage: Boolean) {
         messageStore.setNewMessageState(folderId, messageServerId, newMessage)
         notifyChange()

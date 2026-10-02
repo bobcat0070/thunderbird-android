@@ -85,6 +85,26 @@ interface MessageStore {
     fun setMessageFlag(folderId: Long, messageServerId: String, flag: Flag, set: Boolean)
 
     /**
+     * The categories the server keeps on a message, such as the ones assigned in Outlook.
+     */
+    fun getMessageServerCategories(folderId: Long, messageServerId: String): List<String>
+
+    /**
+     * Replace the categories the server keeps on a message.
+     */
+    fun setMessageServerCategories(folderId: Long, messageServerId: String, categories: List<String>)
+
+    /**
+     * Replace the categories the server keeps on the given messages.
+     */
+    fun setServerCategories(messageIds: Collection<Long>, categories: List<String>)
+
+    /**
+     * Every server category in use on the messages of this account, in alphabetical order.
+     */
+    fun getServerCategories(): List<String>
+
+    /**
      * Set whether a message should be considered as new.
      */
     fun setNewMessageState(folderId: Long, messageServerId: String, newMessage: Boolean)

@@ -4,6 +4,7 @@ import app.k9mail.legacy.message.extractors.PreviewResult
 import com.fsck.k9.mail.Message
 import com.fsck.k9.mail.MessageDownloadState
 import net.thunderbird.feature.mail.message.classification.api.MessageClassification
+import com.fsck.k9.mail.MessageImportance
 
 data class SaveMessageData(
     val message: Message,
@@ -25,4 +26,8 @@ data class SaveMessageData(
      * per sender, because the whole point is to tell a domain's real mail from mail claiming to be it.
      */
     val isSenderAuthenticated: Boolean = false,
+    /**
+     * How important the sender marked the message, as its headers state.
+     */
+    val importance: MessageImportance = MessageImportance.NORMAL,
 )

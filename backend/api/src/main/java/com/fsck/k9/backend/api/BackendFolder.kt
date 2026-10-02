@@ -21,6 +21,16 @@ interface BackendFolder {
     fun isMessagePresent(messageServerId: String): Boolean
     fun getMessageFlags(messageServerId: String): Set<Flag>
     fun setMessageFlag(messageServerId: String, flag: Flag, value: Boolean)
+
+    /**
+     * The categories the server keeps on a message, such as the ones Outlook assigns.
+     */
+    fun getMessageServerCategories(messageServerId: String): List<String>
+
+    /**
+     * Replaces the categories stored for a message with the ones the server holds for it now.
+     */
+    fun setMessageServerCategories(messageServerId: String, categories: List<String>)
     suspend fun saveMessage(message: Message, downloadState: MessageDownloadState)
     fun getOldestMessageDate(): Date?
     fun getFolderExtraString(name: String): String?
