@@ -61,8 +61,8 @@ internal const val PREFER_HEADER = "Prefer"
 /**
  * Asks Graph to identify messages by ids that stay with them when they change folder.
  *
- * The preference only holds for the request it is sent with, and only decides the ids in the response: a request may
- * still name a message by either kind of id.
+ * The preference only holds for the request it is sent with, and it decides the ids a listing hands out. A request
+ * may name a message by either kind of id, and Graph answers about that message with the kind it was asked with.
  *
  * See https://learn.microsoft.com/en-us/graph/outlook-immutable-id
  */
@@ -135,9 +135,12 @@ internal class GraphApiClient(
     /**
      * @param headers extra request headers, e.g. `Prefer: odata.maxpagesize` to control the page size of a
      *   collection response.
+     * @param immutableIds `false` to have a listing answered with the ids Graph uses by default, which is what
+     *   mail synchronized by an earlier version is stored under.
      */
-    fun getString(url: HttpUrl, headers: Map<String, String> = emptyMap()): String {
+    fun getString(url: HttpUrl, headers: Map<String, String> = emptyMap(), immutableIds: Boolean = true): String {
         val requestBuilder = Request.Builder().url(url).get()
+        if (!immutableIds) requestBuilder.tag(DefaultIds::class.java, DefaultIds)
         for ((name, value) in headers) {
             requestBuilder.header(name, value)
         }
@@ -257,7 +260,11 @@ internal class GraphApiClient(
             val authorizedRequest = request.newBuilder()
                 .header("Authorization", "Bearer $token")
                 .header("Accept", "application/json")
-                .header(PREFER_HEADER, request.preferencesWithImmutableIds())
+                .apply {
+                    if (request.tag(DefaultIds::class.java) == null) {
+                        header(PREFER_HEADER, request.preferencesWithImmutableIds())
+                    }
+                }
                 .build()
 
             val call = okHttpClient.newCall(authorizedRequest)
@@ -311,6 +318,11 @@ internal fun pathSegment(value: String): String {
 
     return SEGMENT_ENCODER.newBuilder().addPathSegment(value).build().encodedPathSegments.last()
 }
+
+/**
+ * Marks a request that is to be answered with the ids Graph uses by default.
+ */
+private object DefaultIds
 
 /**
  * What the request prefers, with immutable ids added: one header listing every preference, which is the form

@@ -89,7 +89,7 @@ internal class GraphSync(
     /**
      * Gives messages stored under the ids Graph used to report the immutable ids it reports now.
      */
-    private val migrateToImmutableIds: (BackendFolder, removeMissing: Boolean) -> Unit =
+    private val migrateToImmutableIds: (folderServerId: String, BackendFolder, removeMissing: Boolean) -> Unit =
         GraphImmutableIdMigration(client)::migrateIfNeeded,
 ) {
     private val deltaReader = GraphDeltaReader(client)
@@ -102,7 +102,7 @@ internal class GraphSync(
             val backendFolder = backendStorage.getFolder(folderServerId)
             // First, and fatal to this sync if it fails: the round below reports messages by their immutable ids,
             // and one still stored under its old id would be stored a second time.
-            migrateToImmutableIds(backendFolder, syncConfig.syncRemoteDeletions)
+            migrateToImmutableIds(folderServerId, backendFolder, syncConfig.syncRemoteDeletions)
 
             // A limit of 0 is the "all messages" setting; a folder without a limit of its own takes the account's.
             val visibleLimit = listOf(backendFolder.visibleLimit, syncConfig.defaultVisibleLimit)

@@ -192,7 +192,7 @@ class GraphSyncCategoriesTest {
             readLastActions = { _, messages -> messages },
             backfillLastActions = { _, _, _, _ -> },
             // Covered by GraphImmutableIdMigrationTest; the messages here are stored under the ids Graph reports.
-            migrateToImmutableIds = { _, _ -> },
+            migrateToImmutableIds = { _, _, _ -> },
         )
     }
 

@@ -23,10 +23,12 @@ import net.thunderbird.backend.graph.command.CommandRefreshFolderList
 import net.thunderbird.backend.graph.command.CommandSearch
 import net.thunderbird.backend.graph.command.CommandSendMessage
 import net.thunderbird.backend.graph.command.CommandSetFlag
+import net.thunderbird.backend.graph.command.FOLDER_EXTRA_ID_FORMAT
 import net.thunderbird.backend.graph.command.GraphContactStore
 import net.thunderbird.backend.graph.command.GraphContactSync
 import net.thunderbird.backend.graph.command.GraphContactUpdate
 import net.thunderbird.backend.graph.command.GraphSync
+import net.thunderbird.backend.graph.command.ID_FORMAT_IMMUTABLE
 import net.thunderbird.core.common.mail.Flag
 import net.thunderbird.core.logging.Logger
 import net.thunderbird.feature.mail.folder.api.FolderPathDelimiter
@@ -45,7 +47,7 @@ import net.thunderbird.feature.mail.folder.api.FolderPathDelimiter
 // from the interface they implement rather than make anything simpler.
 @Suppress("TooManyFunctions")
 class GraphBackend internal constructor(
-    backendStorage: BackendStorage,
+    private val backendStorage: BackendStorage,
     private val client: GraphApiClient,
     private val logger: Logger,
     private val pushSupport: GraphPushSupport?,
@@ -159,18 +161,39 @@ class GraphBackend internal constructor(
         targetFolderServerId: String,
         messageServerIds: List<String>,
     ): Map<String, String> = commandMoveOrCopy.moveMessages(targetFolderServerId, messageServerIds)
+        .also { recheckIdsAfterRelocation(sourceFolderServerId, targetFolderServerId) }
 
     override fun moveMessagesAndMarkAsRead(
         sourceFolderServerId: String,
         targetFolderServerId: String,
         messageServerIds: List<String>,
     ): Map<String, String> = commandMoveOrCopy.moveMessagesAndMarkAsRead(targetFolderServerId, messageServerIds)
+        .also { recheckIdsAfterRelocation(sourceFolderServerId, targetFolderServerId) }
 
     override fun copyMessages(
         sourceFolderServerId: String,
         targetFolderServerId: String,
         messageServerIds: List<String>,
     ): Map<String, String> = commandMoveOrCopy.copyMessages(targetFolderServerId, messageServerIds)
+        .also { recheckIdsAfterRelocation(sourceFolderServerId, targetFolderServerId) }
+
+    /**
+     * Has the ids of the destination folder converted again before its next sync, when the messages came out of
+     * a folder whose own ids have not been converted yet.
+     *
+     * Graph answers about a message with the kind of id it was asked with. A message moved or copied by its old
+     * id may therefore arrive in the destination under an id of the old kind, where the next sync would report it
+     * under its immutable id and store it twice.
+     */
+    private fun recheckIdsAfterRelocation(sourceFolderServerId: String, targetFolderServerId: String) {
+        if (!backendStorage.hasImmutableIds(sourceFolderServerId)) {
+            backendStorage.getFolder(targetFolderServerId).setFolderExtraString(FOLDER_EXTRA_ID_FORMAT, null)
+        }
+    }
+
+    private fun BackendStorage.hasImmutableIds(folderServerId: String): Boolean {
+        return getFolder(folderServerId).getFolderExtraString(FOLDER_EXTRA_ID_FORMAT) == ID_FORMAT_IMMUTABLE
+    }
 
     override fun search(
         folderServerId: String,

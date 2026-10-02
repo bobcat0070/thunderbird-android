@@ -51,7 +51,10 @@ class GraphSyncIdConversionTest {
         )
         val requestsBeforeConversion = mutableListOf<Int>()
 
-        createTestSubject { _, _ -> requestsBeforeConversion += server.requestCount }
+        createTestSubject { folderServerId, _, _ ->
+            assertThat(folderServerId).isEqualTo(FOLDER_ID)
+            requestsBeforeConversion += server.requestCount
+        }
             .sync(FOLDER_ID, syncConfig(syncRemoteDeletions = true), listener)
 
         assertThat(requestsBeforeConversion).containsExactly(0)
@@ -62,7 +65,7 @@ class GraphSyncIdConversionTest {
     fun `whether deletions are followed should decide whether the conversion removes missing messages`() = runTest {
         createFolder()
         val removeMissingValues = mutableListOf<Boolean>()
-        val testSubject = createTestSubject { _, removeMissing ->
+        val testSubject = createTestSubject { _, _, removeMissing ->
             removeMissingValues += removeMissing
             throw MessagingException("stop here", false)
         }
@@ -79,7 +82,7 @@ class GraphSyncIdConversionTest {
         // store every message a second time.
         createFolder()
 
-        createTestSubject { _, _ -> throw MessagingException("not converted", false) }
+        createTestSubject { _, _, _ -> throw MessagingException("not converted", false) }
             .sync(FOLDER_ID, syncConfig(syncRemoteDeletions = true), listener)
 
         assertThat(server.requestCount).isEqualTo(0)
@@ -92,7 +95,7 @@ class GraphSyncIdConversionTest {
         }
     }
 
-    private fun createTestSubject(migrateToImmutableIds: (BackendFolder, Boolean) -> Unit): GraphSync {
+    private fun createTestSubject(migrateToImmutableIds: (String, BackendFolder, Boolean) -> Unit): GraphSync {
         return GraphSync(
             backendStorage = backendStorage,
             client = GraphApiClient(

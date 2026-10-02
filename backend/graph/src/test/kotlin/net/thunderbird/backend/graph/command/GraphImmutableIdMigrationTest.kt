@@ -6,7 +6,6 @@ import assertk.assertions.containsExactly
 import assertk.assertions.containsExactlyInAnyOrder
 import assertk.assertions.isEmpty
 import assertk.assertions.isEqualTo
-import assertk.assertions.isNotNull
 import assertk.assertions.isNull
 import com.fsck.k9.backend.api.BackendFolder
 import com.fsck.k9.backend.api.FolderInfo
@@ -53,12 +52,12 @@ class GraphImmutableIdMigrationTest {
     }
 
     @Test
-    fun `stored messages should be given the immutable ids Graph reports for them`() = runTest {
-        val folder = createFolderWith("old-1" to "2026-01-02T00:00:00Z", "old-2" to "2026-01-01T00:00:00Z")
-        graph.immutableIds["old-1"] = "immutable-1"
-        graph.immutableIds["old-2"] = "immutable-2"
+    fun `stored messages should be given the immutable ids Graph lists them under`() = runTest {
+        graph.add("old-1", "immutable-1", receivedDateTime = "2026-01-02T00:00:00Z")
+        graph.add("old-2", "immutable-2", receivedDateTime = "2026-01-01T00:00:00Z")
+        val folder = createFolderWithStored("old-1", "old-2")
 
-        testSubject.migrateIfNeeded(folder, removeMissing = true)
+        testSubject.migrateIfNeeded(FOLDER_ID, folder, removeMissing = true)
 
         assertThat(folder.getMessageServerIds()).containsExactlyInAnyOrder("immutable-1", "immutable-2")
         assertThat(folder.getFolderExtraString(FOLDER_EXTRA_ID_FORMAT)).isEqualTo(ID_FORMAT_IMMUTABLE)
@@ -66,184 +65,311 @@ class GraphImmutableIdMigrationTest {
 
     @Test
     fun `a message should keep what is stored with it`() = runTest {
-        val folder = createFolderWith("old-1" to "2026-01-01T00:00:00Z")
+        graph.add("old-1", "immutable-1", receivedDateTime = "2026-01-01T00:00:00Z")
+        val folder = createFolderWithStored("old-1")
         folder.setMessageFlag("old-1", Flag.ANSWERED, true)
         folder.setMessageServerCategories("old-1", listOf("Red category"))
-        graph.immutableIds["old-1"] = "immutable-1"
 
-        testSubject.migrateIfNeeded(folder, removeMissing = true)
+        testSubject.migrateIfNeeded(FOLDER_ID, folder, removeMissing = true)
 
         assertThat(folder.getMessageFlags("immutable-1")).containsExactlyInAnyOrder(Flag.ANSWERED)
         assertThat(folder.getMessageServerCategories("immutable-1")).containsExactly("Red category")
     }
 
     @Test
-    fun `each message should be looked up by the id it is stored under and asked for its immutable id`() = runTest {
-        val folder = createFolderWith("old/1" to "2026-01-01T00:00:00Z")
-        graph.immutableIds["old/1"] = "immutable-1"
+    fun `the folder should be listed once with each kind of id`() = runTest {
+        // Graph answers a request about one message with the kind of id it was asked with, so asking about a
+        // stored message translates nothing. Only a listing hands out the kind of id the request prefers.
+        graph.add("old-1", "immutable-1", receivedDateTime = "2026-01-01T00:00:00Z")
+        val folder = createFolderWithStored("old-1")
 
-        testSubject.migrateIfNeeded(folder, removeMissing = true)
+        testSubject.migrateIfNeeded(FOLDER_ID, folder, removeMissing = true)
 
-        val request = graph.batchItems.single()
-        assertThat(request.method).isEqualTo("GET")
-        // Encoded, so an id containing a slash still names one message.
-        assertThat(request.url).isEqualTo("/me/messages/old%2F1?\$select=id")
-        assertThat(request.prefer).isEqualTo("IdType=\"ImmutableId\"")
+        assertThat(graph.listings.map { it.immutableIds }).containsExactlyInAnyOrder(false, true)
+        assertThat(graph.listings.map { it.folderId }.distinct()).containsExactly(FOLDER_ID)
+        assertThat(graph.lookups).isEmpty()
     }
 
     @Test
-    fun `a folder that has been converted should not be asked about again`() = runTest {
-        val folder = createFolderWith("old-1" to "2026-01-01T00:00:00Z")
-        graph.immutableIds["old-1"] = "immutable-1"
-        testSubject.migrateIfNeeded(folder, removeMissing = true)
+    fun `a folder that has been converted should not be listed again`() = runTest {
+        graph.add("old-1", "immutable-1", receivedDateTime = "2026-01-01T00:00:00Z")
+        val folder = createFolderWithStored("old-1")
+        testSubject.migrateIfNeeded(FOLDER_ID, folder, removeMissing = true)
         val requestCount = server.requestCount
 
-        testSubject.migrateIfNeeded(folder, removeMissing = true)
+        testSubject.migrateIfNeeded(FOLDER_ID, folder, removeMissing = true)
 
         assertThat(server.requestCount).isEqualTo(requestCount)
     }
 
     @Test
     fun `a folder without stored messages should be done without asking Graph anything`() = runTest {
-        val folder = createFolderWith()
+        val folder = createFolderWithStored()
 
-        testSubject.migrateIfNeeded(folder, removeMissing = true)
+        testSubject.migrateIfNeeded(FOLDER_ID, folder, removeMissing = true)
 
         assertThat(server.requestCount).isEqualTo(0)
         assertThat(folder.getFolderExtraString(FOLDER_EXTRA_ID_FORMAT)).isEqualTo(ID_FORMAT_IMMUTABLE)
     }
 
     @Test
-    fun `a message Graph no longer finds should be removed`() = runTest {
+    fun `a message that already has its immutable id should be left alone`() = runTest {
+        // Converting again has to be harmless: it is what happens after an interruption, and after a message
+        // reached the folder under an old id once the folder had been converted.
+        graph.add("old-1", "immutable-1", receivedDateTime = "2026-01-02T00:00:00Z")
+        graph.add("old-2", "immutable-2", receivedDateTime = "2026-01-01T00:00:00Z")
+        val folder = createFolderWithStored("old-1")
+        folder.save("immutable-2", "2026-01-01T00:00:00Z")
+
+        testSubject.migrateIfNeeded(FOLDER_ID, folder, removeMissing = true)
+
+        assertThat(folder.getMessageServerIds()).containsExactlyInAnyOrder("immutable-1", "immutable-2")
+    }
+
+    @Test
+    fun `a message stored under both of its ids should end up stored once`() = runTest {
+        graph.add("old-1", "immutable-1", receivedDateTime = "2026-01-01T00:00:00Z")
+        val folder = createFolderWithStored("old-1")
+        folder.save("immutable-1", "2026-01-01T00:00:00Z")
+
+        testSubject.migrateIfNeeded(FOLDER_ID, folder, removeMissing = true)
+
+        assertThat(folder.getMessageServerIds()).containsExactlyInAnyOrder("immutable-1")
+    }
+
+    @Test
+    fun `a message Graph no longer has should be removed`() = runTest {
         // Deleted or moved since the last sync. The sync will report that under an id that no longer matches
         // what is stored, so this is the last chance to act on it.
-        val folder = createFolderWith("old-1" to "2026-01-02T00:00:00Z", "gone" to "2026-01-01T00:00:00Z")
-        graph.immutableIds["old-1"] = "immutable-1"
+        graph.add("old-1", "immutable-1", receivedDateTime = "2026-01-02T00:00:00Z")
+        val folder = createFolderWithStored("old-1")
+        folder.save("gone", "2026-01-01T00:00:00Z")
 
-        testSubject.migrateIfNeeded(folder, removeMissing = true)
+        testSubject.migrateIfNeeded(FOLDER_ID, folder, removeMissing = true)
 
         assertThat(folder.getMessageServerIds()).containsExactlyInAnyOrder("immutable-1")
         assertThat(folder.getFolderExtraString(FOLDER_EXTRA_ID_FORMAT)).isEqualTo(ID_FORMAT_IMMUTABLE)
     }
 
     @Test
-    fun `a message Graph no longer finds should be kept when remote deletions are not followed`() = runTest {
-        val folder = createFolderWith("gone" to "2026-01-01T00:00:00Z")
+    fun `a message Graph no longer has should be kept when remote deletions are not followed`() = runTest {
+        graph.add("old-1", "immutable-1", receivedDateTime = "2026-01-02T00:00:00Z")
+        val folder = createFolderWithStored("old-1")
+        folder.save("gone", "2026-01-01T00:00:00Z")
 
-        testSubject.migrateIfNeeded(folder, removeMissing = false)
+        testSubject.migrateIfNeeded(FOLDER_ID, folder, removeMissing = false)
 
-        assertThat(folder.getMessageServerIds()).containsExactlyInAnyOrder("gone")
+        assertThat(folder.getMessageServerIds()).containsExactlyInAnyOrder("immutable-1", "gone")
     }
 
     @Test
-    fun `a message that is already stored under its immutable id should not be stored twice`() = runTest {
-        // A message fetched on its own before the folder was converted is stored under its immutable id, beside
-        // the copy under the old one.
-        val folder = createFolderWith("old-1" to "2026-01-01T00:00:00Z", "immutable-1" to "2026-01-01T00:00:00Z")
-        graph.immutableIds["old-1"] = "immutable-1"
-        graph.immutableIds["immutable-1"] = "immutable-1"
+    fun `a large folder should not be listed to its end for the sake of a deleted message`() = runTest {
+        // Three pages of mail on the server, of which only the newest message is stored - beside one that has
+        // since been deleted there.
+        graph.addMany(count = 1200)
+        val folder = createFolderWithStored("old-1")
+        folder.save("gone", graph.receivedDateTimeOf("old-2"))
 
-        testSubject.migrateIfNeeded(folder, removeMissing = true)
+        testSubject.migrateIfNeeded(FOLDER_ID, folder, removeMissing = true)
 
         assertThat(folder.getMessageServerIds()).containsExactlyInAnyOrder("immutable-1")
+        assertThat(graph.listings.map { it.skip }).containsExactly(0, 0)
+        assertThat(graph.lookups).containsExactly("gone")
     }
 
     @Test
-    fun `a lookup Graph did not answer should fail the conversion and leave the folder unconverted`() = runTest {
-        val folder = createFolderWith("old-1" to "2026-01-02T00:00:00Z", "old-2" to "2026-01-01T00:00:00Z")
-        graph.immutableIds["old-1"] = "immutable-1"
-        graph.failing += "old-2"
+    fun `stored messages further back than one page should be found on the next`() = runTest {
+        graph.addMany(count = 1200)
+        val folder = createFolderWithStored("old-1", "old-700")
 
-        val exception = assertFailsWith<MessagingException> {
-            testSubject.migrateIfNeeded(folder, removeMissing = true)
+        testSubject.migrateIfNeeded(FOLDER_ID, folder, removeMissing = true)
+
+        assertThat(folder.getMessageServerIds()).containsExactlyInAnyOrder("immutable-1", "immutable-700")
+        // Two pages of each listing, and no more: everything stored has been found by then.
+        assertThat(graph.listings.map { it.skip }).containsExactly(0, 0, 500, 500)
+    }
+
+    @Test
+    fun `a stored message that is older than its date suggests should still be found`() = runTest {
+        // Stored with a date newer than the one Graph lists it under, as a message with a wrong sent date is.
+        // Graph still has it, so the listing is followed until it turns up rather than giving it up as deleted.
+        graph.addMany(count = 1200)
+        val folder = createFolderWithStored()
+        folder.save("old-900", graph.receivedDateTimeOf("old-10"))
+
+        testSubject.migrateIfNeeded(FOLDER_ID, folder, removeMissing = true)
+
+        assertThat(folder.getMessageServerIds()).containsExactlyInAnyOrder("immutable-900")
+    }
+
+    @Test
+    fun `copies of one mail should each get an id of their own`() = runTest {
+        // The same Message-ID received at the same moment: nothing tells the copies apart, so they are paired in
+        // the order they are listed.
+        graph.add("old-1", "immutable-1", receivedDateTime = "2026-01-01T00:00:00Z", internetMessageId = "<same>")
+        graph.add("old-2", "immutable-2", receivedDateTime = "2026-01-01T00:00:00Z", internetMessageId = "<same>")
+        val folder = createFolderWithStored("old-1", "old-2")
+
+        testSubject.migrateIfNeeded(FOLDER_ID, folder, removeMissing = true)
+
+        assertThat(folder.getMessageServerIds()).containsExactlyInAnyOrder("immutable-1", "immutable-2")
+    }
+
+    @Test
+    fun `a listing Graph fails should fail the conversion and leave the folder unconverted`() = runTest {
+        graph.add("old-1", "immutable-1", receivedDateTime = "2026-01-01T00:00:00Z")
+        val folder = createFolderWithStored("old-1")
+        graph.isFailing = true
+
+        assertFailsWith<MessagingException> {
+            testSubject.migrateIfNeeded(FOLDER_ID, folder, removeMissing = true)
         }
 
-        // Temporary, so the sync is tried again; and what could be converted has been.
-        assertThat(exception.isPermanentFailure).isEqualTo(false)
-        assertThat(folder.getMessageServerIds()).containsExactlyInAnyOrder("immutable-1", "old-2")
+        assertThat(folder.getMessageServerIds()).containsExactlyInAnyOrder("old-1")
         assertThat(folder.getFolderExtraString(FOLDER_EXTRA_ID_FORMAT)).isNull()
     }
 
     @Test
-    fun `an interrupted conversion should carry on from where it stopped`() = runTest {
-        // More messages than one step converts, so that progress is recorded before the failure.
-        val newest = (1..100).map { minute ->
-            "new-$minute" to
-                "2026-02-01T%02d:%02d:00Z".format(minute / 60, minute % 60)
-        }
-        val oldest = listOf("old-1" to "2026-01-01T00:00:00Z")
-        val folder = createFolderWith(*(newest + oldest).toTypedArray())
-        for ((id, _) in newest + oldest) {
-            graph.immutableIds[id] = "immutable-$id"
-            graph.immutableIds["immutable-$id"] = "immutable-$id"
-        }
-        graph.failing += "old-1"
-        assertFailsWith<MessagingException> { testSubject.migrateIfNeeded(folder, removeMissing = true) }
-        assertThat(folder.getFolderExtraNumber(FOLDER_EXTRA_ID_MIGRATION_CURSOR)).isNotNull()
-        graph.failing.clear()
-        graph.batchItems.clear()
+    fun `a conversion that failed should be completed by the next attempt`() = runTest {
+        graph.add("old-1", "immutable-1", receivedDateTime = "2026-01-01T00:00:00Z")
+        val folder = createFolderWithStored("old-1")
+        graph.isFailing = true
+        assertFailsWith<MessagingException> { testSubject.migrateIfNeeded(FOLDER_ID, folder, removeMissing = true) }
+        graph.isFailing = false
 
-        testSubject.migrateIfNeeded(folder, removeMissing = true)
+        testSubject.migrateIfNeeded(FOLDER_ID, folder, removeMissing = true)
 
-        // Only the message the first attempt stopped at, which is asked about again, and the one it did not
-        // get to - not the ninety-nine before them.
-        assertThat(graph.batchItems.map { it.url }).containsExactly(
-            "/me/messages/immutable-new-1?\$select=id",
-            "/me/messages/old-1?\$select=id",
-        )
-        assertThat(folder.getMessageServerIds().filter { !it.startsWith("immutable-") }).isEmpty()
+        assertThat(folder.getMessageServerIds()).containsExactlyInAnyOrder("immutable-1")
         assertThat(folder.getFolderExtraString(FOLDER_EXTRA_ID_FORMAT)).isEqualTo(ID_FORMAT_IMMUTABLE)
     }
 
-    private suspend fun createFolderWith(vararg messages: Pair<String, String>): BackendFolder {
+    /**
+     * Creates the folder with the given messages stored under their old ids, dated as Graph has them.
+     */
+    private suspend fun createFolderWithStored(vararg defaultIds: String): BackendFolder {
         backendStorage.createFolderUpdater().use {
             it.createFolders(listOf(FolderInfo(FOLDER_ID, "Inbox", FolderType.INBOX)))
         }
 
         return backendStorage.getFolder(FOLDER_ID).apply {
-            for ((messageId, receivedDateTime) in messages) {
-                val message = GraphMessage(id = messageId, receivedDateTime = receivedDateTime)
-                saveMessage(message.toEnvelopeMessage(), MessageDownloadState.ENVELOPE)
+            for (defaultId in defaultIds) {
+                save(defaultId, graph.receivedDateTimeOf(defaultId))
             }
         }
     }
+
+    private suspend fun BackendFolder.save(messageServerId: String, receivedDateTime: String) {
+        val message = GraphMessage(id = messageServerId, receivedDateTime = receivedDateTime)
+        saveMessage(message.toEnvelopeMessage(), MessageDownloadState.ENVELOPE)
+    }
 }
 
-private data class BatchItem(val id: String, val method: String, val url: String, val prefer: String?)
+private data class ServerMessage(
+    val defaultId: String,
+    val immutableId: String,
+    val internetMessageId: String,
+    val receivedDateTime: String,
+)
+
+private data class Listing(val folderId: String, val immutableIds: Boolean, val skip: Int)
 
 /**
- * Answers the lookups of a batch the way Graph does: a message it knows with its immutable id, one it does not
- * with 404, and one it is failing on with 500.
+ * A mailbox folder that answers the way Microsoft 365 was seen to: a listing hands out the kind of id the request
+ * prefers, and a request about one message is answered with the id it was asked with - or 404 for an id no message
+ * in the mailbox has.
  */
 private class FakeIdGraph : Dispatcher() {
-    val immutableIds = mutableMapOf<String, String>()
-    val failing = mutableSetOf<String>()
-    val batchItems = mutableListOf<BatchItem>()
+    private val messages = mutableListOf<ServerMessage>()
+    val listings = mutableListOf<Listing>()
+    val lookups = mutableListOf<String>()
+    var isFailing = false
+
+    fun add(defaultId: String, immutableId: String, receivedDateTime: String, internetMessageId: String? = null) {
+        messages += ServerMessage(
+            defaultId = defaultId,
+            immutableId = immutableId,
+            internetMessageId = internetMessageId ?: "<$immutableId@example>",
+            receivedDateTime = receivedDateTime,
+        )
+    }
+
+    /**
+     * Adds messages `old-1` to `old-<count>`, a minute apart, `old-1` being the newest.
+     */
+    fun addMany(count: Int) {
+        for (number in 1..count) {
+            val minutesAgo = number - 1
+            val receivedDateTime = "2026-01-%02dT%02d:%02d:00Z".format(
+                DAY_OF_NEWEST - minutesAgo / MINUTES_PER_DAY,
+                LAST_HOUR - (minutesAgo / MINUTES_PER_HOUR) % HOURS_PER_DAY,
+                LAST_MINUTE - minutesAgo % MINUTES_PER_HOUR,
+            )
+            add("old-$number", "immutable-$number", receivedDateTime)
+        }
+    }
+
+    fun receivedDateTimeOf(defaultId: String): String = messages.first { it.defaultId == defaultId }.receivedDateTime
 
     override fun dispatch(request: RecordedRequest): MockResponse {
-        val requests = Json.parseToJsonElement(request.body.readUtf8()).jsonObject.getValue("requests").jsonArray
-        val items = requests.map { element ->
-            val item = element.jsonObject
-            BatchItem(
-                id = item.getValue("id").jsonPrimitive.content,
-                method = item.getValue("method").jsonPrimitive.content,
-                url = item.getValue("url").jsonPrimitive.content,
-                prefer = item["headers"]?.jsonObject?.get("Prefer")?.jsonPrimitive?.content,
-            )
+        val url = requireNotNull(request.requestUrl)
+
+        return when {
+            isFailing -> MockResponse().setResponseCode(HTTP_SERVER_ERROR)
+            url.encodedPath.endsWith("/\$batch") -> batch(request)
+            else -> listing(request)
         }
-        batchItems += items
+    }
 
-        val responses = items.map { item ->
-            val storedId = item.url.substringAfter("/me/messages/").substringBefore("?").replace("%2F", "/")
-            val immutableId = immutableIds[storedId]
+    private fun listing(request: RecordedRequest): MockResponse {
+        val url = requireNotNull(request.requestUrl)
+        val immutableIds = request.getHeader("Prefer").orEmpty().contains("IdType=\"ImmutableId\"")
+        val top = requireNotNull(url.queryParameter("\$top")).toInt()
+        val skip = url.queryParameter("\$skip")?.toInt() ?: 0
+        listings += Listing(folderId = url.pathSegments[url.pathSegments.size - 2], immutableIds, skip)
 
-            when {
-                storedId in failing -> """{"id":"${item.id}","status":500}"""
-                immutableId != null -> """{"id":"${item.id}","status":200,"body":{"id":"$immutableId"}}"""
-                else -> """{"id":"${item.id}","status":404}"""
+        val newestFirst = messages.sortedByDescending { it.receivedDateTime }
+        val page = newestFirst.drop(skip).take(top).joinToString(",") { message ->
+            val id = if (immutableIds) message.immutableId else message.defaultId
+            """{"id":"$id","internetMessageId":"${message.internetMessageId}",""" +
+                """"receivedDateTime":"${message.receivedDateTime}"}"""
+        }
+        val nextLink = if (skip + top < newestFirst.size) {
+            val next = url.newBuilder().setQueryParameter("\$skip", (skip + top).toString()).build()
+            ""","@odata.nextLink":"$next""""
+        } else {
+            ""
+        }
+
+        return MockResponse().setBody("""{"value":[$page]$nextLink}""")
+    }
+
+    private fun batch(request: RecordedRequest): MockResponse {
+        val requests = Json.parseToJsonElement(request.body.readUtf8()).jsonObject.getValue("requests").jsonArray
+        val responses = requests.map { element ->
+            val item = element.jsonObject
+            val id = item.getValue("id").jsonPrimitive.content
+            val askedAbout = item.getValue("url").jsonPrimitive.content
+                .substringAfter("/me/messages/")
+                .substringBefore("?")
+            lookups += askedAbout
+
+            if (messages.any { it.defaultId == askedAbout || it.immutableId == askedAbout }) {
+                """{"id":"$id","status":200,"body":{"id":"$askedAbout"}}"""
+            } else {
+                """{"id":"$id","status":404}"""
             }
         }
 
         return MockResponse().setBody("""{"responses":[${responses.joinToString(",")}]}""")
+    }
+
+    private companion object {
+        const val HTTP_SERVER_ERROR = 500
+        const val DAY_OF_NEWEST = 28
+        const val LAST_HOUR = 23
+        const val LAST_MINUTE = 59
+        const val MINUTES_PER_HOUR = 60
+        const val HOURS_PER_DAY = 24
+        const val MINUTES_PER_DAY = MINUTES_PER_HOUR * HOURS_PER_DAY
     }
 }

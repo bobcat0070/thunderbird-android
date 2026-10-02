@@ -118,16 +118,22 @@ such as category colours, do without.
 #### Converting ids that are already stored
 
 Mail synchronized before immutable ids were asked for is stored under the old ids, and a sync that reported the same
-message under another id would store it twice. So before a folder is synchronized again, each message stored for it
-is looked up by the id it has and stored again under the immutable id Graph answers with. A message Graph no longer
-finds has been deleted or moved since the last sync and is removed, unless the account does not follow remote
-deletions. Delta tokens are valid for either kind of id, so the folder is not enumerated again.
+message under another id would store it twice. So before a folder is synchronized again, its stored messages are
+stored again under their immutable ids. Delta tokens are valid for either kind of id, so the folder is not enumerated
+again.
 
-This costs one request per stored message, twenty to a batch, once per folder. Graph can convert a thousand ids in
-one call (`translateExchangeIds`), but only for an app permitted to read the user's profile (`User.Read`), which
-would be one more scope for every user to consent to. Progress is recorded as the conversion goes, so a folder large
-enough to be throttled part way carries on at the next sync instead of starting over; until it is done, that
-folder is not synchronized.
+Graph does not translate an id it is asked about: a request that names a message by its old id is answered with that
+same id, whatever it prefers. Only a listing hands out the preferred kind, so the folder is listed newest first once
+with each kind of id, as far back as the stored messages go, and the two listings are paired up by each message's
+`Message-ID` and the time it was received. A stored message that turns up in neither has been deleted or moved since
+the last sync and is removed, unless the account does not follow remote deletions. Graph can convert ids directly
+(`translateExchangeIds`), a thousand per call, but only for an app permitted to read the user's profile
+(`User.Read`), which would be one more scope for every user to consent to.
+
+Converting again is harmless, since a message that already has its immutable id is found under it. A conversion that
+is interrupted is simply run again at the next sync; until it has succeeded, the folder is not synchronized. A message
+moved or copied by its old id, out of a folder not yet converted, can arrive under an old id, so its destination is
+converted again before its next sync.
 
 #### Operational cost
 
