@@ -12,6 +12,7 @@ import java.io.File
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
+import kotlinx.coroutines.test.runTest
 import net.thunderbird.backend.graph.FakeOAuth2TokenProvider
 import net.thunderbird.backend.graph.api.GraphApiClient
 import net.thunderbird.core.common.mail.Flag
@@ -37,7 +38,7 @@ class CommandDownloadMessageTest {
     }
 
     @Test
-    fun `downloading a complete message should fetch raw MIME and store it as full`() {
+    fun `downloading a complete message should fetch raw MIME and store it as full`() = runTest {
         createFolder()
         server.enqueue(MockResponse().setBody(RAW_MIME))
         server.enqueue(MockResponse().setBody("""{"id":"m1","inferenceClassification":"other"}"""))
@@ -52,7 +53,7 @@ class CommandDownloadMessageTest {
     }
 
     @Test
-    fun `downloading structure should store the envelope from the JSON representation`() {
+    fun `downloading structure should store the envelope from the JSON representation`() = runTest {
         createFolder()
         server.enqueue(
             MockResponse().setBody(
@@ -68,7 +69,7 @@ class CommandDownloadMessageTest {
     }
 
     @Test
-    fun `downloaded message should keep the server id as its uid`() {
+    fun `downloaded message should keep the server id as its uid`() = runTest {
         createFolder()
         server.enqueue(MockResponse().setBody(RAW_MIME))
 

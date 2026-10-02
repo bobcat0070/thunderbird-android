@@ -82,6 +82,7 @@ include(
 
 include(
     ":app-common",
+    ":app-composition",
 )
 
 include(
@@ -136,6 +137,8 @@ include(
     ":feature:mail:message:classification:internal",
     ":feature:mail:message:reader:api",
     ":feature:mail:message:reader:impl",
+    ":feature:mail:storage:global-db-migration:api",
+    ":feature:mail:storage:global-db-migration:internal",
 )
 
 include(

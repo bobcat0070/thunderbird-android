@@ -7,7 +7,7 @@ import com.fsck.k9.K9RobolectricTest
 import com.fsck.k9.Preferences
 import kotlinx.coroutines.test.runTest
 import net.thunderbird.components.core.outcome.Outcome
-import net.thunderbird.feature.mail.folder.api.FolderType
+import net.thunderbird.feature.mail.folder.FolderType
 import net.thunderbird.feature.mail.folder.api.RemoteFolder
 import net.thunderbird.feature.mail.folder.api.RemoteFolderDetails
 import net.thunderbird.feature.mail.folder.api.data.repository.RemoteFolderDetailsRepository

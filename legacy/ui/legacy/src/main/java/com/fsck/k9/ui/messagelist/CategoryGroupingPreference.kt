@@ -1,6 +1,6 @@
 package com.fsck.k9.ui.messagelist
 
-import net.thunderbird.feature.mail.folder.api.FolderType
+import net.thunderbird.feature.mail.folder.FolderType
 import com.fsck.k9.preferences.CategoryGrouping
 import com.fsck.k9.preferences.CategoryGroupingStore
 import net.thunderbird.feature.search.legacy.UnifiedFolderKind

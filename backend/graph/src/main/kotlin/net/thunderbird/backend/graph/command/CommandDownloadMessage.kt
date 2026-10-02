@@ -21,13 +21,13 @@ internal class CommandDownloadMessage(
     private val backendStorage: BackendStorage,
     private val client: GraphApiClient,
 ) {
-    fun downloadMessageStructure(folderServerId: String, messageServerId: String) {
+    suspend fun downloadMessageStructure(folderServerId: String, messageServerId: String) {
         val message = fetchEnvelope(messageServerId)
 
         backendStorage.getFolder(folderServerId).saveMessage(message, MessageDownloadState.ENVELOPE)
     }
 
-    fun downloadCompleteMessage(folderServerId: String, messageServerId: String) {
+    suspend fun downloadCompleteMessage(folderServerId: String, messageServerId: String) {
         val message = fetchFullMessage(messageServerId)
         // The raw message says nothing about Focused Inbox, and the stored message is classified again from what
         // is saved here, so where it was sorted is asked for alongside - or opening it would change its category.

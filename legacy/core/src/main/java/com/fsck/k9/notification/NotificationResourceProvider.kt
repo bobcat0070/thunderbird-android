@@ -1,6 +1,7 @@
 package com.fsck.k9.notification
 
 import android.graphics.Bitmap
+import androidx.annotation.WorkerThread
 import com.fsck.k9.mail.Address
 
 interface NotificationResourceProvider {
@@ -37,7 +38,8 @@ interface NotificationResourceProvider {
      * @param isSenderAuthenticated whether this message passed DMARC. Gates the sender domain's brand
      *   indicator, which must never be shown for mail that only claims to come from that domain.
      */
-    suspend fun avatar(address: Address, isSenderAuthenticated: Boolean): Bitmap?
+    @WorkerThread
+    fun avatar(address: Address, isSenderAuthenticated: Boolean): Bitmap?
 
     fun notifyErrorTitle(): String
     fun notifyErrorText(): String

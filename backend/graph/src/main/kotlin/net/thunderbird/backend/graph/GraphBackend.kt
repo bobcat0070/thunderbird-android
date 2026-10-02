@@ -11,6 +11,10 @@ import com.fsck.k9.backend.api.SyncListener
 import com.fsck.k9.mail.BodyFactory
 import com.fsck.k9.mail.Message
 import com.fsck.k9.mail.Part
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withContext
 import net.thunderbird.backend.graph.api.GraphApiClient
 import net.thunderbird.backend.graph.command.CommandDelete
 import net.thunderbird.backend.graph.command.CommandDownloadMessage
@@ -46,6 +50,7 @@ class GraphBackend internal constructor(
     private val logger: Logger,
     private val pushSupport: GraphPushSupport?,
     contactStore: GraphContactStore? = null,
+    private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
 ) : Backend, DirectorySearcher {
     private val commandRefreshFolderList = CommandRefreshFolderList(backendStorage, client)
     private val commandSync = GraphSync(backendStorage, client, logger)
@@ -99,21 +104,24 @@ class GraphBackend internal constructor(
         }
     }
 
-    override fun sync(folderServerId: String, syncConfig: SyncConfig, listener: SyncListener) {
-        commandSync.sync(folderServerId, syncConfig, listener)
-    }
+    override fun sync(folderServerId: String, syncConfig: SyncConfig, listener: SyncListener) =
+        runBlocking(ioDispatcher) {
+            commandSync.sync(folderServerId, syncConfig, listener)
+        }
 
-    override fun downloadMessage(syncConfig: SyncConfig, folderServerId: String, messageServerId: String) {
-        commandDownloadMessage.downloadCompleteMessage(folderServerId, messageServerId)
-    }
+    override fun downloadMessage(syncConfig: SyncConfig, folderServerId: String, messageServerId: String) =
+        runBlocking(ioDispatcher) {
+            commandDownloadMessage.downloadCompleteMessage(folderServerId, messageServerId)
+        }
 
-    override fun downloadMessageStructure(folderServerId: String, messageServerId: String) {
+    override fun downloadMessageStructure(folderServerId: String, messageServerId: String) = runBlocking(ioDispatcher) {
         commandDownloadMessage.downloadMessageStructure(folderServerId, messageServerId)
     }
 
-    override fun downloadCompleteMessage(folderServerId: String, messageServerId: String) {
-        commandDownloadMessage.downloadCompleteMessage(folderServerId, messageServerId)
-    }
+    override suspend fun downloadCompleteMessage(folderServerId: String, messageServerId: String) =
+        withContext(ioDispatcher) {
+            commandDownloadMessage.downloadCompleteMessage(folderServerId, messageServerId)
+        }
 
     override fun setFlag(folderServerId: String, messageServerIds: List<String>, flag: Flag, newState: Boolean) {
         commandSetFlag.setFlag(messageServerIds, flag, newState)

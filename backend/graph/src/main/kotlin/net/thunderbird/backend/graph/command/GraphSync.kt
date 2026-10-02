@@ -88,7 +88,7 @@ internal class GraphSync(
     private val deltaReader = GraphDeltaReader(client)
 
     @Suppress("TooGenericExceptionCaught")
-    fun sync(folderServerId: String, syncConfig: SyncConfig, listener: SyncListener) {
+    suspend fun sync(folderServerId: String, syncConfig: SyncConfig, listener: SyncListener) {
         try {
             listener.syncStarted(folderServerId)
 
@@ -243,7 +243,7 @@ internal class GraphSync(
      *   is stored per message reaches mail that was synchronized by an earlier version.
      * @return the number of messages that were added.
      */
-    private fun saveMessages(
+    private suspend fun saveMessages(
         folderServerId: String,
         backendFolder: BackendFolder,
         messages: List<GraphMessage>,

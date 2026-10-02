@@ -8,7 +8,7 @@ import kotlin.test.Test
 import net.thunderbird.feature.account.AccountIdFactory
 import net.thunderbird.feature.mail.folder.api.Folder
 import net.thunderbird.feature.mail.folder.api.FolderDetails
-import net.thunderbird.feature.mail.folder.api.FolderType
+import net.thunderbird.feature.mail.folder.FolderType
 import org.mockito.kotlin.mock
 
 class FolderSettingsDataStoreTest {

@@ -13,6 +13,7 @@ import com.fsck.k9.mail.FolderType
 import com.fsck.k9.mail.MessageDownloadState
 import kotlin.test.AfterTest
 import kotlin.test.Test
+import kotlinx.coroutines.test.runTest
 import net.thunderbird.backend.graph.FakeOAuth2TokenProvider
 import net.thunderbird.backend.graph.api.GraphApiClient
 import net.thunderbird.backend.graph.api.GraphMessage
@@ -49,7 +50,7 @@ class GraphLastActionBackfillTest {
     }
 
     @Test
-    fun `stored messages replied to or forwarded in Outlook should get their arrows`() {
+    fun `stored messages replied to or forwarded in Outlook should get their arrows`() = runTest {
         // Stored before replied and forwarded were read at all; delta will never report them again.
         val folder = createFolderWith("m1", "m2", "m3")
         graph.verbs["m1"] = LAST_VERB_REPLY_TO_SENDER
@@ -64,7 +65,7 @@ class GraphLastActionBackfillTest {
     }
 
     @Test
-    fun `other flags should be left as they are`() {
+    fun `other flags should be left as they are`() = runTest {
         // The listing carries only the last action; reading it as "not read, not starred" would undo both.
         val folder = createFolderWith("m1")
         folder.setMessageFlag("m1", Flag.SEEN, true)
@@ -77,7 +78,7 @@ class GraphLastActionBackfillTest {
     }
 
     @Test
-    fun `a folder should be read once`() {
+    fun `a folder should be read once`() = runTest {
         val folder = createFolderWith("m1")
 
         testSubject.backfillIfDue(FOLDER_ID, folder, syncConfig(), listener)
@@ -87,7 +88,7 @@ class GraphLastActionBackfillTest {
     }
 
     @Test
-    fun `a refused listing should be tried again next time`() {
+    fun `a refused listing should be tried again next time`() = runTest {
         val folder = createFolderWith("m1")
         graph.isRefusing = true
 
@@ -103,7 +104,7 @@ class GraphLastActionBackfillTest {
         assertThat(folder.getFolderExtraString(FOLDER_EXTRA_LAST_ACTIONS_BACKFILLED)).isNotNull()
     }
 
-    private fun createFolderWith(vararg messageIds: String) = backendStorage.run {
+    private suspend fun createFolderWith(vararg messageIds: String) = backendStorage.run {
         createFolderUpdater().use { it.createFolders(listOf(FolderInfo(FOLDER_ID, "Inbox", FolderType.INBOX))) }
 
         getFolder(FOLDER_ID).apply {

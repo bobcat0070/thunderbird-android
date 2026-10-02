@@ -17,6 +17,7 @@ import com.fsck.k9.mail.FolderType
 import com.fsck.k9.mail.MessageDownloadState
 import kotlin.test.AfterTest
 import kotlin.test.Test
+import kotlinx.coroutines.test.runTest
 import net.thunderbird.backend.graph.FakeOAuth2TokenProvider
 import net.thunderbird.backend.graph.api.GraphApiClient
 import net.thunderbird.backend.graph.api.GraphMessage
@@ -40,7 +41,7 @@ class GraphSyncTest {
     }
 
     @Test
-    fun `initial sync should store messages and remember the delta token`() {
+    fun `initial sync should store messages and remember the delta token`() = runTest {
         createFolder()
         enqueueWindowProbe()
         server.enqueue(
@@ -61,7 +62,7 @@ class GraphSyncTest {
     }
 
     @Test
-    fun `second sync should resume from the stored delta token instead of enumerating again`() {
+    fun `second sync should resume from the stored delta token instead of enumerating again`() = runTest {
         createFolder()
         val deltaLink = "${server.url("/v1.0/")}me/mailFolders/$FOLDER_ID/messages/delta?\$deltatoken=t1"
         givenCompletedFullRound(deltaLink)
@@ -80,7 +81,7 @@ class GraphSyncTest {
     }
 
     @Test
-    fun `incremental sync should add newly arrived messages`() {
+    fun `incremental sync should add newly arrived messages`() = runTest {
         createFolderWithMessage()
         val deltaLink = "${server.url("/v1.0/")}me/mailFolders/$FOLDER_ID/messages/delta?\$deltatoken=t1"
         givenCompletedFullRound(deltaLink)
@@ -103,7 +104,7 @@ class GraphSyncTest {
     }
 
     @Test
-    fun `removed messages should be deleted locally`() {
+    fun `removed messages should be deleted locally`() = runTest {
         createFolderWithMessage()
         val deltaLink = "${server.url("/v1.0/")}me/mailFolders/$FOLDER_ID/messages/delta?\$deltatoken=t1"
         givenCompletedFullRound(deltaLink)
@@ -127,7 +128,7 @@ class GraphSyncTest {
     }
 
     @Test
-    fun `rejected delta token should fall back to a fresh enumeration`() {
+    fun `rejected delta token should fall back to a fresh enumeration`() = runTest {
         createFolder()
         val staleLink = "${server.url("/v1.0/")}me/mailFolders/$FOLDER_ID/messages/delta?\$deltatoken=stale"
         givenCompletedFullRound(staleLink)
@@ -152,7 +153,7 @@ class GraphSyncTest {
     }
 
     @Test
-    fun `incomplete round should not store a delta token`() {
+    fun `incomplete round should not store a delta token`() = runTest {
         createFolder()
         enqueueWindowProbe()
         // A response with neither a deltaLink nor a nextLink ends the round without a resume point.
@@ -164,7 +165,7 @@ class GraphSyncTest {
     }
 
     @Test
-    fun `remote flag change should be applied locally`() {
+    fun `remote flag change should be applied locally`() = runTest {
         createFolderWithMessage()
         val deltaLink = "${server.url("/v1.0/")}me/mailFolders/$FOLDER_ID/messages/delta?\$deltatoken=t1"
         givenCompletedFullRound(deltaLink)
@@ -183,7 +184,7 @@ class GraphSyncTest {
     }
 
     @Test
-    fun `a flag Graph does not store should survive a remote change to the message`() {
+    fun `a flag Graph does not store should survive a remote change to the message`() = runTest {
         createFolderWithMessage()
         val folder = backendStorage.getFolder(FOLDER_ID)
         folder.setMessageFlag("existing", Flag.ANSWERED, true)
@@ -214,7 +215,7 @@ class GraphSyncTest {
     }
 
     @Test
-    fun `a message replied to in Outlook should be marked answered here`() {
+    fun `a message replied to in Outlook should be marked answered here`() = runTest {
         createFolderWithMessage()
         val deltaLink = "${server.url("/v1.0/")}me/mailFolders/$FOLDER_ID/messages/delta?\$deltatoken=t1"
         givenCompletedFullRound(deltaLink)
@@ -240,7 +241,7 @@ class GraphSyncTest {
     }
 
     @Test
-    fun `a later forward in Outlook should not clear a reply made here`() {
+    fun `a later forward in Outlook should not clear a reply made here`() = runTest {
         // Exchange records only the last action, so a forward after a reply reads as a forward alone.
         createFolderWithMessage()
         val folder = backendStorage.getFolder(FOLDER_ID)
@@ -270,7 +271,7 @@ class GraphSyncTest {
     }
 
     @Test
-    fun `the delta round should not expand extended properties`() {
+    fun `the delta round should not expand extended properties`() = runTest {
         // Microsoft 365 answers a delta request that expands them with 400 Bad Request, and no mail arrives at all.
         createFolder()
         enqueueWindowProbe()
@@ -290,7 +291,7 @@ class GraphSyncTest {
     }
 
     @Test
-    fun `a message with preview text should still be stored as headers-only`() {
+    fun `a message with preview text should still be stored as headers-only`() = runTest {
         createFolder()
         enqueueWindowProbe()
         server.enqueue(
@@ -312,7 +313,7 @@ class GraphSyncTest {
     }
 
     @Test
-    fun `message without a body preview should still be stored`() {
+    fun `message without a body preview should still be stored`() = runTest {
         createFolder()
         enqueueWindowProbe()
         server.enqueue(
@@ -330,7 +331,7 @@ class GraphSyncTest {
     }
 
     @Test
-    fun `asking for more messages should enumerate the folder again instead of resuming`() {
+    fun `asking for more messages should enumerate the folder again instead of resuming`() = runTest {
         createFolder()
         val deltaLink = "${server.url("/v1.0/")}me/mailFolders/$FOLDER_ID/messages/delta?\$deltatoken=t1"
         val folder = backendStorage.getFolder(FOLDER_ID)
@@ -356,7 +357,7 @@ class GraphSyncTest {
     }
 
     @Test
-    fun `unchanged visible limit should still resume from the stored token`() {
+    fun `unchanged visible limit should still resume from the stored token`() = runTest {
         createFolder()
         val deltaLink = "${server.url("/v1.0/")}me/mailFolders/$FOLDER_ID/messages/delta?\$deltatoken=t1"
         val folder = backendStorage.getFolder(FOLDER_ID)
@@ -385,7 +386,7 @@ class GraphSyncTest {
     }
 
     @Test
-    fun `a format upgrade should not overwrite a message whose body was already downloaded`() {
+    fun `a format upgrade should not overwrite a message whose body was already downloaded`() = runTest {
         // Re-saving writes the envelope over the stored message, so doing it to a message the user has
         // already downloaded would throw the body away and put the download button back.
         createFolderWithMessage()
@@ -411,7 +412,7 @@ class GraphSyncTest {
     }
 
     @Test
-    fun `initial round should page through nextLink so older mail is reachable`() {
+    fun `initial round should page through nextLink so older mail is reachable`() = runTest {
         createFolder()
         backendStorage.getFolder(FOLDER_ID).visibleLimit = 3
         enqueueWindowProbe()
@@ -444,7 +445,7 @@ class GraphSyncTest {
     }
 
     @Test
-    fun `delta request should set the page size by header rather than by a result cap`() {
+    fun `delta request should set the page size by header rather than by a result cap`() = runTest {
         createFolder()
         enqueueWindowProbe()
         server.enqueue(
@@ -466,7 +467,7 @@ class GraphSyncTest {
     }
 
     @Test
-    fun `large folder should bound the enumeration by the date of the oldest visible message`() {
+    fun `large folder should bound the enumeration by the date of the oldest visible message`() = runTest {
         createFolder()
         backendStorage.getFolder(FOLDER_ID).visibleLimit = 2
         // The probe finds a message at the edge of the window, meaning the folder holds at least the window.
@@ -493,7 +494,7 @@ class GraphSyncTest {
     }
 
     @Test
-    fun `folder smaller than the window should not be date bounded`() {
+    fun `folder smaller than the window should not be date bounded`() = runTest {
         createFolder()
         enqueueWindowProbe()
         server.enqueue(
@@ -512,7 +513,7 @@ class GraphSyncTest {
     }
 
     @Test
-    fun `window probe should fetch only the message at the edge of the window`() {
+    fun `window probe should fetch only the message at the edge of the window`() = runTest {
         createFolder()
         backendStorage.getFolder(FOLDER_ID).visibleLimit = 10000
         enqueueWindowProbe()
@@ -535,7 +536,7 @@ class GraphSyncTest {
     }
 
     @Test
-    fun `messages the filtered delta round leaves out should be listed from the folder`() {
+    fun `messages the filtered delta round leaves out should be listed from the folder`() = runTest {
         createFolder()
         backendStorage.getFolder(FOLDER_ID).visibleLimit = 4
         enqueueWindowProbe(edgeReceivedDateTime = "2026-01-01T00:00:00Z")
@@ -577,7 +578,7 @@ class GraphSyncTest {
     }
 
     @Test
-    fun `all messages setting should synchronize the whole folder`() {
+    fun `all messages setting should synchronize the whole folder`() = runTest {
         createFolder()
         backendStorage.getFolder(FOLDER_ID).visibleLimit = 0
         server.enqueue(
@@ -598,7 +599,7 @@ class GraphSyncTest {
     }
 
     @Test
-    fun `a large window should be enumerated to the end so the round can be resumed`() {
+    fun `a large window should be enumerated to the end so the round can be resumed`() = runTest {
         createFolder()
         backendStorage.getFolder(FOLDER_ID).visibleLimit = 10000
         enqueueWindowProbe()
@@ -642,7 +643,7 @@ class GraphSyncTest {
         }
     }
 
-    private fun createFolderWithMessage() {
+    private suspend fun createFolderWithMessage() {
         createFolder()
         val folder = backendStorage.getFolder(FOLDER_ID)
         val existingMessage = GraphMessage(

@@ -8,7 +8,7 @@ import assertk.assertions.isTrue
 import com.fsck.k9.preferences.CategoryGrouping
 import com.fsck.k9.preferences.CategoryGroupingStore
 import kotlin.test.Test
-import net.thunderbird.feature.mail.folder.api.FolderType
+import net.thunderbird.feature.mail.folder.FolderType
 import net.thunderbird.feature.search.legacy.SearchAccount
 import net.thunderbird.feature.search.legacy.UnifiedFolderKind
 
