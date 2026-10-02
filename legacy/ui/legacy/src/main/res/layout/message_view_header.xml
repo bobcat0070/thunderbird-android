@@ -68,6 +68,23 @@
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 
+    <!-- How important the sender marked the message and the categories the server keeps on it. Hidden for a
+         message with neither. -->
+    <com.google.android.material.textview.MaterialTextView
+        android:id="@+id/message_labels"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="-8dp"
+        android:background="?attr/selectableItemBackground"
+        android:lineSpacingExtra="6dp"
+        android:paddingHorizontal="16dp"
+        android:paddingBottom="12dp"
+        android:textAppearance="?attr/textAppearanceBodyMedium"
+        android:visibility="gone"
+        tools:text="High importance"
+        tools:visibility="visible"
+        />
+
     <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/participants_container"
         android:layout_width="match_parent"

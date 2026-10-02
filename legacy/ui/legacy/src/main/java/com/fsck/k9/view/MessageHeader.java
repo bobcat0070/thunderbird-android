@@ -65,6 +65,10 @@ import net.thunderbird.core.preference.display.visualSettings.message.list.Messa
 import net.thunderbird.feature.mail.message.reader.api.domain.ReplyAction;
 import net.thunderbird.feature.mail.message.reader.api.domain.ReplyActions;
 import net.thunderbird.feature.mail.message.reader.api.strategy.ReplyActionStrategy;
+import com.fsck.k9.mail.MessageImportance;
+import com.fsck.k9.mail.MessageImportanceKt;
+import com.fsck.k9.mailstore.LocalMessage;
+import com.fsck.k9.ui.servercategories.MessageLabels;
 
 
 public class MessageHeader extends LinearLayout implements OnClickListener, OnLongClickListener {
@@ -89,6 +93,9 @@ public class MessageHeader extends LinearLayout implements OnClickListener, OnLo
     private ImageView contactPictureView;
     private MaterialTextView markVerificationView;
     private MaterialTextView deliveredToView;
+    private MaterialTextView labelsView;
+    private MessageImportance importance = MessageImportance.NORMAL;
+    private boolean serverCategoriesEditable = false;
 
     /**
      * One thread: these lookups are cached and infrequent, and serialising them keeps a burst of header
@@ -130,6 +137,8 @@ public class MessageHeader extends LinearLayout implements OnClickListener, OnLo
         contactPictureView = findViewById(R.id.contact_picture);
         markVerificationView = findViewById(R.id.mark_verification);
         deliveredToView = findViewById(R.id.delivered_to);
+        labelsView = findViewById(R.id.message_labels);
+        labelsView.setOnClickListener(this);
         fromView = findViewById(R.id.from);
         cryptoStatusIcon = findViewById(R.id.crypto_status_icon);
         recipientNamesView = findViewById(R.id.recipients);
@@ -175,6 +184,10 @@ public class MessageHeader extends LinearLayout implements OnClickListener, OnLo
             performPrimaryReplyAction();
         } else if (id == R.id.menu_overflow) {
             showOverflowMenu(view);
+        } else if (id == R.id.message_labels) {
+            if (serverCategoriesEditable) {
+                messageHeaderClickListener.onMenuItemClick(R.id.server_categories);
+            }
         } else if (id == R.id.participants_container) {
             messageHeaderClickListener.onParticipantsContainerClick();
         } else if (id == R.id.view_all_attachments || id == R.id.attachment_summary_container) {
@@ -529,6 +542,12 @@ public class MessageHeader extends LinearLayout implements OnClickListener, OnLo
         // whether sender pictures are switched on.
         showDeliveryAddress(message, account);
 
+        importance = MessageImportanceKt.getImportance(message);
+        List<String> serverCategories = message instanceof LocalMessage
+            ? ((LocalMessage) message).getServerCategories()
+            : Collections.emptyList();
+        setServerCategories(serverCategories);
+
         CharSequence from = messageHelper.getSenderDisplayName(fromAddress);
         fromView.setText(from);
 
@@ -627,6 +646,32 @@ public class MessageHeader extends LinearLayout implements OnClickListener, OnLo
         if (!additionalActions.contains(ReplyAction.REPLY_ALL)) {
             popupMenu.getMenu().removeItem(R.id.reply_all);
         }
+    }
+
+    /**
+     * Shows the categories the server keeps on the message, beside its importance.
+     *
+     * Also called when the categories are changed while the message is open, since the message in hand was
+     * loaded before the change.
+     */
+    public void setServerCategories(@NonNull List<String> serverCategories) {
+        CharSequence labels = MessageLabels.build(getContext(), importance, serverCategories);
+        if (labels == null) {
+            labelsView.setVisibility(View.GONE);
+            return;
+        }
+
+        labelsView.setText(labels);
+        labelsView.setVisibility(View.VISIBLE);
+    }
+
+    /**
+     * Whether tapping the categories lets the user change them, which only an account whose server keeps
+     * categories allows.
+     */
+    public void setServerCategoriesEditable(boolean editable) {
+        serverCategoriesEditable = editable;
+        labelsView.setClickable(editable);
     }
 
     public void setSubject(@NonNull String subject) {

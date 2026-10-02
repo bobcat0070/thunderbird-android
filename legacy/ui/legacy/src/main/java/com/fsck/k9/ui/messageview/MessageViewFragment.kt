@@ -117,6 +117,9 @@ import org.koin.androidx.viewmodel.ext.android.viewModel
 import org.koin.compose.koinInject
 import org.openintents.openpgp.util.OpenPgpIntentStarter
 import net.thunderbird.feature.mail.message.reader.api.R as MessageReaderR
+import app.k9mail.legacy.mailstore.MessageStoreManager
+import app.k9mail.legacy.mailstore.ServerCategoriesColumn
+import com.fsck.k9.ui.servercategories.ServerCategoriesDialogFragment
 
 @Suppress("LargeClass", "TooManyFunctions")
 class MessageViewFragment :
@@ -147,6 +150,13 @@ class MessageViewFragment :
         )
     }
     private val replayAllStrategy: ReplyActionStrategy<LegacyAccountDto, Message> by inject()
+    private val messageStoreManager: MessageStoreManager by inject()
+
+    /**
+     * The categories the server keeps on the message, as last shown: what the message was loaded with, or what
+     * the user has changed them to since. `null` until a message is loaded.
+     */
+    private var serverCategories: List<String>? = null
 
     private val createDocumentLauncher: ActivityResultLauncher<CreateDocumentResultContract.Input> =
         registerForActivityResult(CreateDocumentResultContract()) { documentUri ->
@@ -245,6 +255,7 @@ class MessageViewFragment :
 
         setFragmentResultListener(MessageDetailsFragment.FRAGMENT_RESULT_KEY, ::onMessageDetailsResult)
         setFragmentResultListener(ClassifyMessageDialogFragment.FRAGMENT_RESULT_KEY, ::onClassifyResult)
+        setFragmentResultListener(ServerCategoriesDialogFragment.FRAGMENT_RESULT_KEY, ::onServerCategoriesResult)
         setFragmentResultListener(AlwaysShowImagesDialogFragment.FRAGMENT_RESULT_KEY, ::onAlwaysShowImagesResult)
     }
 
@@ -489,6 +500,7 @@ class MessageViewFragment :
         )
         menu.findItem(R.id.unsubscribe).isVisible = canMessageBeUnsubscribed()
         menu.findItem(R.id.classify).isVisible = senderAddress() != null
+        menu.findItem(R.id.server_categories).isVisible = canEditServerCategories
         menu.findItem(R.id.show_headers).isVisible = true
         menu.findItem(R.id.export_eml).isVisible =
             featureFlagProvider.provide(GeneratedFeatureFlagKey.MESSAGE_VIEW_ACTION_EXPORT_EML).isEnabled()
@@ -530,6 +542,7 @@ class MessageViewFragment :
             R.id.move_to_drafts -> onMoveToDrafts()
             R.id.unsubscribe -> onUnsubscribe()
             R.id.classify -> onClassify()
+            R.id.server_categories -> onServerCategories()
             R.id.show_headers -> onShowHeaders()
             R.id.print -> {
                 printMessage()
@@ -620,6 +633,41 @@ class MessageViewFragment :
     }
 
     /**
+     * Offers the categories in use in the account, so that most of the time one only has to be ticked.
+     */
+    private fun onServerCategories() {
+        if (!canEditServerCategories) return
+        val assignedCategories = serverCategories ?: return
+
+        viewLifecycleOwner.lifecycleScope.launch {
+            val knownCategories = withContext(Dispatchers.IO) {
+                messageStoreManager.getMessageStore(account).getServerCategories()
+            }
+
+            ServerCategoriesDialogFragment.create(assignedCategories, knownCategories)
+                .show(parentFragmentManager, "server_categories")
+        }
+    }
+
+    private fun onServerCategoriesResult(requestKey: String, result: Bundle) {
+        val message = this.message ?: return
+        val categories = result.getStringArrayList(ServerCategoriesDialogFragment.RESULT_CATEGORIES)
+            ?.let(ServerCategoriesColumn::normalize)
+            ?: return
+        if (categories == serverCategories) return
+
+        serverCategories = categories
+        messageTopView.messageHeaderView.setServerCategories(categories)
+        messagingController.setServerCategories(
+            account,
+            message.folder.databaseId,
+            message.databaseId,
+            message.uid,
+            categories,
+        )
+    }
+
+    /**
      * Whether the receiving server reported that this message passed DMARC, read from the message in hand.
      */
     private fun isSenderAuthenticated(): Boolean {
@@ -678,7 +726,11 @@ class MessageViewFragment :
 
     private fun displayHeaderForLoadingMessage(message: LocalMessage) {
         val showStar = !isOutbox
+        // The message in hand was loaded once; a change made here since is newer than what it says.
+        val currentServerCategories = serverCategories ?: message.serverCategories.also { serverCategories = it }
         messageTopView.setHeaders(message, account, showStar)
+        messageTopView.messageHeaderView.setServerCategories(currentServerCategories)
+        messageTopView.messageHeaderView.setServerCategoriesEditable(canEditServerCategories)
 
         if (account.isOpenPgpProviderConfigured) {
             messageTopView.messageHeaderView.setCryptoStatusLoading()
@@ -711,6 +763,7 @@ class MessageViewFragment :
                 R.id.forward_as_attachment -> onForwardAsAttachment()
                 R.id.edit_as_new_message -> onEditAsNewMessage()
                 R.id.share -> onSendAlternate()
+                R.id.server_categories -> onServerCategories()
                 else -> error("Missing handler for reply menu item $itemId")
             }
         }
@@ -1076,6 +1129,7 @@ class MessageViewFragment :
         messagingController.setFlag(account, message.folder.databaseId, listOf(message), flag, newState)
 
         messageTopView.setHeaders(message, account, true)
+        serverCategories?.let { messageTopView.messageHeaderView.setServerCategories(it) }
 
         invalidateMenu()
     }
@@ -1178,6 +1232,9 @@ class MessageViewFragment :
 
     private val isMoveCapable: Boolean
         get() = !isOutbox && messagingController.isMoveCapable(account)
+
+    private val canEditServerCategories: Boolean
+        get() = !isOutbox && message != null && messagingController.supportsServerCategories(account)
 
     private fun canMessageBeArchived(): Boolean {
         val archiveFolderId = account.archiveFolderId ?: return false

@@ -1259,6 +1259,11 @@ You can keep this message and use it as a backup for your secret key. If you wan
     <string name="message_list_content_description_unread_prefix">unread, %s</string>
     <string name="message_importance_high">High importance</string>
     <string name="message_importance_low">Low importance</string>
+    <string name="server_categories_action">Outlook categories</string>
+    <string name="server_categories_title">Outlook categories</string>
+    <string name="server_categories_new_hint">New category</string>
+    <string name="server_categories_add_action">Add</string>
+    <string name="server_categories_content_description">Categories: %s</string>
 
     <!-- Name of the "data collection" section in the general settings screen -->
     <string name="settings_ui_data_collection">Data collection</string>
