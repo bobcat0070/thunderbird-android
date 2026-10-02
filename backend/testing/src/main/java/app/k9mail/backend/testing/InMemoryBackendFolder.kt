@@ -116,6 +116,19 @@ class InMemoryBackendFolder(override var name: String, var type: FolderType) : B
         }
     }
 
+    override fun changeMessageServerId(messageServerId: String, newMessageServerId: String) {
+        val message = messages.remove(messageServerId) ?: error("Message $messageServerId not found")
+        val flags = messageFlags.remove(messageServerId)
+        val categories = messageServerCategories.remove(messageServerId)
+
+        if (newMessageServerId !in messages) {
+            message.uid = newMessageServerId
+            messages[newMessageServerId] = message
+            flags?.let { messageFlags[newMessageServerId] = it }
+            categories?.let { messageServerCategories[newMessageServerId] = it }
+        }
+    }
+
     override fun getMessageServerCategories(messageServerId: String): List<String> {
         return messageServerCategories[messageServerId].orEmpty()
     }

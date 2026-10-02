@@ -85,6 +85,12 @@ interface MessageStore {
     fun setMessageFlag(folderId: Long, messageServerId: String, flag: Flag, set: Boolean)
 
     /**
+     * Store a message under another server ID. If a message is already stored under [newMessageServerId], that
+     * one is kept and the one stored under [messageServerId] is removed.
+     */
+    fun changeMessageServerId(folderId: Long, messageServerId: String, newMessageServerId: String)
+
+    /**
      * The categories the server keeps on a message, such as the ones assigned in Outlook.
      */
     fun getMessageServerCategories(folderId: Long, messageServerId: String): List<String>

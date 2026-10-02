@@ -32,6 +32,14 @@ interface BackendFolder {
      */
     fun setMessageServerCategories(messageServerId: String, categories: List<String>)
     suspend fun saveMessage(message: Message, downloadState: MessageDownloadState)
+
+    /**
+     * Stores a message under another server ID, for a server that has changed how it identifies the message.
+     *
+     * If a message is already stored under [newMessageServerId], that one is kept and the one stored under
+     * [messageServerId] is removed: they are the same message, and the folder must not show it twice.
+     */
+    fun changeMessageServerId(messageServerId: String, newMessageServerId: String)
     fun getOldestMessageDate(): Date?
     fun getFolderExtraString(name: String): String?
     fun setFolderExtraString(name: String, value: String?)

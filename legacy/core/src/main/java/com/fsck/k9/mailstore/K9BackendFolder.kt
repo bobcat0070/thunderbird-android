@@ -84,6 +84,10 @@ class K9BackendFolder(
         messageStore.setMessageFlag(folderId, messageServerId, flag, value)
     }
 
+    override fun changeMessageServerId(messageServerId: String, newMessageServerId: String) {
+        messageStore.changeMessageServerId(folderId, messageServerId, newMessageServerId)
+    }
+
     override fun getMessageServerCategories(messageServerId: String): List<String> {
         return messageStore.getMessageServerCategories(folderId, messageServerId)
     }

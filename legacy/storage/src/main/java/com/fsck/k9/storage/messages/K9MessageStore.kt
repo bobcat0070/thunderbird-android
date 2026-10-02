@@ -94,6 +94,13 @@ class K9MessageStore(
         flagMessageOperations.setMessageFlag(folderId, messageServerId, flag, set)
     }
 
+    override fun changeMessageServerId(folderId: Long, messageServerId: String, newMessageServerId: String) {
+        val isChanged = updateMessageOperations.changeMessageServerId(folderId, messageServerId, newMessageServerId)
+        if (!isChanged) {
+            deleteMessageOperations.destroyMessages(folderId, listOf(messageServerId))
+        }
+    }
+
     override fun getMessageServerCategories(folderId: Long, messageServerId: String): List<String> {
         return serverCategoryOperations.getMessageServerCategories(folderId, messageServerId)
     }

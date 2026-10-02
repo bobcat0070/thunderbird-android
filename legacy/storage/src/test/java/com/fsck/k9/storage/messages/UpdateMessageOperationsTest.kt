@@ -2,6 +2,8 @@ package com.fsck.k9.storage.messages
 
 import android.database.sqlite.SQLiteDatabase
 import assertk.assertThat
+import assertk.assertions.isFalse
+import assertk.assertions.isTrue
 import assertk.assertions.hasSize
 import assertk.assertions.isEqualTo
 import assertk.assertions.isNull
@@ -26,6 +28,50 @@ class UpdateMessageOperationsTest : RobolectricTest() {
     @After
     fun tearDown() {
         sqliteDatabase.close()
+    }
+
+    @Test
+    fun `a message should be stored under its new server ID`() {
+        sqliteDatabase.createMessage(folderId = 1, uid = "old", subject = "Message")
+
+        val isChanged = updateMessageOperations.changeMessageServerId(
+            folderId = 1,
+            messageServerId = "old",
+            newMessageServerId = "new",
+        )
+
+        val message = sqliteDatabase.readMessages().single()
+        assertThat(isChanged).isTrue()
+        assertThat(message.uid).isEqualTo("new")
+        assertThat(message.subject).isEqualTo("Message")
+    }
+
+    @Test
+    fun `changing a server ID should not touch the same ID in another folder`() {
+        sqliteDatabase.createMessage(folderId = 1, uid = "old")
+        sqliteDatabase.createMessage(folderId = 2, uid = "old")
+
+        updateMessageOperations.changeMessageServerId(folderId = 1, messageServerId = "old", newMessageServerId = "new")
+
+        val uidsByFolder = sqliteDatabase.readMessages().associate { it.folderId to it.uid }
+        assertThat(uidsByFolder).isEqualTo(mapOf(1L to "new", 2L to "old"))
+    }
+
+    @Test
+    fun `a server ID that is taken should not be given to another message`() {
+        // A folder cannot hold two messages with one server ID; the caller decides which of them to keep.
+        sqliteDatabase.createMessage(folderId = 1, uid = "old", subject = "Old copy")
+        sqliteDatabase.createMessage(folderId = 1, uid = "new", subject = "New copy")
+
+        val isChanged = updateMessageOperations.changeMessageServerId(
+            folderId = 1,
+            messageServerId = "old",
+            newMessageServerId = "new",
+        )
+
+        val subjectsByUid = sqliteDatabase.readMessages().associate { it.uid to it.subject }
+        assertThat(isChanged).isFalse()
+        assertThat(subjectsByUid).isEqualTo(mapOf("old" to "Old copy", "new" to "New copy"))
     }
 
     @Test

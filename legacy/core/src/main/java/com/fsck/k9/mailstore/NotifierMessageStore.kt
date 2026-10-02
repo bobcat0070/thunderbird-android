@@ -50,6 +50,11 @@ class NotifierMessageStore(
         notifyChange()
     }
 
+    override fun changeMessageServerId(folderId: Long, messageServerId: String, newMessageServerId: String) {
+        messageStore.changeMessageServerId(folderId, messageServerId, newMessageServerId)
+        notifyChange()
+    }
+
     override fun setMessageServerCategories(folderId: Long, messageServerId: String, categories: List<String>) {
         messageStore.setMessageServerCategories(folderId, messageServerId, categories)
         notifyChange()

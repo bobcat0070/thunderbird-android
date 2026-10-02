@@ -22,6 +22,42 @@ internal class UpdateMessageOperations(private val lockableDatabase: LockableDat
         }
     }
 
+    /**
+     * Stores the message under [newMessageServerId] instead of [messageServerId].
+     *
+     * @return `false` when a message is already stored under [newMessageServerId], in which case nothing is
+     *   changed: a folder cannot hold two messages with one server ID.
+     */
+    fun changeMessageServerId(folderId: Long, messageServerId: String, newMessageServerId: String): Boolean {
+        return lockableDatabase.execute(true) { database ->
+            val isNewServerIdTaken = database.query(
+                "messages",
+                arrayOf("id"),
+                "folder_id = ? AND uid = ?",
+                arrayOf(folderId.toString(), newMessageServerId),
+                null,
+                null,
+                null,
+            ).use { cursor -> cursor.moveToFirst() }
+
+            if (isNewServerIdTaken) {
+                false
+            } else {
+                val values = ContentValues().apply {
+                    put("uid", newMessageServerId)
+                }
+
+                database.update(
+                    "messages",
+                    values,
+                    "folder_id = ? AND uid = ?",
+                    arrayOf(folderId.toString(), messageServerId),
+                )
+                true
+            }
+        }
+    }
+
     fun clearNewMessageState() {
         lockableDatabase.execute(false) { database ->
             database.execSQL("UPDATE messages SET new_message = 0")
