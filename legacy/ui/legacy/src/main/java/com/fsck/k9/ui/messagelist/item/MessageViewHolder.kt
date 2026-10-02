@@ -31,6 +31,9 @@ import java.util.Locale
 import kotlin.math.max
 import net.thunderbird.core.preference.display.visualSettings.message.list.UiDensity
 import net.thunderbird.feature.mail.message.list.R as MessageListR
+import com.fsck.k9.mail.MessageImportance
+import com.fsck.k9.ui.servercategories.ServerCategoryChipSpan
+import com.google.android.material.color.MaterialColors
 
 @Suppress("TooManyFunctions")
 class MessageViewHolder(
@@ -56,6 +59,7 @@ class MessageViewHolder(
     val starClickAreaView: View = view.findViewById(R.id.star_click_area)
     val attachmentView: ImageView = view.findViewById(R.id.attachment)
     val statusView: ImageView = view.findViewById(R.id.status)
+    val importanceView: ImageView = view.findViewById(R.id.importance)
 
     @Suppress("LongMethod", "CyclomaticComplexMethod")
     fun bind(messageListItem: MessageListItem, isActive: Boolean, isSelected: Boolean) {
@@ -114,7 +118,15 @@ class MessageViewHolder(
             itemView.setBackgroundColor(selectBackgroundColor(isSelected, isRead, isActive))
             updateWithThreadCount(displayThreadCount)
             val beforePreviewText = if (appearance.senderAboveSubject) subject else displayName
-            val messageStringBuilder = SpannableStringBuilder(beforePreviewText)
+            val messageStringBuilder = SpannableStringBuilder()
+            ServerCategoryChipSpan.appendTo(
+                builder = messageStringBuilder,
+                categories = serverCategories,
+                density = res.displayMetrics.density,
+                maxLabels = MAX_CATEGORY_LABELS,
+            )
+            val beforePreviewStart = messageStringBuilder.length
+            messageStringBuilder.append(beforePreviewText)
             if (appearance.previewLines > 0) {
                 val preview = getPreview(isMessageEncrypted, previewText)
                 if (preview.isNotEmpty()) {
@@ -124,7 +136,7 @@ class MessageViewHolder(
             previewView.setTextColor(foregroundColor)
             previewView.setText(messageStringBuilder, TextView.BufferType.SPANNABLE)
 
-            formatPreviewText(previewView, beforePreviewText, isRead, isActive, isSelected)
+            formatPreviewText(previewView, beforePreviewStart, beforePreviewText, isRead, isActive, isSelected)
 
             subjectView.typeface = Typeface.create(subjectView.typeface, maybeBoldTypeface)
             subjectView.setTextColor(foregroundColor)
@@ -143,6 +155,8 @@ class MessageViewHolder(
             dateView.text = messageListItem.displayMessageDateTime
             attachmentView.isVisible = hasAttachments
             attachmentView.setColorFilter(foregroundColor)
+
+            bindImportance(importance, foregroundColor)
 
             val statusHolder = buildStatusHolder(isForwarded, isAnswered)
             if (statusHolder != null) {
@@ -196,8 +210,13 @@ class MessageViewHolder(
         }
     }
 
+    /**
+     * @param beforePreviewStart where [beforePreviewText] starts, which is after any category labels.
+     */
+    @Suppress("LongParameterList")
     private fun formatPreviewText(
         preview: MaterialTextView,
+        beforePreviewStart: Int,
         beforePreviewText: CharSequence,
         messageRead: Boolean,
         active: Boolean,
@@ -206,18 +225,40 @@ class MessageViewHolder(
         val previewText = preview.text as Spannable
         val textColor = selectPreviewTextColor(active, selected)
 
-        val beforePreviewLength = beforePreviewText.length
-        addBeforePreviewSpan(previewText, beforePreviewLength, messageRead)
+        val beforePreviewEnd = beforePreviewStart + beforePreviewText.length
+        addBeforePreviewSpan(previewText, beforePreviewStart, beforePreviewEnd, messageRead)
 
         previewText.setSpan(
             ForegroundColorSpan(textColor),
-            beforePreviewLength,
+            beforePreviewEnd,
             previewText.length,
             Spannable.SPAN_EXCLUSIVE_EXCLUSIVE,
         )
     }
 
-    private fun addBeforePreviewSpan(text: Spannable, length: Int, messageRead: Boolean) {
+    private fun bindImportance(importance: MessageImportance, foregroundColor: Int) {
+        when (importance) {
+            MessageImportance.HIGH -> {
+                importanceView.setImageResource(Icons.Outlined.PriorityHigh)
+                importanceView.setColorFilter(
+                    MaterialColors.getColor(importanceView, androidx.appcompat.R.attr.colorError),
+                )
+                importanceView.contentDescription = res.getString(R.string.message_importance_high)
+                importanceView.isVisible = true
+            }
+
+            MessageImportance.LOW -> {
+                importanceView.setImageResource(Icons.Outlined.ArrowDownward)
+                importanceView.setColorFilter(foregroundColor)
+                importanceView.contentDescription = res.getString(R.string.message_importance_low)
+                importanceView.isVisible = true
+            }
+
+            MessageImportance.NORMAL -> importanceView.isVisible = false
+        }
+    }
+
+    private fun addBeforePreviewSpan(text: Spannable, start: Int, end: Int, messageRead: Boolean) {
         val appearance = appearance()
         val fontSize = if (appearance.senderAboveSubject) {
             appearance.fontSizes.messageListSubject
@@ -227,12 +268,12 @@ class MessageViewHolder(
 
         if (fontSize != FontSizes.FONT_DEFAULT) {
             val span = AbsoluteSizeSpan(fontSize, true)
-            text.setSpan(span, 0, length, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
+            text.setSpan(span, start, end, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
         }
 
         if (!messageRead) {
             val span = StyleSpan(Typeface.BOLD)
-            text.setSpan(span, 0, length, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
+            text.setSpan(span, start, end, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
         }
     }
 
@@ -278,6 +319,11 @@ class MessageViewHolder(
     }
 
     companion object {
+        /**
+         * How many categories a row names. The labels share the preview line with the sender and the preview
+         * text, so any more are counted rather than named.
+         */
+        private const val MAX_CATEGORY_LABELS = 3
 
         @Suppress("LongParameterList")
         fun create(

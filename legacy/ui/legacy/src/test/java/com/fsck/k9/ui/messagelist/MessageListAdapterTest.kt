@@ -44,6 +44,10 @@ import net.thunderbird.feature.account.storage.profile.ProfileDto
 import org.junit.Test
 import org.mockito.kotlin.mock
 import org.robolectric.Robolectric
+import com.fsck.k9.mail.MessageImportance
+import com.fsck.k9.ui.servercategories.ServerCategoryChipSpan
+import assertk.assertions.containsExactly
+import assertk.assertions.isEmpty
 
 private const val SOME_ACCOUNT_UUID = "6b84207b-25de-4dab-97c3-953bbf03fec6"
 private const val FIRST_LINE_DEFAULT_FONT_SIZE = 16f
@@ -392,6 +396,118 @@ class MessageListAdapterTest : RobolectricTest() {
         assertThat(view.secondLineView.textSize).isEqualTo(22f)
     }
 
+    @Test
+    fun highImportance_shouldShowImportanceMarker() {
+        val adapter = createAdapter()
+        val messageListItem = createMessageListItem(importance = MessageImportance.HIGH)
+
+        val view = adapter.createAndBindView(messageListItem)
+
+        assertThat(view.importanceView).isVisible()
+        assertThat(view.importanceView.contentDescription)
+            .isEqualTo(context.getString(R.string.message_importance_high))
+    }
+
+    @Test
+    fun lowImportance_shouldShowImportanceMarker() {
+        val adapter = createAdapter()
+        val messageListItem = createMessageListItem(importance = MessageImportance.LOW)
+
+        val view = adapter.createAndBindView(messageListItem)
+
+        assertThat(view.importanceView).isVisible()
+        assertThat(view.importanceView.contentDescription)
+            .isEqualTo(context.getString(R.string.message_importance_low))
+    }
+
+    @Test
+    fun normalImportance_shouldNotShowImportanceMarker() {
+        val adapter = createAdapter()
+        val messageListItem = createMessageListItem(importance = MessageImportance.NORMAL)
+
+        val view = adapter.createAndBindView(messageListItem)
+
+        assertThat(view.importanceView).isGone()
+    }
+
+    @Test
+    fun normalImportance_shouldHideMarkerOfRecycledView() {
+        val adapter = createAdapter()
+        adapter.viewItems = listOf(
+            MessageListViewItem.Message(createMessageListItem(importance = MessageImportance.HIGH)),
+            MessageListViewItem.Message(createMessageListItem(importance = MessageImportance.NORMAL, uniqueId = 2)),
+        )
+        val holder = adapter.onCreateViewHolder(LinearLayout(context), 0)
+        adapter.onBindViewHolder(holder, 0)
+
+        adapter.onBindViewHolder(holder, 1)
+
+        assertThat(holder.itemView.importanceView).isGone()
+    }
+
+    @Test
+    fun serverCategories_shouldBeLabelledAheadOfSenderInSecondLineView() {
+        val adapter = createAdapter(senderAboveSubject = false, previewLines = 1)
+        val messageListItem = createMessageListItem(
+            displayName = "Sender",
+            previewText = "Preview",
+            serverCategories = listOf("Red category", "Project X"),
+        )
+
+        val view = adapter.createAndBindView(messageListItem)
+
+        val text = view.secondLineView.text as Spannable
+        assertThat(text.toString()).isEqualTo("Red categoryProject X" + secondLine("Sender", "Preview"))
+        val labels = text.getSpans(0, text.length, ServerCategoryChipSpan::class.java)
+            .map { span -> text.substring(text.getSpanStart(span), text.getSpanEnd(span)) }
+        assertThat(labels).containsExactly("Red category", "Project X")
+    }
+
+    @Test
+    fun serverCategories_shouldLeaveSenderFormattingOnTheSender() {
+        val adapter = createAdapter(
+            fontSizes = createFontSizes(sender = LARGE),
+            senderAboveSubject = false,
+        )
+        val messageListItem = createMessageListItem(
+            displayName = "Sender",
+            serverCategories = listOf("Red category"),
+        )
+
+        val view = adapter.createAndBindView(messageListItem)
+
+        val text = view.secondLineView.text as Spannable
+        val sizeSpan = text.getSpans(0, text.length, AbsoluteSizeSpan::class.java).single()
+        assertThat(text.substring(text.getSpanStart(sizeSpan), text.getSpanEnd(sizeSpan))).isEqualTo("Sender")
+    }
+
+    @Test
+    fun manyServerCategories_shouldCountTheOnesThatAreNotNamed() {
+        val adapter = createAdapter(senderAboveSubject = false, previewLines = 1)
+        val messageListItem = createMessageListItem(
+            displayName = "Sender",
+            previewText = "Preview",
+            serverCategories = listOf("One", "Two", "Three", "Four", "Five"),
+        )
+
+        val view = adapter.createAndBindView(messageListItem)
+
+        assertThat(view.secondLineView.text.toString())
+            .isEqualTo("OneTwoThree+2" + secondLine("Sender", "Preview"))
+    }
+
+    @Test
+    fun noServerCategories_shouldNotAddLabels() {
+        val adapter = createAdapter(senderAboveSubject = false, previewLines = 1)
+        val messageListItem = createMessageListItem(displayName = "Sender", previewText = "Preview")
+
+        val view = adapter.createAndBindView(messageListItem)
+
+        val text = view.secondLineView.text as Spannable
+        assertThat(text.toString()).isEqualTo(secondLine("Sender", "Preview"))
+        assertThat(text.getSpans(0, text.length, ServerCategoryChipSpan::class.java).toList()).isEmpty()
+    }
+
     fun createFontSizes(
         subject: Int = FONT_DEFAULT,
         sender: Int = FONT_DEFAULT,
@@ -468,6 +584,8 @@ class MessageListAdapterTest : RobolectricTest() {
         messageUid: String = "irrelevant",
         databaseId: Long = 0L,
         threadRoot: Long = 0L,
+        importance: MessageImportance = MessageImportance.NORMAL,
+        serverCategories: List<String> = emptyList(),
     ): MessageListItem {
         return MessageListItem(
             account,
@@ -493,6 +611,8 @@ class MessageListAdapterTest : RobolectricTest() {
             contactColor = -1,
             classification = MessageClass.UNKNOWN,
             isSenderAuthenticated = false,
+            importance = importance,
+            serverCategories = serverCategories,
         )
     }
 
@@ -557,6 +677,7 @@ class MessageListAdapterTest : RobolectricTest() {
     val View.firstLineView: MaterialTextView get() = findViewById(R.id.subject)
     val View.secondLineView: MaterialTextView get() = findViewById(R.id.preview)
     val View.attachmentCountView: View get() = findViewById(R.id.attachment)
+    val View.importanceView: View get() = findViewById(R.id.importance)
     val View.dateView: MaterialTextView get() = findViewById(R.id.date)
 
     private fun Assert<View>.isVisible() = given { actual ->

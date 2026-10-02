@@ -122,11 +122,25 @@
         android:textAppearance="?attr/textAppearanceBodyMedium"
         android:textColor="?attr/colorOnSurfaceVariant"
         app:layout_constraintBaseline_toBaselineOf="@+id/subject"
-        app:layout_constraintEnd_toStartOf="@+id/attachment"
+        app:layout_constraintEnd_toStartOf="@+id/importance"
         app:layout_constraintHorizontal_bias="0.0"
         app:layout_constraintStart_toEndOf="@+id/subject"
         app:layout_goneMarginEnd="8dp"
         tools:text="3"
+        />
+
+    <ImageView
+        android:id="@+id/importance"
+        android:layout_width="18dp"
+        android:layout_height="18dp"
+        android:layout_marginEnd="2dp"
+        android:visibility="gone"
+        app:layout_constraintBottom_toBottomOf="@+id/subject"
+        app:layout_constraintEnd_toStartOf="@+id/attachment"
+        app:layout_constraintTop_toTopOf="@+id/top_guideline"
+        app:srcCompat="@drawable/ic_priority_high"
+        tools:ignore="ContentDescription"
+        tools:visibility="visible"
         />
 
     <ImageView

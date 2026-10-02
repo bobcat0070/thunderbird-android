@@ -22,6 +22,7 @@ object Icons {
         val Adjust = R.drawable.ic_adjust
         val Archive = R.drawable.ic_archive
         val ArrowBack = R.drawable.ic_arrow_back
+        val ArrowDownward = R.drawable.ic_arrow_downward
         val Attachment = R.drawable.ic_attachment
         val Block = R.drawable.ic_block
         val Bolt = R.drawable.ic_bolt
@@ -72,6 +73,7 @@ object Icons {
         val Outbox = R.drawable.ic_outbox
         val Person = R.drawable.ic_person
         val PersonAdd = R.drawable.ic_person_add
+        val PriorityHigh = R.drawable.ic_priority_high
         val Refresh = R.drawable.ic_refresh
 
         @JvmField

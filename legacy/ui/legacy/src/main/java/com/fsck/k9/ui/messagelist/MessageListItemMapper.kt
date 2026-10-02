@@ -65,6 +65,8 @@ class MessageListItemMapper(
             } ?: -1,
             classification = message.classification,
             isSenderAuthenticated = message.isSenderAuthenticated,
+            importance = message.importance,
+            serverCategories = message.serverCategories,
         )
     }
 

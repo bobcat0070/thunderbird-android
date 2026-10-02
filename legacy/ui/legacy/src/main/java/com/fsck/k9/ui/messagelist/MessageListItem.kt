@@ -5,6 +5,7 @@ import app.k9mail.legacy.message.controller.MessageReference
 import com.fsck.k9.mail.Address
 import net.thunderbird.core.android.account.LegacyAccount
 import net.thunderbird.feature.mail.message.classification.api.MessageClass
+import com.fsck.k9.mail.MessageImportance
 
 data class MessageListItem(
     val account: LegacyAccount,
@@ -31,6 +32,12 @@ data class MessageListItem(
     val contactColor: Int,
     val classification: MessageClass,
     val isSenderAuthenticated: Boolean,
+    val importance: MessageImportance = MessageImportance.NORMAL,
+    /**
+     * The categories the server keeps on the message, such as the ones assigned in Outlook. Not the
+     * [classification], which the app works out for itself.
+     */
+    val serverCategories: List<String> = emptyList(),
 ) {
     val messageReference: MessageReference
         get() = MessageReference(account.uuid, folderId, messageUid)
