@@ -57,6 +57,7 @@ import com.fsck.k9.controller.MessagingControllerCommands.PendingMoveAndMarkAsRe
 import com.fsck.k9.controller.MessagingControllerCommands.PendingMoveOrCopy;
 import com.fsck.k9.controller.MessagingControllerCommands.PendingReplace;
 import com.fsck.k9.controller.MessagingControllerCommands.PendingSetFlag;
+import com.fsck.k9.controller.MessagingControllerCommands.PendingSetServerCategories;
 import com.fsck.k9.controller.ProgressBodyFactory.ProgressListener;
 import com.fsck.k9.core.BuildConfig;
 import com.fsck.k9.helper.MutableBoolean;
@@ -1278,6 +1279,52 @@ public class MessagingController implements MessagingControllerRegistry, Messagi
         backend.setFlag(folderServerId, command.uids, command.flag, command.newState);
     }
 
+    /**
+     * Replaces the categories the server keeps on a message, such as the ones assigned in Outlook.
+     *
+     * The stored message is changed first, so the change shows at once. The server is told as soon as it can be
+     * reached.
+     */
+    public void setServerCategories(LegacyAccountDto account, long folderId, long messageId, String uid,
+        List<String> categories) {
+        putBackground("setServerCategories", null, () ->
+            setServerCategoriesSynchronous(account, folderId, messageId, uid, categories)
+        );
+    }
+
+    @VisibleForTesting
+    void setServerCategoriesSynchronous(LegacyAccountDto account, long folderId, long messageId, String uid,
+        List<String> categories) {
+        try {
+            MessageStore messageStore = messageStoreManager.getMessageStore(account);
+            messageStore.setServerCategories(Collections.singletonList(messageId), categories);
+
+            for (MessagingListener l : getListeners()) {
+                l.folderStatusChanged(account, folderId);
+            }
+
+            LocalStore localStore = localStoreProvider.getInstance(account);
+            LocalFolder localFolder = localStore.getFolder(folderId);
+            localFolder.open();
+
+            if (supportsServerCategories(account) && !localFolder.isLocalOnly()) {
+                PendingCommand command =
+                    PendingSetServerCategories.create(folderId, categories, Collections.singletonList(uid));
+                queuePendingCommand(account, command);
+                processPendingCommands(account);
+            }
+        } catch (MessagingException e) {
+            Log.e(e, "Couldn't set the categories of a message");
+        }
+    }
+
+    void processPendingSetServerCategories(PendingSetServerCategories command, LegacyAccountDto account)
+        throws MessagingException {
+        Backend backend = getBackend(account);
+        String folderServerId = getFolderServerId(account, command.folderId);
+        backend.setServerCategories(folderServerId, command.uids, command.categories);
+    }
+
     private void queueDelete(LegacyAccountDto account, long folderId, List<String> uids) {
         PendingCommand command = PendingDelete.create(folderId, uids);
         queuePendingCommand(account, command);
@@ -2096,6 +2143,10 @@ public class MessagingController implements MessagingControllerRegistry, Messagi
 
     public boolean supportsFlags(LegacyAccountDto account) {
         return getBackend(account).getSupportsFlags();
+    }
+
+    public boolean supportsServerCategories(LegacyAccountDto account) {
+        return getBackend(account).getSupportsServerCategories();
     }
 
     public boolean supportsExpunge(LegacyAccountDto account) {

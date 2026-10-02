@@ -16,6 +16,7 @@ public class MessagingControllerCommands {
     static final String COMMAND_REPLACE = "replace";
     static final String COMMAND_MARK_ALL_AS_READ = "mark_all_as_read";
     static final String COMMAND_SET_FLAG = "set_flag";
+    static final String COMMAND_SET_SERVER_CATEGORIES = "set_server_categories";
     static final String COMMAND_DELETE = "delete";
     static final String COMMAND_EXPUNGE = "expunge";
     static final String COMMAND_MOVE_OR_COPY = "move_or_copy";
@@ -155,6 +156,35 @@ public class MessagingControllerCommands {
         @Override
         public void execute(MessagingController controller, LegacyAccountDto account) throws MessagingException {
             controller.processPendingSetFlag(this, account);
+        }
+    }
+
+    public static class PendingSetServerCategories extends PendingCommand {
+        public final long folderId;
+        public final List<String> categories;
+        public final List<String> uids;
+
+
+        public static PendingSetServerCategories create(long folderId, List<String> categories, List<String> uids) {
+            requireNotNull(categories);
+            requireValidUids(uids);
+            return new PendingSetServerCategories(folderId, categories, uids);
+        }
+
+        private PendingSetServerCategories(long folderId, List<String> categories, List<String> uids) {
+            this.folderId = folderId;
+            this.categories = categories;
+            this.uids = uids;
+        }
+
+        @Override
+        public String getCommandName() {
+            return COMMAND_SET_SERVER_CATEGORIES;
+        }
+
+        @Override
+        public void execute(MessagingController controller, LegacyAccountDto account) throws MessagingException {
+            controller.processPendingSetServerCategories(this, account);
         }
     }
 

@@ -17,6 +17,9 @@ import com.fsck.k9.K9;
 import com.fsck.k9.K9RobolectricTest;
 import com.fsck.k9.Preferences;
 import com.fsck.k9.backend.BackendManager;
+import org.mockito.ArgumentCaptor;
+import com.fsck.k9.controller.MessagingControllerCommands.PendingSetServerCategories;
+import com.fsck.k9.controller.MessagingControllerCommands.PendingCommand;
 import com.fsck.k9.backend.api.Backend;
 import com.fsck.k9.mail.AuthType;
 import com.fsck.k9.mail.AuthenticationFailedException;
@@ -200,6 +203,62 @@ public class MessagingControllerTest extends K9RobolectricTest {
         removeAccountsFromPreferences();
         controller.stop();
         autoClose();
+    }
+
+    @Test
+    public void setServerCategoriesSynchronous_shouldStoreTheCategories() throws MessagingException {
+        ListenableMessageStore messageStore = mock(ListenableMessageStore.class);
+        when(messageStoreManager.getMessageStore(account)).thenReturn(messageStore);
+        when(backend.getSupportsServerCategories()).thenReturn(true);
+        List<String> categories = Arrays.asList("Red category", "Project X");
+
+        controller.setServerCategoriesSynchronous(account, FOLDER_ID, 42L, "uid1", categories);
+
+        verify(messageStore).setServerCategories(Collections.singletonList(42L), categories);
+    }
+
+    @Test
+    public void setServerCategoriesSynchronous_shouldQueueTheChangeForTheServer() throws MessagingException {
+        ListenableMessageStore messageStore = mock(ListenableMessageStore.class);
+        when(messageStoreManager.getMessageStore(account)).thenReturn(messageStore);
+        when(backend.getSupportsServerCategories()).thenReturn(true);
+        List<String> categories = Collections.singletonList("Red category");
+
+        controller.setServerCategoriesSynchronous(account, FOLDER_ID, 42L, "uid1", categories);
+
+        ArgumentCaptor<PendingCommand> commandCaptor = ArgumentCaptor.forClass(PendingCommand.class);
+        verify(localStore).addPendingCommand(commandCaptor.capture());
+        PendingSetServerCategories command = (PendingSetServerCategories) commandCaptor.getValue();
+        assertEquals(FOLDER_ID, command.folderId);
+        assertEquals(categories, command.categories);
+        assertEquals(Collections.singletonList("uid1"), command.uids);
+    }
+
+    @Test
+    public void setServerCategoriesSynchronous_shouldNotQueueAnythingForABackendWithoutServerCategories()
+        throws MessagingException {
+        ListenableMessageStore messageStore = mock(ListenableMessageStore.class);
+        when(messageStoreManager.getMessageStore(account)).thenReturn(messageStore);
+        when(backend.getSupportsServerCategories()).thenReturn(false);
+
+        controller.setServerCategoriesSynchronous(
+            account, FOLDER_ID, 42L, "uid1", Collections.singletonList("Red category"));
+
+        verify(localStore, never()).addPendingCommand(any(PendingCommand.class));
+    }
+
+    @Test
+    public void processPendingSetServerCategories_shouldSendTheCategoriesToTheBackend() throws MessagingException {
+        ListenableMessageStore messageStore = mock(ListenableMessageStore.class);
+        when(messageStoreManager.getMessageStore(account)).thenReturn(messageStore);
+        when(messageStore.getFolderServerId(FOLDER_ID)).thenReturn(FOLDER_NAME);
+        List<String> categories = Arrays.asList("Red category", "Project X");
+        List<String> uids = Collections.singletonList("uid1");
+
+        controller.processPendingSetServerCategories(
+            PendingSetServerCategories.create(FOLDER_ID, categories, uids), account);
+
+        verify(backend).setServerCategories(FOLDER_NAME, uids, categories);
     }
 
     @Test

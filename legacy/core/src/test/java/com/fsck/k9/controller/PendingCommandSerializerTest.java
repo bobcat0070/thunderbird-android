@@ -1,13 +1,17 @@
 package com.fsck.k9.controller;
 
 
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 
 import com.fsck.k9.K9RobolectricTest;
 import com.fsck.k9.controller.MessagingControllerCommands.PendingAppend;
 import com.fsck.k9.controller.MessagingControllerCommands.PendingCommand;
 import com.fsck.k9.controller.MessagingControllerCommands.PendingEmptyTrash;
 import com.fsck.k9.controller.MessagingControllerCommands.PendingMoveOrCopy;
+import com.fsck.k9.controller.MessagingControllerCommands.PendingSetServerCategories;
 import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
@@ -68,6 +72,37 @@ public class PendingCommandSerializerTest extends K9RobolectricTest {
         assertEquals(SOURCE_FOLDER_ID, unserializedCommand.srcFolderId);
         assertEquals(DEST_FOLDER_ID, unserializedCommand.destFolderId);
         assertEquals(UID_MAP, unserializedCommand.newUidMap);
+    }
+
+    @Test
+    public void testSerializeDeserialize__setServerCategories() {
+        List<String> categories = Arrays.asList("Red category", "Project X");
+        PendingCommand pendingCommand = PendingSetServerCategories.create(
+                SOURCE_FOLDER_ID, categories, Collections.singletonList(UID));
+
+        String serializedCommand = pendingCommandSerializer.serialize(pendingCommand);
+        PendingSetServerCategories unserializedCommand =
+                (PendingSetServerCategories) pendingCommandSerializer.unserialize(
+                        DATABASE_ID, pendingCommand.getCommandName(), serializedCommand);
+
+        assertEquals(DATABASE_ID, unserializedCommand.databaseId);
+        assertEquals(SOURCE_FOLDER_ID, unserializedCommand.folderId);
+        assertEquals(categories, unserializedCommand.categories);
+        assertEquals(Collections.singletonList(UID), unserializedCommand.uids);
+    }
+
+    @Test
+    public void testSerializeDeserialize__setServerCategories__withoutCategories() {
+        // Removing the last category from a message is a change too, and has to reach the server as one.
+        PendingCommand pendingCommand = PendingSetServerCategories.create(
+                SOURCE_FOLDER_ID, Collections.<String>emptyList(), Collections.singletonList(UID));
+
+        String serializedCommand = pendingCommandSerializer.serialize(pendingCommand);
+        PendingSetServerCategories unserializedCommand =
+                (PendingSetServerCategories) pendingCommandSerializer.unserialize(
+                        DATABASE_ID, pendingCommand.getCommandName(), serializedCommand);
+
+        assertEquals(Collections.<String>emptyList(), unserializedCommand.categories);
     }
 
     @Test(expected = IllegalArgumentException.class)

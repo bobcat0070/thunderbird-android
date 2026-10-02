@@ -18,6 +18,7 @@ import com.fsck.k9.controller.MessagingControllerCommands.PendingMoveAndMarkAsRe
 import com.fsck.k9.controller.MessagingControllerCommands.PendingMoveOrCopy;
 import com.fsck.k9.controller.MessagingControllerCommands.PendingReplace;
 import com.fsck.k9.controller.MessagingControllerCommands.PendingSetFlag;
+import com.fsck.k9.controller.MessagingControllerCommands.PendingSetServerCategories;
 import com.squareup.moshi.JsonAdapter;
 import com.squareup.moshi.Moshi;
 
@@ -43,6 +44,8 @@ public class PendingCommandSerializer {
         adapters.put(MessagingControllerCommands.COMMAND_EXPUNGE, moshi.adapter(PendingExpunge.class));
         adapters.put(MessagingControllerCommands.COMMAND_MARK_ALL_AS_READ, moshi.adapter(PendingMarkAllAsRead.class));
         adapters.put(MessagingControllerCommands.COMMAND_SET_FLAG, moshi.adapter(PendingSetFlag.class));
+        adapters.put(MessagingControllerCommands.COMMAND_SET_SERVER_CATEGORIES,
+                moshi.adapter(PendingSetServerCategories.class));
         adapters.put(MessagingControllerCommands.COMMAND_DELETE, moshi.adapter(PendingDelete.class));
 
         this.adapters = Collections.unmodifiableMap(adapters);
