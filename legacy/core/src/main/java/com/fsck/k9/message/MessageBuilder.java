@@ -19,6 +19,8 @@ import net.thunderbird.feature.mail.message.composer.signature.HtmlSignatureSani
 import net.thunderbird.legacy.logging.Log;
 import com.fsck.k9.K9;
 import app.k9mail.legacy.message.controller.MessageReference;
+import com.fsck.k9.mail.MessageImportanceKt;
+import com.fsck.k9.mail.MessageImportance;
 import com.fsck.k9.mail.Address;
 import com.fsck.k9.mail.Body;
 import com.fsck.k9.mail.BoundaryGenerator;
@@ -55,6 +57,7 @@ public abstract class MessageBuilder {
     private String inReplyTo;
     private String references;
     private boolean requestReadReceipt;
+    private MessageImportance importance = MessageImportance.NORMAL;
     private Identity identity;
     private SimpleMessageFormat messageFormat;
     private String text;
@@ -120,6 +123,8 @@ public abstract class MessageBuilder {
             message.setHeader("X-Confirm-Reading-To", from.toEncodedString());
             message.setHeader("Return-Receipt-To", from.toEncodedString());
         }
+
+        MessageImportanceKt.setImportance(message, importance);
 
         if (!settingsManager.getSettings().getPrivacy().isHideUserAgent()) {
             String encodedUserAgent = MimeHeaderEncoder.encode("User-Agent", resourceProvider.userAgent());
@@ -421,6 +426,15 @@ public abstract class MessageBuilder {
 
     public MessageBuilder setRequestReadReceipt(boolean requestReadReceipt) {
         this.requestReadReceipt = requestReadReceipt;
+        return this;
+    }
+
+    /**
+     * How important the message is to be marked for its recipients. Normal, which adds nothing to the message,
+     * unless set.
+     */
+    public MessageBuilder setImportance(MessageImportance importance) {
+        this.importance = importance;
         return this;
     }
 

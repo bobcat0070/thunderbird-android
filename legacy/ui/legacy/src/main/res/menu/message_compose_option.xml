@@ -35,6 +35,11 @@
         android:icon="@drawable/ic_action_request_read_receipt_light"
         />
     <item
+        android:id="@+id/importance"
+        android:title="@string/compose_importance_action"
+        app:showAsAction="never"
+        />
+    <item
         android:id="@+id/openpgp_encrypt_enable"
         android:title="@string/enable_encryption"
         app:showAsAction="never"

@@ -28,6 +28,7 @@ import com.fsck.k9.mail.Message.RecipientType;
 import net.thunderbird.core.common.exception.MessagingException;
 import com.fsck.k9.mail.internet.MessageIdGenerator;
 import com.fsck.k9.mail.internet.MimeHeader;
+import com.fsck.k9.mail.MessageImportance;
 import com.fsck.k9.mail.internet.MimeMessage;
 import com.fsck.k9.mail.internet.MimeMultipart;
 import com.fsck.k9.message.MessageBuilder.Callback;
@@ -286,6 +287,42 @@ public class MessageBuilderTest extends RobolectricTest {
         assertArrayEquals(TEST_CC, message.getRecipients(RecipientType.CC));
         assertArrayEquals(TEST_BCC, message.getRecipients(RecipientType.BCC));
         assertEquals(MESSAGE_HEADERS + MESSAGE_CONTENT, getMessageContents(message));
+    }
+
+    @Test
+    public void build_withHighImportance_shouldStateItInTheHeaders() throws Exception {
+        MessageBuilder messageBuilder = createSimpleMessageBuilder().setImportance(MessageImportance.HIGH);
+
+        messageBuilder.buildAsync(callback);
+        pendingWork.runAllTasks();
+
+        MimeMessage message = getMessageFromCallback();
+        assertArrayEquals(new String[] { "high" }, message.getHeader("Importance"));
+        assertArrayEquals(new String[] { "1" }, message.getHeader("X-Priority"));
+    }
+
+    @Test
+    public void build_withLowImportance_shouldStateItInTheHeaders() throws Exception {
+        MessageBuilder messageBuilder = createSimpleMessageBuilder().setImportance(MessageImportance.LOW);
+
+        messageBuilder.buildAsync(callback);
+        pendingWork.runAllTasks();
+
+        MimeMessage message = getMessageFromCallback();
+        assertArrayEquals(new String[] { "low" }, message.getHeader("Importance"));
+        assertArrayEquals(new String[] { "5" }, message.getHeader("X-Priority"));
+    }
+
+    @Test
+    public void build_withNormalImportance_shouldNotAddHeaders() throws Exception {
+        MessageBuilder messageBuilder = createSimpleMessageBuilder().setImportance(MessageImportance.NORMAL);
+
+        messageBuilder.buildAsync(callback);
+        pendingWork.runAllTasks();
+
+        MimeMessage message = getMessageFromCallback();
+        assertEquals(0, message.getHeader("Importance").length);
+        assertEquals(0, message.getHeader("X-Priority").length);
     }
 
     @Test

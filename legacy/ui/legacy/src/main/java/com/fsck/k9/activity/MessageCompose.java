@@ -83,6 +83,7 @@ import com.fsck.k9.activity.compose.ComposeCryptoStatus;
 import com.fsck.k9.activity.compose.ComposeCryptoStatus.SendErrorState;
 import com.fsck.k9.activity.compose.IdentityAdapter;
 import com.fsck.k9.activity.compose.IdentityAdapter.IdentityContainer;
+import com.fsck.k9.activity.compose.MessageImportanceChoice;
 import com.fsck.k9.activity.compose.PgpEnabledErrorDialog.OnOpenPgpDisableListener;
 import com.fsck.k9.activity.compose.PgpInlineDialog.OnOpenPgpInlineChangeListener;
 import com.fsck.k9.activity.compose.PgpSignOnlyDialog.OnOpenPgpSignOnlyChangeListener;
@@ -112,6 +113,8 @@ import net.thunderbird.core.android.network.ConnectivityManager;
 import net.thunderbird.core.common.mail.Flag;
 import com.fsck.k9.mail.Message;
 import com.fsck.k9.mail.Message.RecipientType;
+import com.fsck.k9.mail.MessageImportance;
+import com.fsck.k9.mail.MessageImportanceKt;
 import net.thunderbird.core.common.exception.MessagingException;
 import com.fsck.k9.mail.internet.MimeMessage;
 import com.fsck.k9.mailstore.LocalMessage;
@@ -202,6 +205,7 @@ public class MessageCompose extends BaseActivity implements OnClickListener,
     private static final String STATE_IN_REPLY_TO = "com.fsck.k9.activity.MessageCompose.inReplyTo";
     private static final String STATE_REFERENCES = "com.fsck.k9.activity.MessageCompose.references";
     private static final String STATE_KEY_READ_RECEIPT = "com.fsck.k9.activity.MessageCompose.messageReadReceipt";
+    private static final String STATE_KEY_IMPORTANCE = "com.fsck.k9.activity.MessageCompose.importance";
     private static final String STATE_KEY_CHANGES_MADE_SINCE_LAST_SAVE = "com.fsck.k9.activity.MessageCompose.changesMadeSinceLastSave";
     private static final String STATE_ALREADY_NOTIFIED_USER_OF_EMPTY_SUBJECT = "alreadyNotifiedUserOfEmptySubject";
     private static final String STATE_ACTIVE_IN_APP_NOTIFICATIONS =
@@ -294,6 +298,7 @@ public class MessageCompose extends BaseActivity implements OnClickListener,
     private Action action;
 
     private boolean requestReadReceipt = false;
+    private MessageImportance importance = MessageImportance.NORMAL;
 
     private MaterialTextView chooseIdentityView;
     private EditText subjectView;
@@ -750,6 +755,7 @@ public class MessageCompose extends BaseActivity implements OnClickListener,
         outState.putString(STATE_IN_REPLY_TO, repliedToMessageId);
         outState.putString(STATE_REFERENCES, referencedMessageIds);
         outState.putBoolean(STATE_KEY_READ_RECEIPT, requestReadReceipt);
+        outState.putString(STATE_KEY_IMPORTANCE, importance.name());
         outState.putBoolean(STATE_KEY_CHANGES_MADE_SINCE_LAST_SAVE, changesMadeSinceLastSave);
         outState.putBoolean(STATE_ALREADY_NOTIFIED_USER_OF_EMPTY_SUBJECT, alreadyNotifiedUserOfEmptySubject);
         outState.putIntegerArrayList(STATE_ACTIVE_IN_APP_NOTIFICATIONS, new ArrayList<>(activeInAppNotifications));
@@ -776,6 +782,7 @@ public class MessageCompose extends BaseActivity implements OnClickListener,
         attachmentsView.removeAllViews();
 
         requestReadReceipt = savedInstanceState.getBoolean(STATE_KEY_READ_RECEIPT);
+        importance = MessageImportanceChoice.fromSavedState(savedInstanceState.getString(STATE_KEY_IMPORTANCE));
 
         replyToPresenter.onRestoreInstanceState(savedInstanceState);
         recipientPresenter.onRestoreInstanceState(savedInstanceState);
@@ -840,6 +847,7 @@ public class MessageCompose extends BaseActivity implements OnClickListener,
                 .setInReplyTo(repliedToMessageId)
                 .setReferences(referencedMessageIds)
                 .setRequestReadReceipt(requestReadReceipt)
+                .setImportance(importance)
                 .setIdentity(identity)
                 .setReplyTo(replyToPresenter.getAddresses())
                 .setMessageFormat(currentMessageFormat)
@@ -990,6 +998,25 @@ public class MessageCompose extends BaseActivity implements OnClickListener,
         } else {
             finish();
         }
+    }
+
+    private void onImportance() {
+        new MaterialAlertDialogBuilder(this)
+            .setTitle(R.string.compose_importance_title)
+            .setSingleChoiceItems(
+                MessageImportanceChoice.labels(this),
+                MessageImportanceChoice.indexOf(importance),
+                (dialog, which) -> {
+                    MessageImportance chosen = MessageImportanceChoice.at(which);
+                    if (chosen != importance) {
+                        importance = chosen;
+                        changesMadeSinceLastSave = true;
+                    }
+                    dialog.dismiss();
+                }
+            )
+            .setNegativeButton(com.fsck.k9.ui.base.R.string.cancel_action, null)
+            .show();
     }
 
     private void onReadReceipt() {
@@ -1293,6 +1320,8 @@ public class MessageCompose extends BaseActivity implements OnClickListener,
             showPopupMenu(attachmentMenuAnchor);
         } else if (id == R.id.read_receipt) {
             onReadReceipt();
+        } else if (id == R.id.importance) {
+            onImportance();
         } else {
             return super.onOptionsItemSelected(item);
         }
@@ -1626,6 +1655,9 @@ public class MessageCompose extends BaseActivity implements OnClickListener,
 
         replyToPresenter.initFromDraftMessage(message);
         recipientPresenter.initFromDraftMessage(message);
+
+        // A draft keeps the importance it was saved with in its headers.
+        importance = MessageImportanceKt.getImportance(message);
 
         // Read In-Reply-To header from draft
         final String[] inReplyTo = message.getHeader("In-Reply-To");
