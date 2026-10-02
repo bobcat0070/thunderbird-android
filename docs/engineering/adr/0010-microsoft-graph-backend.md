@@ -26,6 +26,10 @@ accounts whose incoming server type is `graph`.
   `/me/sendMail` as base64 MIME. Graph's JSON message model cannot round-trip arbitrary MIME, and routing content
   through it would lose structure the app already handles correctly. Graph is therefore used as a transport, not as a
   message model.
+- **Large messages are assembled on the server.** Graph accepts raw MIME only up to 4 MB and cannot take more of it
+  in pieces. A larger message is created as a draft without its attachments, which are then added to it - the big
+  ones through an upload session - before the draft is sent. Creating the draft from MIME keeps every header the app
+  wrote, including the ones that thread a reply.
 - **Envelopes come from JSON.** Sync lists messages through the JSON API and downloads full content on demand, so a
   sync costs one request per page rather than one message download per message. The `bodyPreview` property is stored
   as the message text so the message list can show preview lines without downloading anything.
@@ -33,6 +37,15 @@ accounts whose incoming server type is `graph`.
   changed. An idle folder costs a single request that returns an empty collection.
 - **Message ids are not stable.** Graph reassigns a message id when the message changes folder, which is why move and
   copy report the new ids back to the caller.
+- **Replied and forwarded follow Outlook.** Exchange keeps one "last action" per message rather than a flag for each.
+  A reply or forward made here is written the way Outlook writes it, so Outlook shows the arrow. Reading it back
+  takes a separate request after each delta round, because Microsoft 365 refuses a delta request that expands
+  extended properties, whatever the documentation says.
+- **Importance is a header, categories are not part of the message.** The importance Graph reports is stated in the
+  stored message's `Importance` header, the same place the app reads it for any other account and writes it when a
+  message is composed. Outlook categories have no place in a message, so they are stored beside it and kept current
+  by delta sync, also for a message whose body has been downloaded. A change made here is written back with a patch
+  of the message's categories, queued like a flag change so that it survives being offline.
 
 ### Detection
 
@@ -78,17 +91,24 @@ alike.
 
 #### Reduced fidelity compared with IMAP
 
-- Graph has no equivalent of the `\Answered` flag on a message, so replies are not reflected in the flag state.
+- Replied and forwarded cannot both be recorded: Exchange keeps only the last action, so a message replied to and
+  then forwarded reads as forwarded. Nor can either be cleared on the server, so clearing one stays on the device.
 - There is no expunge step; a delete moves the message to Deleted Items.
 - Individual MIME parts cannot be fetched, so opening a message downloads it whole.
-- Messages larger than 4 MB cannot be sent inline and would need an upload session, which is not implemented.
 - Folders created in the app are not created on the server.
+- The colours of Outlook categories, and the list of categories a mailbox defines, are mailbox settings. Reading
+  them needs the `MailboxSettings.Read` permission, which the app does not request, so a category is shown in a
+  colour worked out from its name and only categories already seen on synchronized mail are offered when assigning
+  one. A category defined in Outlook but not yet used has to be typed.
+- The importance of a message that was already received cannot be changed from the app.
 
 #### Requires an app registration with Graph permissions
 
-The OAuth configuration requests the delegated Microsoft Graph scopes `Mail.ReadWrite` and `Mail.Send`. The app
-registration behind the client id must have them granted, and tenants that require admin consent need an
-administrator to approve the app before sign-in succeeds.
+The OAuth configuration requests the delegated Microsoft Graph scopes `Mail.ReadWrite` and `Mail.Send`, and
+`Contacts.Read` and `People.Read` for completing addresses. The app registration behind the client id must have them
+granted, and tenants that require admin consent need an administrator to approve the app before sign-in succeeds.
+Every further scope is a permission each user has to consent to again, which is why features that would need one,
+such as category colours, do without.
 
 #### Operational cost
 
