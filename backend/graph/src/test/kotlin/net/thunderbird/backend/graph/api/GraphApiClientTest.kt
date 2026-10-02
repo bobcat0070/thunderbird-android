@@ -38,6 +38,43 @@ class GraphApiClientTest {
     }
 
     @Test
+    fun `request should ask for immutable ids`() {
+        val testSubject = createTestSubject()
+        server.enqueue(MockResponse().setBody("""{"id":"m1"}"""))
+
+        testSubject.getString(testSubject.url("me/messages/m1"))
+
+        assertThat(server.takeRequest().getHeader("Prefer")).isEqualTo("IdType=\"ImmutableId\"")
+    }
+
+    @Test
+    fun `asking for immutable ids should not replace what a request already prefers`() {
+        val testSubject = createTestSubject()
+        server.enqueue(MockResponse().setBody("""{"value":[]}"""))
+
+        testSubject.getString(
+            testSubject.url("me/mailFolders/inbox/messages/delta"),
+            mapOf("Prefer" to "odata.maxpagesize=100"),
+        )
+
+        val request = server.takeRequest()
+        assertThat(request.headers.values("Prefer"))
+            .isEqualTo(listOf("odata.maxpagesize=100, IdType=\"ImmutableId\""))
+    }
+
+    @Test
+    fun `a request that is sent again should ask for immutable ids once`() {
+        val testSubject = createTestSubject()
+        server.enqueue(MockResponse().setResponseCode(429).setHeader("Retry-After", "1"))
+        server.enqueue(MockResponse().setBody("""{"id":"m1"}"""))
+
+        testSubject.getString(testSubject.url("me/messages/m1"))
+
+        server.takeRequest()
+        assertThat(server.takeRequest().headers.values("Prefer")).isEqualTo(listOf("IdType=\"ImmutableId\""))
+    }
+
+    @Test
     fun `rejected token should be invalidated and the request retried once`() {
         val tokenProvider = FakeOAuth2TokenProvider(tokens = listOf("stale-token", "fresh-token"))
         val testSubject = createTestSubject(tokenProvider)

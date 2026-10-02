@@ -10,9 +10,9 @@ import net.thunderbird.backend.graph.api.graphBatchItem
 /**
  * Moves and copies messages between folders.
  *
- * Graph assigns a new id to a message when it changes folder, so both operations return a mapping from the original
- * message id to the id in the destination folder. A message whose request failed is left out of the mapping, so the
- * caller keeps referring to it by its original id.
+ * Both operations return a mapping from the original message id to the id in the destination folder. With the
+ * immutable ids this backend asks for, a moved message keeps its id and a copy gets one of its own. A message whose
+ * request failed is left out of the mapping, so the caller keeps referring to it by its original id.
  */
 internal class CommandMoveOrCopy(
     private val client: GraphApiClient,

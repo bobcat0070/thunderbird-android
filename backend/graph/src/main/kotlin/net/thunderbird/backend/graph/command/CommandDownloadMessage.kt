@@ -27,7 +27,12 @@ internal class CommandDownloadMessage(
         val graphMessage = fetchEnvelope(messageServerId)
         val backendFolder = backendStorage.getFolder(folderServerId)
 
-        backendFolder.saveMessage(graphMessage.toEnvelopeMessage(), MessageDownloadState.ENVELOPE)
+        // Stored under the id it was asked for by. Graph answers with the message's immutable id, which for a
+        // folder whose stored ids have not been converted yet is a different one, and saving under that would
+        // leave the message in the folder twice.
+        val envelope = graphMessage.toEnvelopeMessage().apply { uid = messageServerId }
+
+        backendFolder.saveMessage(envelope, MessageDownloadState.ENVELOPE)
         graphMessage.serverCategories()?.let { backendFolder.setMessageServerCategories(messageServerId, it) }
     }
 

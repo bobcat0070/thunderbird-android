@@ -56,6 +56,18 @@ private const val HTTP_HIGHEST_CLIENT_ERROR = 499
 
 private val OCTET_STREAM_MEDIA_TYPE = "application/octet-stream".toMediaType()
 
+internal const val PREFER_HEADER = "Prefer"
+
+/**
+ * Asks Graph to identify messages by ids that stay with them when they change folder.
+ *
+ * The preference only holds for the request it is sent with, and only decides the ids in the response: a request may
+ * still name a message by either kind of id.
+ *
+ * See https://learn.microsoft.com/en-us/graph/outlook-immutable-id
+ */
+internal const val PREFER_IMMUTABLE_IDS = "IdType=\"ImmutableId\""
+
 /**
  * Where Graph hands out attachment upload URLs. They carry their own authorization, so they are checked against this
  * rather than being sent the account's token.
@@ -67,6 +79,7 @@ private val UPLOAD_HOST_SUFFIXES = listOf("office.com", "office365.com", "outloo
  *
  * Responsibilities:
  * - attaching a bearer token obtained from [tokenProvider] and refreshing it once on 401
+ * - asking for immutable message ids, see [PREFER_IMMUTABLE_IDS]
  * - honouring Graph throttling (429, 503, 504) via the Retry-After header
  * - translating API errors into [MessagingException] / [AuthenticationFailedException], and network failures into a
  *   temporary [MessagingException], which is what tells the app to keep a pending change and try it again later
@@ -244,6 +257,7 @@ internal class GraphApiClient(
             val authorizedRequest = request.newBuilder()
                 .header("Authorization", "Bearer $token")
                 .header("Accept", "application/json")
+                .header(PREFER_HEADER, request.preferencesWithImmutableIds())
                 .build()
 
             val call = okHttpClient.newCall(authorizedRequest)
@@ -296,6 +310,14 @@ internal fun pathSegment(value: String): String {
     }
 
     return SEGMENT_ENCODER.newBuilder().addPathSegment(value).build().encodedPathSegments.last()
+}
+
+/**
+ * What the request prefers, with immutable ids added: one header listing every preference, which is the form
+ * Graph's own examples use when a request has more than one.
+ */
+private fun Request.preferencesWithImmutableIds(): String {
+    return (headers(PREFER_HEADER) + PREFER_IMMUTABLE_IDS).joinToString(", ")
 }
 
 private fun Response.isThrottled(): Boolean {

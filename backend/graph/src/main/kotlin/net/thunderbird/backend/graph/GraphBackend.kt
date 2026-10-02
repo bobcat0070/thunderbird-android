@@ -38,8 +38,8 @@ import net.thunderbird.feature.mail.folder.api.FolderPathDelimiter
  * that would otherwise use SMTP. This matters for Microsoft 365 tenants, where IMAP and SMTP AUTH are frequently
  * disabled by policy, leaving Graph as the only available protocol.
  *
- * Messages are identified by their Graph message id. Graph reassigns that id when a message moves between folders,
- * which is why the move and copy operations report the new ids back to the caller.
+ * Messages are identified by their immutable Graph id, which stays with a message when it moves between folders.
+ * The move and copy operations still report ids back to the caller: a copy is a new message with an id of its own.
  */
 // The Backend contract alone is more methods than the rule allows; splitting them up would move them away
 // from the interface they implement rather than make anything simpler.

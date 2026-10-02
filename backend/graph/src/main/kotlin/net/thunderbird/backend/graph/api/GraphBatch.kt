@@ -60,6 +60,9 @@ internal data class GraphBatchResponseItem(
 
 /**
  * Builds a batch item, attaching the content type Graph requires alongside a body.
+ *
+ * Every item asks for immutable ids itself: a batch is a set of separate requests, and what the request carrying
+ * them prefers does not pass to them.
  */
 internal fun graphBatchItem(
     index: Int,
@@ -72,7 +75,10 @@ internal fun graphBatchItem(
         method = method,
         url = url,
         body = body,
-        headers = body?.let { mapOf("Content-Type" to "application/json") },
+        headers = buildMap {
+            put(PREFER_HEADER, PREFER_IMMUTABLE_IDS)
+            if (body != null) put("Content-Type", "application/json")
+        },
     )
 }
 

@@ -104,6 +104,18 @@ class CommandDownloadMessageTest {
     }
 
     @Test
+    fun `downloading structure should store the message under the id it was asked for by`() = runTest {
+        // Graph answers with the immutable id. In a folder whose stored ids have not been converted yet that is
+        // not the id the message is stored under, and saving under it would leave the message there twice.
+        createFolder()
+        server.enqueue(MockResponse().setBody("""{"id":"immutable-1","subject":"Structure only"}"""))
+
+        createTestSubject().downloadMessageStructure(FOLDER_ID, "old-1")
+
+        assertThat(backendStorage.getFolder(FOLDER_ID).getMessageServerIds()).isEqualTo(setOf("old-1"))
+    }
+
+    @Test
     fun `downloaded message should keep the server id as its uid`() = runTest {
         createFolder()
         server.enqueue(MockResponse().setBody(RAW_MIME))

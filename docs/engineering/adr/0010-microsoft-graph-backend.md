@@ -35,8 +35,12 @@ accounts whose incoming server type is `graph`.
   as the message text so the message list can show preview lines without downloading anything.
 - **Synchronization is incremental.** Each folder keeps a delta token, so a sync after the first returns only what
   changed. An idle folder costs a single request that returns an empty collection.
-- **Message ids are not stable.** Graph reassigns a message id when the message changes folder, which is why move and
-  copy report the new ids back to the caller.
+- **Messages are identified by immutable ids.** The id Graph reports by default changes whenever a message changes
+  folder, so a message moved by another client or a server rule looked like one message deleted and another
+  arriving: its downloaded body was lost and anything referring to it pointed at nothing. Every request therefore
+  asks for immutable ids (`Prefer: IdType="ImmutableId"`), which stay with a message for as long as it is in the
+  mailbox. Move and copy still report the ids back to the caller, which for a move is now the id the message
+  already had. Folder ids were always stable.
 - **Replied and forwarded follow Outlook.** Exchange keeps one "last action" per message rather than a flag for each.
   A reply or forward made here is written the way Outlook writes it, so Outlook shows the arrow. Reading it back
   takes a separate request after each delta round, because Microsoft 365 refuses a delta request that expands
@@ -96,6 +100,7 @@ alike.
 - There is no expunge step; a delete moves the message to Deleted Items.
 - Individual MIME parts cannot be fetched, so opening a message downloads it whole.
 - Folders created in the app are not created on the server.
+- An immutable id still changes when a message is moved to an archive mailbox, or exported and imported again.
 - The colours of Outlook categories, and the list of categories a mailbox defines, are mailbox settings. Reading
   them needs the `MailboxSettings.Read` permission, which the app does not request, so a category is shown in a
   colour worked out from its name and only categories already seen on synchronized mail are offered when assigning
@@ -109,6 +114,20 @@ The OAuth configuration requests the delegated Microsoft Graph scopes `Mail.Read
 granted, and tenants that require admin consent need an administrator to approve the app before sign-in succeeds.
 Every further scope is a permission each user has to consent to again, which is why features that would need one,
 such as category colours, do without.
+
+#### Converting ids that are already stored
+
+Mail synchronized before immutable ids were asked for is stored under the old ids, and a sync that reported the same
+message under another id would store it twice. So before a folder is synchronized again, each message stored for it
+is looked up by the id it has and stored again under the immutable id Graph answers with. A message Graph no longer
+finds has been deleted or moved since the last sync and is removed, unless the account does not follow remote
+deletions. Delta tokens are valid for either kind of id, so the folder is not enumerated again.
+
+This costs one request per stored message, twenty to a batch, once per folder. Graph can convert a thousand ids in
+one call (`translateExchangeIds`), but only for an app permitted to read the user's profile (`User.Read`), which
+would be one more scope for every user to consent to. Progress is recorded as the conversion goes, so a folder large
+enough to be throttled part way carries on at the next sync instead of starting over; until it is done, that
+folder is not synchronized.
 
 #### Operational cost
 

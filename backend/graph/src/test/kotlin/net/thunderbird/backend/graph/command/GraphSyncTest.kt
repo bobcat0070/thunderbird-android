@@ -463,7 +463,7 @@ class GraphSyncTest {
         val request = server.takeRequest()
         // \$top would cap the whole round and hide older mail, so it must not be used.
         assertThat(request.requestUrl?.queryParameter("\$top")).isNull()
-        assertThat(request.getHeader("Prefer")).isEqualTo("odata.maxpagesize=100")
+        assertThat(request.getHeader("Prefer")).isEqualTo("odata.maxpagesize=100, IdType=\"ImmutableId\"")
     }
 
     @Test
@@ -667,6 +667,8 @@ class GraphSyncTest {
             // Covered by GraphLastActionReaderTest; here the round's messages carry whatever the test put in them.
             readLastActions = { _, messages -> messages },
             backfillLastActions = { _, _, _, _ -> },
+            // Covered by GraphImmutableIdMigrationTest; the messages here are stored under the ids Graph reports.
+            migrateToImmutableIds = { _, _ -> },
         )
     }
 

@@ -144,6 +144,23 @@ class GraphCommandTest {
     }
 
     @Test
+    fun `every request in a batch should ask for immutable ids itself`() {
+        // What the batch request prefers does not pass to the requests inside it, and a move answers with the
+        // id the message has in its new folder.
+        server.enqueue(
+            batchResponse(
+                """{"id":"0","status":201,"body":{"id":"m1"}}""",
+                """{"id":"1","status":201,"body":{"id":"m2"}}""",
+            ),
+        )
+
+        CommandMoveOrCopy(createClient()).moveMessages("archive", listOf("m1", "m2"))
+
+        val body = server.takeRequest().body.readUtf8()
+        assertThat(body.split("\"Prefer\":\"IdType=\\\"ImmutableId\\\"\"")).hasSize(3)
+    }
+
+    @Test
     fun `a message that failed to move should be left out of the mapping`() {
         server.enqueue(
             batchResponse(

@@ -117,7 +117,7 @@ class GraphContactSyncTest {
             .isEqualTo("/v1.0/me/contactFolders/$CONTACT_FOLDER_ID/contacts/delta")
         // Delta takes no $top; the page size is asked for in a header.
         assertThat(deltaRequest.requestUrl?.queryParameter("\$top")).isNull()
-        assertThat(deltaRequest.getHeader("Prefer")).isEqualTo("odata.maxpagesize=100")
+        assertThat(deltaRequest.getHeader("Prefer")).isEqualTo("odata.maxpagesize=100, IdType=\"ImmutableId\"")
         assertThat(store.savedDeltaLink).isEqualTo("${server.url("/v1.0/")}d?t=2")
     }
 
