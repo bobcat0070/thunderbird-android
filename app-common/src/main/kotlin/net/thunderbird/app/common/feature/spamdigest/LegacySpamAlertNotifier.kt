@@ -20,10 +20,11 @@ import net.thunderbird.feature.spamdigest.SpamMessage
 private const val LOG_TAG = "SpamAlert"
 
 /**
- * Posted under a tag of its own, so its ids cannot collide with the fixed per-account ranges the other notifications
- * are numbered in.
+ * Spam alerts are numbered in a range of their own, far above the small per-account ranges the other notifications
+ * use, with the low bits taken from the message so each message gets one notification.
  */
-private const val NOTIFICATION_TAG = "spam_alert"
+private const val NOTIFICATION_ID_BASE = 0x5A000000
+private const val NOTIFICATION_ID_MASK = 0x00FFFFFF
 
 /**
  * Lines a sender wrote are shown on one line, at most this long.
@@ -46,7 +47,13 @@ internal class LegacySpamAlertNotifier(
 
     override fun notify(accountId: String, folderId: Long, messageServerId: String, message: SpamMessage) {
         val account = accountManager.getAccount(accountId) ?: return
-        if (!canPostNotifications()) return
+        // Checked here, beside the call that needs it, where lint can see it.
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+            ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) !=
+            PackageManager.PERMISSION_GRANTED
+        ) {
+            return
+        }
 
         val title = context.getString(R.string.spam_alert_title)
         val sender = (message.senderName?.takeIf { it.isNotBlank() } ?: message.senderAddress).orEmpty().oneLine()
@@ -79,18 +86,11 @@ internal class LegacySpamAlertNotifier(
             .setPublicVersion(publicVersion)
             .build()
 
-        try {
-            notificationHelper.getNotificationManager()
-                .notify(NOTIFICATION_TAG, "$accountId/$folderId/$messageServerId".hashCode(), notification)
-        } catch (e: SecurityException) {
-            logger.warn(LOG_TAG) { "Could not post a spam alert: ${e::class.simpleName}" }
-        }
-    }
-
-    private fun canPostNotifications(): Boolean {
-        return Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
-            ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) ==
-            PackageManager.PERMISSION_GRANTED
+        // Posted through the helper the app's other notifications use, which handles a refused notification.
+        val notificationId =
+            NOTIFICATION_ID_BASE + ("$accountId/$folderId/$messageServerId".hashCode() and NOTIFICATION_ID_MASK)
+        notificationHelper.notify(account, notificationId, notification)
+        logger.debug(LOG_TAG) { "Posted a spam alert" }
     }
 
     private fun String.oneLine(): String {
