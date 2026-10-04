@@ -3,6 +3,7 @@ package com.fsck.k9.contacts
 import com.fsck.k9.contacts.bimi.BimiLogoLoader
 import com.fsck.k9.contacts.bimi.CertificateRevocationChecker
 import com.fsck.k9.contacts.bimi.DnsTxtLookup
+import com.fsck.k9.ui.unsubscribe.OneClickUnsubscriber
 import net.thunderbird.core.logging.Logger
 import com.fsck.k9.contacts.bimi.PlatformDnsTxtLookup
 import com.fsck.k9.contacts.bimi.VmcValidator
@@ -18,6 +19,8 @@ import org.koin.dsl.module
  */
 private const val GRAVATAR_TIMEOUT_SECONDS = 10L
 
+private const val UNSUBSCRIBE_TIMEOUT_SECONDS = 20L
+
 val contactsModule = module {
     single { AvatarCache(context = androidContext()) }
     single { ContactLetterExtractor() }
@@ -26,6 +29,9 @@ val contactsModule = module {
     factory { ContactPhotoLoader(contentResolver = get(), contactRepository = get()) }
     factory { ContactPictureLoader(context = get(), contactLetterBitmapCreator = get()) }
     single(named("gravatarHttpClient")) { senderPictureHttpClient(GRAVATAR_TIMEOUT_SECONDS) }
+    // Unsubscribe addresses are the sender's choice, like picture addresses, so they go through the same client
+    // that keeps requests off the local network.
+    single { OneClickUnsubscriber(httpClient = senderPictureHttpClient(UNSUBSCRIBE_TIMEOUT_SECONDS)) }
     single {
         GravatarLoader(
             generalSettingsManager = get(),

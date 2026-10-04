@@ -1,5 +1,9 @@
 package com.fsck.k9.ui.messagelist
 
+import android.net.Uri
+import com.fsck.k9.ui.base.R as BaseR
+import com.fsck.k9.ui.unsubscribe.OneClickUnsubscriber
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import net.thunderbird.feature.mail.message.classification.api.MessageClass
 import android.app.SearchManager
 import android.content.Context
@@ -134,6 +138,7 @@ import net.thunderbird.feature.search.legacy.UnifiedFolderKind
 import net.thunderbird.feature.search.legacy.api.MessageSearchField
 import net.thunderbird.feature.search.legacy.LocalMessageSearch
 import net.thunderbird.feature.search.legacy.SearchAccount
+import net.thunderbird.feature.search.legacy.senderSearchAddress
 import net.thunderbird.feature.search.legacy.serialization.LocalMessageSearchSerializer
 import org.koin.android.ext.android.inject
 import org.koin.androidx.viewmodel.ext.android.viewModel
@@ -182,6 +187,7 @@ class LegacyMessageListFragment :
     private val messagingController: MessagingControllerWrapper by inject()
     private val messagingControllerRegistry: MessagingControllerRegistry by inject()
     private val messageRepository: MessageRepository by inject()
+    private val oneClickUnsubscriber: OneClickUnsubscriber by inject()
     private val accountManager: LegacyAccountManager by inject()
     private val connectivityManager: ConnectivityManager by inject()
     private val localStoreProvider: LocalStoreProvider by inject()
@@ -786,6 +792,7 @@ class LegacyMessageListFragment :
     private fun setWindowTitle() {
         val classification = displayedClassification
         val unifiedFolder = localSearch.unifiedSpecialFolder
+        val sender = senderAddress
         val title = when {
             // Checked before the folder cases: a category list is a view of a folder, and naming the folder
             // would leave nothing on screen saying which category is being shown.
@@ -793,6 +800,7 @@ class LegacyMessageListFragment :
             isUnifiedFolders -> getString(R.string.integrated_inbox_title)
             unifiedFolder != null -> getString(unifiedFolder.titleRes())
             isNewMessagesView -> getString(R.string.new_messages_title)
+            sender != null -> sender
             isManualSearch -> getString(R.string.search_results)
             isThreadDisplay -> threadTitle ?: ""
             isSingleFolderMode -> currentFolder!!.displayName
@@ -1325,6 +1333,10 @@ class LegacyMessageListFragment :
 
         menu.findItem(R.id.search_remote).isVisible = !isRemoteSearch && isRemoteSearchAllowed
         menu.findItem(R.id.search_everywhere).isVisible = isManualSearch && !localSearch.searchAllAccounts()
+        val hasSenderMail = senderAddress != null && !currentMessageListItems.isNullOrEmpty()
+        menu.findItem(R.id.sender_archive_all).isVisible = hasSenderMail
+        menu.findItem(R.id.sender_delete_all).isVisible = hasSenderMail
+        menu.findItem(R.id.sender_unsubscribe).isVisible = hasSenderMail
         preparePinMenu(menu)
     }
 
@@ -1435,6 +1447,9 @@ class LegacyMessageListFragment :
             R.id.expunge -> onExpunge()
             R.id.search_everywhere -> onSearchEverywhere()
             R.id.pin_folder -> onTogglePin()
+            R.id.sender_archive_all -> confirmSenderBulkAction(archive = true)
+            R.id.sender_delete_all -> confirmSenderBulkAction(archive = false)
+            R.id.sender_unsubscribe -> onUnsubscribeFromSender()
             R.id.debug_invalidate_access_token_local -> onDebugInvalidateAccessTokenLocal()
             R.id.debug_invalidate_access_token_server -> onDebugInvalidateAccessTokenServer()
             R.id.debug_force_auth_failure -> onDebugForceAuthFailure()
@@ -2126,6 +2141,89 @@ class LegacyMessageListFragment :
                 return@launch
             }
 
+            startUnsubscribe(messageReference, unsubscribeUri)
+        }
+    }
+
+    /**
+     * The sender a "mail from this sender" list is for, or `null` for any other list.
+     */
+    private val senderAddress: String?
+        get() = localSearch.senderSearchAddress
+
+    /**
+     * Archives or deletes everything listed, after saying how much and from whom. Deleting moves to the trash: the
+     * list leaves out what is already there, so nothing is deleted for good from here.
+     */
+    private fun confirmSenderBulkAction(archive: Boolean) {
+        val address = senderAddress ?: return
+        val messages = currentMessageListItems.orEmpty().map { it.messageReference }
+        if (messages.isEmpty()) return
+
+        val message = resources.getQuantityString(
+            if (archive) R.plurals.sender_archive_all_confirm else R.plurals.sender_delete_all_confirm,
+            messages.size,
+            messages.size,
+            address,
+        )
+
+        MaterialAlertDialogBuilder(requireContext())
+            .setMessage(message)
+            .setPositiveButton(if (archive) R.string.sender_archive_all_action else R.string.sender_delete_all_action) {
+                    _,
+                    _,
+                ->
+                if (archive) onArchive(messages) else onDeleteConfirmed(messages)
+            }
+            .setNegativeButton(BaseR.string.cancel_action, null)
+            .show()
+    }
+
+    /**
+     * Leaves the sender's list using their newest message, which carries their current unsubscribe address. A
+     * one-click unsubscribe is sent from the app once the reader confirms; otherwise, or if the sender refuses it, the
+     * sender's own page or address is opened as from the message view.
+     */
+    private fun onUnsubscribeFromSender() {
+        val address = senderAddress ?: return
+        val newest = currentMessageListItems?.maxByOrNull { it.messageDate }?.messageReference ?: return
+
+        viewLifecycleOwner.lifecycleScope.launch {
+            val oneClickUri = withContext(Dispatchers.IO) {
+                runCatching { messageRepository.getOneClickUnsubscribeUri(newest) }.getOrNull()
+            }
+            if (oneClickUri == null) {
+                unsubscribeElsewhere(newest)
+                return@launch
+            }
+
+            MaterialAlertDialogBuilder(requireContext())
+                .setMessage(getString(R.string.one_click_unsubscribe_confirm, address))
+                .setPositiveButton(R.string.unsubscribe_action) { _, _ -> sendOneClickUnsubscribe(newest, oneClickUri) }
+                .setNegativeButton(BaseR.string.cancel_action, null)
+                .show()
+        }
+    }
+
+    private fun sendOneClickUnsubscribe(messageReference: MessageReference, uri: Uri) {
+        viewLifecycleOwner.lifecycleScope.launch {
+            if (oneClickUnsubscriber.unsubscribe(uri)) {
+                Toast.makeText(activity, R.string.one_click_unsubscribe_done, Toast.LENGTH_SHORT).show()
+            } else {
+                Toast.makeText(activity, R.string.one_click_unsubscribe_failed, Toast.LENGTH_LONG).show()
+                unsubscribeElsewhere(messageReference)
+            }
+        }
+    }
+
+    private suspend fun unsubscribeElsewhere(messageReference: MessageReference) {
+        val unsubscribeUri = withContext(Dispatchers.IO) {
+            runCatching { messageRepository.getUnsubscribeUri(messageReference) }.getOrNull()
+        }
+
+        if (unsubscribeUri == null) {
+            Toast.makeText(activity, R.string.unsubscribe_unavailable, Toast.LENGTH_SHORT).show()
+        } else {
             startUnsubscribe(messageReference, unsubscribeUri)
         }
     }

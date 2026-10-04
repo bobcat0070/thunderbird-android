@@ -1,5 +1,6 @@
 package com.fsck.k9.mailstore
 
+import android.net.Uri
 import app.k9mail.legacy.mailstore.MessageStoreManager
 import app.k9mail.legacy.message.controller.MessageReference
 import com.fsck.k9.mail.Address
@@ -11,6 +12,7 @@ import org.apache.james.mime4j.dom.field.DateTimeField
 import org.apache.james.mime4j.field.DefaultFieldParser
 
 private const val LIST_UNSUBSCRIBE_HEADER = "List-Unsubscribe"
+private const val LIST_UNSUBSCRIBE_POST_HEADER = "List-Unsubscribe-Post"
 
 class MessageRepository(private val messageStoreManager: MessageStoreManager) {
     fun getHeaders(messageReference: MessageReference): List<Header> {
@@ -58,6 +60,27 @@ class MessageRepository(private val messageStoreManager: MessageStoreManager) {
 
         return ListUnsubscribeHelper.getPreferredListUnsubscribeUri(headers.map { it.value })
     }
+
+    /**
+     * @return where to send a one-click unsubscribe for this message, or `null` when it does not offer one; see
+     *   [ListUnsubscribeHelper.getOneClickUnsubscribeUri].
+     */
+    fun getOneClickUnsubscribeUri(messageReference: MessageReference): Uri? {
+        val messageStore = messageStoreManager.getMessageStore(messageReference.accountUuid)
+        val headers = messageStore.getHeaders(
+            messageReference.folderId,
+            messageReference.uid,
+            setOf(LIST_UNSUBSCRIBE_HEADER, LIST_UNSUBSCRIBE_POST_HEADER),
+        )
+
+        return ListUnsubscribeHelper.getOneClickUnsubscribeUri(
+            listUnsubscribeValues = headers.valuesOf(LIST_UNSUBSCRIBE_HEADER),
+            listUnsubscribePostValues = headers.valuesOf(LIST_UNSUBSCRIBE_POST_HEADER),
+        )
+    }
+
+    private fun List<Header>.valuesOf(name: String): List<String> =
+        filter { it.name.equals(name, ignoreCase = true) }.map { it.value }
 
     private fun List<Header>.firstHeaderOrNull(name: String): String? {
         return firstOrNull { it.name.equals(name, ignoreCase = true) }?.value

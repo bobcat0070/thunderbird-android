@@ -99,6 +99,24 @@
         />
 
     <item
+        android:id="@+id/sender_archive_all"
+        android:title="@string/sender_archive_all_action"
+        app:showAsAction="never"
+        />
+
+    <item
+        android:id="@+id/sender_delete_all"
+        android:title="@string/sender_delete_all_action"
+        app:showAsAction="never"
+        />
+
+    <item
+        android:id="@+id/sender_unsubscribe"
+        android:title="@string/unsubscribe_action"
+        app:showAsAction="never"
+        />
+
+    <item
         android:id="@+id/empty_trash"
         android:title="@string/empty_trash_action"
         app:showAsAction="never"

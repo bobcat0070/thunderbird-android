@@ -6,6 +6,7 @@ import java.util.regex.Pattern
 
 object ListUnsubscribeHelper {
     private const val LIST_UNSUBSCRIBE_HEADER = "List-Unsubscribe"
+    private const val ONE_CLICK_POST_VALUE = "List-Unsubscribe=One-Click"
     private val MAILTO_CONTAINER_PATTERN = Pattern.compile("<(mailto:.+?)>")
     private val HTTPS_CONTAINER_PATTERN = Pattern.compile("<(https:.+?)>")
 
@@ -40,6 +41,21 @@ object ListUnsubscribeHelper {
         }
 
         return null
+    }
+
+    /**
+     * The address to send a one-click unsubscribe to (RFC 8058), or `null` when the message does not offer one.
+     *
+     * Offered only when the List-Unsubscribe-Post header says exactly that and List-Unsubscribe has an HTTPS address:
+     * one-click needs both, and posting to an address that never promised to take a POST could do anything.
+     */
+    fun getOneClickUnsubscribeUri(listUnsubscribeValues: List<String>, listUnsubscribePostValues: List<String>): Uri? {
+        val isOffered = listUnsubscribePostValues.any { it.trim().equals(ONE_CLICK_POST_VALUE, ignoreCase = true) }
+        if (!isOffered) return null
+
+        return listUnsubscribeValues.firstNotNullOfOrNull { value ->
+            HTTPS_CONTAINER_PATTERN.matcher(value).takeIf { it.find() }?.group(1)?.let(Uri::parse)
+        }
     }
 
     private fun extractUri(headerValue: String?): Uri? {

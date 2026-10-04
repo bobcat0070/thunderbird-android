@@ -93,4 +93,27 @@ class ListUnsubscribeHelperTest : RobolectricTest() {
         message.addHeader("List-Unsubscribe", value)
         return message
     }
+
+    @Test
+    fun `one-click unsubscribe should be offered when the sender promises it`() {
+        val uri = ListUnsubscribeHelper.getOneClickUnsubscribeUri(
+            listUnsubscribeValues = listOf("<mailto:leave@example.com>, <https://example.com/u?id=1>"),
+            listUnsubscribePostValues = listOf(" List-Unsubscribe=One-Click "),
+        )
+
+        assertThat(uri).isEqualTo("https://example.com/u?id=1".toUri())
+    }
+
+    @Test
+    fun `one-click unsubscribe should not be offered without the promise or an https address`() {
+        assertThat(
+            ListUnsubscribeHelper.getOneClickUnsubscribeUri(listOf("<https://example.com/u>"), emptyList()),
+        ).isNull()
+        assertThat(
+            ListUnsubscribeHelper.getOneClickUnsubscribeUri(
+                listOf("<mailto:leave@example.com>"),
+                listOf("List-Unsubscribe=One-Click"),
+            ),
+        ).isNull()
+    }
 }
