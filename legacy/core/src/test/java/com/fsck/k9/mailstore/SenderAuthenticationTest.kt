@@ -346,6 +346,39 @@ class TrustedAuthenticationServerTest {
     }
 
     @Test
+    fun `Microsoft's header naming mx microsoft com should be read as the same server as its unnamed one`() {
+        // Exchange Online writes its verdict both ways, on different messages of the same mailbox.
+        val header = "mx.microsoft.com 1; spf=pass (sender IP is 192.0.2.1) smtp.mailfrom=example.com; " +
+            "dkim=pass (signature was verified) header.d=example.com; dmarc=pass action=none header.from=example.com"
+
+        assertThat(authenticationServerIdOf(header)).isEqualTo(UNNAMED_AUTHENTICATION_SERVER)
+        assertThat(hasDmarcPass(listOf(header), "example.com", UNNAMED_AUTHENTICATION_SERVER)).isTrue()
+        assertThat(authenticationOutcomes(listOf(header), "example.com", UNNAMED_AUTHENTICATION_SERVER))
+            .containsExactly(
+                AuthenticationOutcome(AuthenticationMethod.DKIM, passed = true),
+                AuthenticationOutcome(AuthenticationMethod.SPF, passed = true),
+                AuthenticationOutcome(AuthenticationMethod.DMARC, passed = true),
+            )
+    }
+
+    @Test
+    fun `a header naming mx microsoft com below Microsoft's own verdict should not count`() {
+        val headers = listOf(
+            "spf=fail smtp.mailfrom=attacker.example; dmarc=fail action=quarantine header.from=example.com",
+            "mx.microsoft.com 1; dmarc=pass action=none header.from=example.com",
+        )
+
+        assertThat(hasDmarcPass(headers, "example.com", UNNAMED_AUTHENTICATION_SERVER)).isFalse()
+    }
+
+    @Test
+    fun `a header naming mx microsoft com should not be believed by an account on another server`() {
+        val headers = listOf("mx.microsoft.com 1; dmarc=pass action=none header.from=example.com")
+
+        assertThat(hasDmarcPass(headers, "example.com", trustedServerId = "mx.google.com")).isFalse()
+    }
+
+    @Test
     fun `an explicit DMARC failure from the account's server should be reported`() {
         val headers = listOf("mx.google.com; dmarc=fail (p=REJECT) header.from=example.com")
 

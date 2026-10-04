@@ -80,14 +80,25 @@ private const val DMARC_METHOD = "dmarc"
 const val UNNAMED_AUTHENTICATION_SERVER = ""
 
 /**
+ * The name Exchange Online writes on some of its headers instead of none, for the same verdict from the same
+ * servers: in one mailbox, on about one message in eight, and on nearly half of its junk.
+ */
+private const val MICROSOFT_AUTHENTICATION_SERVER = "mx.microsoft.com"
+
+/**
  * The name of the server that wrote an `Authentication-Results` header: its authserv-id, lower-cased and without
  * the optional version, or [UNNAMED_AUTHENTICATION_SERVER] for a header that has none.
+ *
+ * Microsoft's named form is read as its unnamed one, so an account that believes Microsoft believes both. That
+ * trusts nothing new: only the topmost header is ever read, and a sender who could get a forged header on top could
+ * already write it without a name.
  */
 fun authenticationServerIdOf(headerValue: String): String {
     val first = stripComments(headerValue).substringBefore(';').trim()
     if (METHOD_RESULT.containsMatchIn(first)) return UNNAMED_AUTHENTICATION_SERVER
 
-    return first.substringBefore(' ').substringBefore('\t').lowercase()
+    val name = first.substringBefore(' ').substringBefore('\t').lowercase()
+    return if (name == MICROSOFT_AUTHENTICATION_SERVER) UNNAMED_AUTHENTICATION_SERVER else name
 }
 
 /**
