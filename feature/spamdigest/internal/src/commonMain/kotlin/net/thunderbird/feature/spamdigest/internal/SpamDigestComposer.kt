@@ -4,6 +4,7 @@ import kotlinx.datetime.LocalDate
 import net.thunderbird.feature.impersonation.Impersonation
 import net.thunderbird.feature.spamdigest.SenderCheck
 import net.thunderbird.feature.spamdigest.SpamDigestAccount
+import net.thunderbird.feature.spamdigest.SpamDigestField
 import net.thunderbird.feature.spamdigest.SpamFolderContents
 import net.thunderbird.feature.spamdigest.SpamMessage
 
@@ -72,7 +73,16 @@ internal data class ComposedDigest(
 internal class SpamDigestComposer(
     private val strings: SpamDigestStrings,
 ) {
-    fun compose(day: LocalDate, accounts: List<AccountSpam>): ComposedDigest {
+    /**
+     * @param fields what to show for each message. When none of name, address and subject is among them the address
+     *   is shown anyway, so that every entry still says who it is from.
+     */
+    fun compose(
+        day: LocalDate,
+        accounts: List<AccountSpam>,
+        fields: Set<SpamDigestField> = SpamDigestField.entries.toSet(),
+    ): ComposedDigest {
+        val shown = fields.withSomethingToIdentify()
         val date = strings.formatDate(day)
         val messageCount = accounts.sumOf { it.messages().size }
         val fromKnownSenders = accounts.flatMap { accountSpam ->
@@ -86,17 +96,19 @@ internal class SpamDigestComposer(
                 appendLine()
                 appendLine("== ${strings.knownSendersHeading(fromKnownSenders.size)} ==")
                 fromKnownSenders.forEachIndexed { index, (account, message) ->
-                    appendMessage(index, message, account)
+                    appendMessage(index, message, account, shown)
                 }
             }
 
             for (accountSpam in accounts) {
                 appendLine()
-                appendAccount(accountSpam)
+                appendAccount(accountSpam, shown)
             }
 
-            appendLine()
-            appendLine(strings.legend())
+            if (SpamDigestField.SENDER_CHECKS in shown) {
+                appendLine()
+                appendLine(strings.legend())
+            }
         }
 
         return ComposedDigest(
@@ -105,17 +117,17 @@ internal class SpamDigestComposer(
         )
     }
 
-    private fun StringBuilder.appendAccount(accountSpam: AccountSpam) {
+    private fun StringBuilder.appendAccount(accountSpam: AccountSpam, shown: Set<SpamDigestField>) {
         appendLine("== ${accountSpam.account.heading()} ==")
 
         when (val result = accountSpam.result) {
             SpamFolderResult.NoSpamFolder -> appendLine(strings.noSpamFolder())
             SpamFolderResult.Unreadable -> appendLine(strings.unreadable())
-            is SpamFolderResult.Read -> appendContents(result.contents)
+            is SpamFolderResult.Read -> appendContents(result.contents, shown)
         }
     }
 
-    private fun StringBuilder.appendContents(contents: SpamFolderContents) {
+    private fun StringBuilder.appendContents(contents: SpamFolderContents, shown: Set<SpamDigestField>) {
         if (!contents.isRefreshed) appendLine(strings.notRefreshed())
 
         val others = contents.messages.filterNot { it.isFromKnownSender }
@@ -126,7 +138,7 @@ internal class SpamDigestComposer(
 
             else -> {
                 appendLine(strings.accountMessageCount(others.size))
-                others.forEachIndexed { index, message -> appendMessage(index, message, account = null) }
+                others.forEachIndexed { index, message -> appendMessage(index, message, account = null, shown) }
             }
         }
     }
@@ -135,21 +147,43 @@ internal class SpamDigestComposer(
      * @param account the account the message is in, named when the list it appears in is not already that
      *   account's.
      */
-    private fun StringBuilder.appendMessage(index: Int, message: SpamMessage, account: SpamDigestAccount?) {
-        val name = message.senderName?.sanitized(MAX_NAME_LENGTH).orEmpty().ifEmpty { strings.unknownSenderName() }
-        val address = message.senderAddress?.sanitized(MAX_ADDRESS_LENGTH).orEmpty()
-            .ifEmpty { strings.unknownSenderAddress() }
-        val subject = message.subject?.sanitized(MAX_SUBJECT_LENGTH).orEmpty().ifEmpty { strings.noSubject() }
+    private fun StringBuilder.appendMessage(
+        index: Int,
+        message: SpamMessage,
+        account: SpamDigestAccount?,
+        shown: Set<SpamDigestField>,
+    ) {
+        val lines = buildList {
+            if (SpamDigestField.SENDER_NAME in shown) {
+                add(message.senderName?.sanitized(MAX_NAME_LENGTH).orEmpty().ifEmpty { strings.unknownSenderName() })
+            }
+
+            val addressLine = listOfNotNull(
+                message.senderAddress?.sanitized(MAX_ADDRESS_LENGTH).orEmpty()
+                    .ifEmpty { strings.unknownSenderAddress() }
+                    .takeIf { SpamDigestField.SENDER_ADDRESS in shown },
+                formatChecks(message.senderChecks).takeIf { SpamDigestField.SENDER_CHECKS in shown },
+            ).joinToString("  ")
+            if (addressLine.isNotEmpty()) add(addressLine)
+
+            // Always shown: it is not a detail but a warning. Built from what the sender wrote, so it goes through the
+            // same cleaning as everything else they wrote.
+            message.impersonation?.let { impersonation ->
+                add("$WARNING_MARK ${strings.impersonation(impersonation).sanitized(MAX_SUBJECT_LENGTH)}")
+            }
+
+            if (SpamDigestField.SUBJECT in shown) {
+                val subject = message.subject?.sanitized(MAX_SUBJECT_LENGTH).orEmpty().ifEmpty { strings.noSubject() }
+                add(strings.subjectLine(subject))
+            }
+
+            account?.let { add(strings.accountLine(it.heading())) }
+        }
 
         appendLine()
-        appendLine("${index + 1}. $name")
-        appendLine("$INDENT$address  ${formatChecks(message.senderChecks)}")
-        message.impersonation?.let { impersonation ->
-            // Built from what the sender wrote, so it goes through the same cleaning as everything else they wrote.
-            appendLine("$INDENT$WARNING_MARK ${strings.impersonation(impersonation).sanitized(MAX_SUBJECT_LENGTH)}")
+        lines.forEachIndexed { lineIndex, line ->
+            appendLine(if (lineIndex == 0) "${index + 1}. $line" else INDENT + line)
         }
-        appendLine(INDENT + strings.subjectLine(subject))
-        account?.let { appendLine(INDENT + strings.accountLine(it.heading())) }
     }
 
     private fun SpamDigestAccount.heading(): String {
@@ -163,6 +197,11 @@ internal class SpamDigestComposer(
         return checks.joinToString(separator = "  ") { check ->
             "${check.method.name} ${if (check.passedAligned) PASS_MARK else FAIL_MARK}"
         }
+    }
+
+    private fun Set<SpamDigestField>.withSomethingToIdentify(): Set<SpamDigestField> {
+        val identifying = setOf(SpamDigestField.SENDER_NAME, SpamDigestField.SENDER_ADDRESS, SpamDigestField.SUBJECT)
+        return if (any { it in identifying }) this else this + SpamDigestField.SENDER_ADDRESS
     }
 
     private fun AccountSpam.messages(): List<SpamMessage> =

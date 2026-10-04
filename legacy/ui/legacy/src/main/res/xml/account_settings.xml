@@ -198,6 +198,15 @@
             app:pref_summaryHasTime="%s"
             />
 
+        <MultiSelectListPreference
+            android:dependency="spam_digest_send_from"
+            android:entries="@array/spam_digest_field_entries"
+            android:entryValues="@array/spam_digest_field_values"
+            android:key="spam_digest_fields"
+            android:summary="@string/account_settings_spam_digest_fields_summary"
+            android:title="@string/account_settings_spam_digest_fields_label"
+            />
+
         <SwitchPreference
             android:key="spam_alert"
             android:summary="@string/account_settings_spam_alert_summary"

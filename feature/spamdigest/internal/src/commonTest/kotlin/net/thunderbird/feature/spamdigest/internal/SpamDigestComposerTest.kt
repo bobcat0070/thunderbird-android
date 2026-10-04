@@ -1,6 +1,7 @@
 package net.thunderbird.feature.spamdigest.internal
 
 import assertk.assertThat
+import assertk.assertions.contains
 import assertk.assertions.isEqualTo
 import kotlin.test.Test
 import kotlin.time.Instant
@@ -9,6 +10,7 @@ import net.thunderbird.feature.impersonation.Impersonation
 import net.thunderbird.feature.spamdigest.SenderCheck
 import net.thunderbird.feature.spamdigest.SenderCheckMethod
 import net.thunderbird.feature.spamdigest.SpamDigestAccount
+import net.thunderbird.feature.spamdigest.SpamDigestField
 import net.thunderbird.feature.spamdigest.SpamFolderContents
 import net.thunderbird.feature.spamdigest.SpamMessage
 
@@ -130,6 +132,42 @@ class SpamDigestComposerTest {
             |
             """.trimMargin(),
         )
+    }
+
+    @Test
+    fun `compose should show only the chosen fields, and no legend without the checks`() {
+        val message = spamMessage(senderName = "Acme Deals", senderAddress = "promo@acme.example", subject = "You won")
+            .copy(senderChecks = listOf(SenderCheck(SenderCheckMethod.DMARC, passedAligned = false)))
+        val accounts = listOf(
+            AccountSpam(work, SpamFolderResult.Read(SpamFolderContents(listOf(message), isRefreshed = true))),
+        )
+
+        val result = testSubject.compose(day, accounts, setOf(SpamDigestField.SENDER_ADDRESS, SpamDigestField.SUBJECT))
+
+        assertThat(result.body).isEqualTo(
+            """
+            |Spam on 2026-10-02: 1 in 1
+            |
+            |== Work <me@work.example> ==
+            |1 messages
+            |
+            |1. promo@acme.example
+            |   Subject: You won
+            |
+            """.trimMargin(),
+        )
+    }
+
+    @Test
+    fun `compose should still name the sender when nothing that identifies a message is chosen`() {
+        val message = spamMessage(senderName = "Acme Deals", senderAddress = "promo@acme.example", subject = "You won")
+        val accounts = listOf(
+            AccountSpam(work, SpamFolderResult.Read(SpamFolderContents(listOf(message), isRefreshed = true))),
+        )
+
+        val result = testSubject.compose(day, accounts, setOf(SpamDigestField.SENDER_CHECKS))
+
+        assertThat(result.body.lines()).contains("1. promo@acme.example  (not reported)")
     }
 
     @Test

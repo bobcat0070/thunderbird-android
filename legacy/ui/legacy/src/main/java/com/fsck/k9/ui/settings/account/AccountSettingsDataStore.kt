@@ -17,6 +17,7 @@ import net.thunderbird.core.android.account.ShowPictures
 import net.thunderbird.feature.mail.folder.api.SpecialFolderSelection
 import net.thunderbird.feature.notification.NotificationLight
 import net.thunderbird.feature.notification.NotificationVibration
+import net.thunderbird.feature.spamdigest.SpamDigestField
 import net.thunderbird.feature.spamdigest.SpamDigestSettingsRepository
 import net.thunderbird.feature.spamdigest.SpamDigestTime
 
@@ -25,6 +26,7 @@ private const val SPAM_DIGEST_INCLUDE = "spam_digest_include"
 private const val SPAM_DIGEST_SEND_FROM = "spam_digest_send_from"
 private const val SPAM_DIGEST_TIME = "spam_digest_time"
 private const val SPAM_ALERT = "spam_alert"
+private const val SPAM_DIGEST_FIELDS = "spam_digest_fields"
 
 class AccountSettingsDataStore(
     private val preferences: Preferences,
@@ -42,6 +44,7 @@ class AccountSettingsDataStore(
     override fun getStringSet(key: String, defValues: Set<String>?): Set<String>? {
         return when (key) {
             PINNED_MOVE_FOLDERS -> pinnedFolderStore.pinnedFolderValues(account.uuid)
+            SPAM_DIGEST_FIELDS -> spamDigestSettingsRepository.getSettings().fields.mapTo(mutableSetOf()) { it.name }
             else -> defValues
         }
     }
@@ -51,6 +54,12 @@ class AccountSettingsDataStore(
             PINNED_MOVE_FOLDERS -> {
                 val folderIds = values.orEmpty().mapNotNullTo(mutableSetOf()) { it.toLongOrNull() }
                 pinnedFolderStore.setPinnedFolderIds(account.uuid, folderIds)
+            }
+
+            SPAM_DIGEST_FIELDS -> {
+                val names = values.orEmpty()
+                val fields = SpamDigestField.entries.filterTo(mutableSetOf()) { it.name in names }
+                spamDigestSettingsRepository.setFields(fields)
             }
 
             else -> Unit

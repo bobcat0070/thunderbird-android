@@ -6,10 +6,12 @@ import androidx.core.content.edit
 import com.fsck.k9.preferences.ExternalGlobalSettings
 import com.fsck.k9.preferences.ExternalSettingKeys.SPAM_ALERT_ACCOUNTS_KEY
 import com.fsck.k9.preferences.ExternalSettingKeys.SPAM_DIGEST_EXCLUDED_ACCOUNTS_KEY
+import com.fsck.k9.preferences.ExternalSettingKeys.SPAM_DIGEST_FIELDS_KEY
 import com.fsck.k9.preferences.ExternalSettingKeys.SPAM_DIGEST_SENDER_ACCOUNT_KEY
 import com.fsck.k9.preferences.ExternalSettingKeys.SPAM_DIGEST_SEND_TIME_KEY
 import java.util.Locale
 import net.thunderbird.feature.spamdigest.SpamDigestAccounts
+import net.thunderbird.feature.spamdigest.SpamDigestField
 import net.thunderbird.feature.spamdigest.SpamDigestSettingsRepository
 import net.thunderbird.feature.spamdigest.SpamDigestTime
 import net.thunderbird.feature.spamdigest.SpamFolderBackgroundSync
@@ -35,6 +37,7 @@ internal class SpamDigestExternalSettings(
         SPAM_DIGEST_SEND_TIME_KEY,
         SPAM_DIGEST_EXCLUDED_ACCOUNTS_KEY,
         SPAM_ALERT_ACCOUNTS_KEY,
+        SPAM_DIGEST_FIELDS_KEY,
     )
 
     override fun exportSettings(): Map<String, String> {
@@ -47,10 +50,16 @@ internal class SpamDigestExternalSettings(
                 "%02d:%02d".format(Locale.ROOT, settings.sendTime.hour, settings.sendTime.minute),
             SPAM_DIGEST_EXCLUDED_ACCOUNTS_KEY to settings.excludedAccountIds.mapNotNull(emailsById::get).toJson(),
             SPAM_ALERT_ACCOUNTS_KEY to settings.alertAccountIds.mapNotNull(emailsById::get).toJson(),
+            SPAM_DIGEST_FIELDS_KEY to settings.fields.map { it.name }.toJson(),
         )
     }
 
     override fun importSettings(values: Map<String, String>) {
+        // Needs no account, so it is applied at once. Names this build does not know are skipped.
+        values[SPAM_DIGEST_FIELDS_KEY]?.parseNames()?.let { names ->
+            settingsRepository.setFields(SpamDigestField.entries.filterTo(mutableSetOf()) { it.name in names })
+        }
+
         pendingImport.add(
             senderEmail = values[SPAM_DIGEST_SENDER_ACCOUNT_KEY]?.trim()?.lowercase()?.takeIf { '@' in it },
             sendTime = values[SPAM_DIGEST_SEND_TIME_KEY]?.toSendTime(),
@@ -141,6 +150,16 @@ private fun String.parseEmails(): Set<String>? {
         (0 until array.length())
             .mapNotNull { index -> array.optString(index).trim().lowercase().takeIf { '@' in it } }
             .toSet()
+    } catch (e: Exception) {
+        null
+    }
+}
+
+@Suppress("TooGenericExceptionCaught", "SwallowedException")
+private fun String.parseNames(): Set<String>? {
+    return try {
+        val array = JSONArray(this)
+        (0 until array.length()).mapNotNull { index -> array.optString(index).takeIf { it.isNotBlank() } }.toSet()
     } catch (e: Exception) {
         null
     }

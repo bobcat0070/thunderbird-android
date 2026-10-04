@@ -612,6 +612,12 @@
     <string name="all_mail_from_sender_action">All mail from this sender</string>
     <string name="message_list_possible_impersonation">Possible impersonation</string>
     <string name="notification_possible_impersonation">Possible impersonation</string>
+    <string name="account_settings_spam_digest_fields_label">Show in digest</string>
+    <string name="account_settings_spam_digest_fields_summary">What the digest lists for each message</string>
+    <string name="account_settings_spam_digest_field_sender_name">Sender name</string>
+    <string name="account_settings_spam_digest_field_sender_address">Sender address</string>
+    <string name="account_settings_spam_digest_field_sender_checks">Sender checks (SPF, DKIM, DMARC)</string>
+    <string name="account_settings_spam_digest_field_subject">Subject</string>
     <string name="account_settings_spam_alert_label">Alert me about people I know</string>
     <string name="account_settings_spam_alert_summary">Notify me as soon as mail from someone I have written to, or a contact, lands in this account\'s spam folder. Turns on checking the spam folder with each mail check.</string>
     <string name="message_view_impersonation_named_elsewhere">Possible impersonation: the name shows <xliff:g id="named">%1$s</xliff:g>, but this came from <xliff:g id="domain">%2$s</xliff:g></string>

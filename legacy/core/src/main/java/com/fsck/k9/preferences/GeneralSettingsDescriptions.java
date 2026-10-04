@@ -70,6 +70,7 @@ import static com.fsck.k9.preferences.ExternalSettingKeys.REMOTE_IMAGE_TRUSTED_D
 import static com.fsck.k9.preferences.ExternalSettingKeys.REMOTE_IMAGE_TRUSTED_SENDERS_KEY;
 import static com.fsck.k9.preferences.ExternalSettingKeys.SPAM_ALERT_ACCOUNTS_KEY;
 import static com.fsck.k9.preferences.ExternalSettingKeys.SPAM_DIGEST_EXCLUDED_ACCOUNTS_KEY;
+import static com.fsck.k9.preferences.ExternalSettingKeys.SPAM_DIGEST_FIELDS_KEY;
 import static com.fsck.k9.preferences.ExternalSettingKeys.SPAM_DIGEST_SENDER_ACCOUNT_KEY;
 import static com.fsck.k9.preferences.ExternalSettingKeys.SPAM_DIGEST_SEND_TIME_KEY;
 import static net.thunderbird.core.preference.display.inboxSettings.DisplayInboxSettingsKt.DISPLAY_SETTINGS_DEFAULT_IS_MESSAGE_LIST_SENDER_ABOVE_SUBJECT;
@@ -436,6 +437,9 @@ class GeneralSettingsDescriptions {
             new V(113, new StringSetting(""))
         ));
         s.put(SPAM_ALERT_ACCOUNTS_KEY, Settings.versions(
+            new V(113, new StringSetting(""))
+        ));
+        s.put(SPAM_DIGEST_FIELDS_KEY, Settings.versions(
             new V(113, new StringSetting(""))
         ));
 

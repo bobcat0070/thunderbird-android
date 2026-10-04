@@ -22,6 +22,18 @@ public data class SpamDigestTime(
 }
 
 /**
+ * A detail the digest can show for each message.
+ */
+public enum class SpamDigestField {
+    SENDER_NAME,
+    SENDER_ADDRESS,
+
+    /** Whether SPF, DKIM and DMARC passed and lined up with the sender's domain. */
+    SENDER_CHECKS,
+    SUBJECT,
+}
+
+/**
  * How the daily spam digest is set up.
  *
  * One digest covers every included account and is sent once a day, from one account to that account's own
@@ -33,12 +45,14 @@ public data class SpamDigestTime(
  * @param sendTime when the digest is sent.
  * @param alertAccountIds accounts that raise a notification as soon as mail from someone the reader knows lands in
  *   their spam folder, rather than waiting for the digest.
+ * @param fields what the digest shows for each message.
  */
 public data class SpamDigestSettings(
     val senderAccountId: String?,
     val excludedAccountIds: Set<String>,
     val sendTime: SpamDigestTime,
     val alertAccountIds: Set<String> = emptySet(),
+    val fields: Set<SpamDigestField> = SpamDigestField.entries.toSet(),
 ) {
     val isEnabled: Boolean
         get() = senderAccountId != null
@@ -67,4 +81,6 @@ public interface SpamDigestSettingsRepository {
      * has the spam folder checked with the account's other folders, since an alert can only be as quick as that.
      */
     public fun setAlertEnabled(accountId: String, enabled: Boolean)
+
+    public fun setFields(fields: Set<SpamDigestField>)
 }

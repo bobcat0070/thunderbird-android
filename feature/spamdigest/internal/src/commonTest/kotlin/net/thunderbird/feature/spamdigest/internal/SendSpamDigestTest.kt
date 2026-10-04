@@ -18,6 +18,7 @@ import kotlinx.datetime.TimeZone
 import net.thunderbird.core.logging.testing.TestLogger
 import net.thunderbird.core.testing.TestClock
 import net.thunderbird.feature.spamdigest.SpamDigestAccount
+import net.thunderbird.feature.spamdigest.SpamDigestField
 import net.thunderbird.feature.spamdigest.SpamDigestMailer
 import net.thunderbird.feature.spamdigest.SpamDigestSettings
 import net.thunderbird.feature.spamdigest.SpamDigestSettingsRepository
@@ -161,6 +162,10 @@ private class FakeSettingsRepository(var current: SpamDigestSettings) : SpamDige
 
     override fun setSendTime(time: SpamDigestTime) {
         current = current.copy(sendTime = time)
+    }
+
+    override fun setFields(fields: Set<SpamDigestField>) {
+        current = current.copy(fields = fields)
     }
 
     override fun setAlertEnabled(accountId: String, enabled: Boolean) {

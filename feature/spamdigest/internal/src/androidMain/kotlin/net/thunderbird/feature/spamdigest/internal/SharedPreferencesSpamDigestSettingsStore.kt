@@ -7,6 +7,7 @@ import kotlin.time.Clock
 import kotlin.time.Duration.Companion.days
 import kotlin.time.Instant
 import kotlinx.datetime.LocalDate
+import net.thunderbird.feature.spamdigest.SpamDigestField
 import net.thunderbird.feature.spamdigest.SpamDigestSettings
 import net.thunderbird.feature.spamdigest.SpamDigestTime
 
@@ -21,6 +22,7 @@ private const val KEY_ALERT_ENABLED_AT_PREFIX = "alertEnabledAt."
 private const val KEY_ALERTED = "alerted"
 private const val KEY_SYNC_TURNED_ON_BY_ALERT = "syncTurnedOnByAlert"
 private const val KEY_SCHEDULED_FOR = "scheduledFor"
+private const val KEY_FIELDS = "fields"
 private const val ALERTED_SEPARATOR = ' '
 
 /**
@@ -48,6 +50,7 @@ internal class SharedPreferencesSpamDigestSettingsStore(
             excludedAccountIds = preferences.getStringSet(KEY_EXCLUDED_ACCOUNT_IDS, null).orEmpty().toSet(),
             sendTime = readSendTime(),
             alertAccountIds = preferences.getStringSet(KEY_ALERT_ACCOUNT_IDS, null).orEmpty().toSet(),
+            fields = readFields(),
         )
     }
 
@@ -123,6 +126,19 @@ internal class SharedPreferencesSpamDigestSettingsStore(
                 putStringSet(KEY_SYNC_TURNED_ON_BY_ALERT, if (turnedOn) accounts + accountId else accounts - accountId)
             }
         }
+    }
+
+    override fun setFields(fields: Set<SpamDigestField>) {
+        preferences.edit { putStringSet(KEY_FIELDS, fields.mapTo(mutableSetOf()) { it.name }) }
+    }
+
+    /**
+     * All of them until the user chooses, so the digest looks as it always has. Names this build does not know - from
+     * a newer one - are skipped.
+     */
+    private fun readFields(): Set<SpamDigestField> {
+        val names = preferences.getStringSet(KEY_FIELDS, null) ?: return SpamDigestField.entries.toSet()
+        return SpamDigestField.entries.filterTo(mutableSetOf()) { it.name in names }
     }
 
     override fun scheduledFor(): Instant? {

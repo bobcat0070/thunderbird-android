@@ -2,6 +2,7 @@ package net.thunderbird.feature.spamdigest.internal
 
 import kotlin.time.Instant
 import kotlinx.datetime.TimeZone
+import net.thunderbird.feature.spamdigest.SpamDigestField
 import net.thunderbird.feature.spamdigest.SpamDigestScheduler
 import net.thunderbird.feature.spamdigest.SpamDigestSettings
 import net.thunderbird.feature.spamdigest.SpamDigestSettingsRepository
@@ -71,6 +72,10 @@ internal class ReschedulingSpamDigestSettingsRepository(
     override fun setSendTime(time: SpamDigestTime) {
         store.setSendTime(time)
         scheduler.reschedule()
+    }
+
+    override fun setFields(fields: Set<SpamDigestField>) {
+        store.setFields(fields)
     }
 
     override fun setAlertEnabled(accountId: String, enabled: Boolean) {

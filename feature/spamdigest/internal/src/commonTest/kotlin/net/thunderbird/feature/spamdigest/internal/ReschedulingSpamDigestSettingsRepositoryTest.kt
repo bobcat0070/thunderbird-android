@@ -7,6 +7,7 @@ import assertk.assertions.isTrue
 import kotlin.test.Test
 import kotlin.time.Instant
 import kotlinx.datetime.LocalDate
+import net.thunderbird.feature.spamdigest.SpamDigestField
 import net.thunderbird.feature.spamdigest.SpamDigestScheduler
 import net.thunderbird.feature.spamdigest.SpamDigestSettings
 import net.thunderbird.feature.spamdigest.SpamDigestTime
@@ -89,6 +90,10 @@ class ReschedulingSpamDigestSettingsRepositoryTest {
 
         override fun setSendTime(time: SpamDigestTime) {
             settings = settings.copy(sendTime = time)
+        }
+
+        override fun setFields(fields: Set<SpamDigestField>) {
+            settings = settings.copy(fields = fields)
         }
 
         override fun setAlertEnabled(accountId: String, enabled: Boolean) {

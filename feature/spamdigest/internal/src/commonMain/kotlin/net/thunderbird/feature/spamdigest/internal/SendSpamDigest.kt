@@ -66,7 +66,7 @@ internal class SendSpamDigest(
             .filter { settings.isAccountIncluded(it.id) }
             .map { account -> AccountSpam(account, readSpamFolder(account.id, day)) }
 
-        val digest = composer.compose(day.date, accountSpam)
+        val digest = composer.compose(day.date, accountSpam, settings.fields)
         mailer.sendToSelf(senderAccountId, digest.subject, digest.body)
         digestLog.markSent(day.date)
 

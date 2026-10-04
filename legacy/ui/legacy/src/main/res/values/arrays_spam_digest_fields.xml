@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string-array name="spam_digest_field_entries">
+        <item>@string/account_settings_spam_digest_field_sender_name</item>
+        <item>@string/account_settings_spam_digest_field_sender_address</item>
+        <item>@string/account_settings_spam_digest_field_sender_checks</item>
+        <item>@string/account_settings_spam_digest_field_subject</item>
+    </string-array>
+
+    <!-- Names of net.thunderbird.feature.spamdigest.SpamDigestField. -->
+    <string-array name="spam_digest_field_values" translatable="false">
+        <item>SENDER_NAME</item>
+        <item>SENDER_ADDRESS</item>
+        <item>SENDER_CHECKS</item>
+        <item>SUBJECT</item>
+    </string-array>
+</resources>

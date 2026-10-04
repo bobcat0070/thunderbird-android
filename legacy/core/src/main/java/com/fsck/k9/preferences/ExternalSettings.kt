@@ -67,4 +67,5 @@ object ExternalSettingKeys {
     const val SPAM_DIGEST_SEND_TIME_KEY = "spamDigestSendTime"
     const val SPAM_DIGEST_EXCLUDED_ACCOUNTS_KEY = "spamDigestExcludedAccounts"
     const val SPAM_ALERT_ACCOUNTS_KEY = "spamAlertAccounts"
+    const val SPAM_DIGEST_FIELDS_KEY = "spamDigestFields"
 }

@@ -4,11 +4,13 @@ import assertk.assertThat
 import assertk.assertions.isEqualTo
 import com.fsck.k9.preferences.ExternalSettingKeys.SPAM_ALERT_ACCOUNTS_KEY
 import com.fsck.k9.preferences.ExternalSettingKeys.SPAM_DIGEST_EXCLUDED_ACCOUNTS_KEY
+import com.fsck.k9.preferences.ExternalSettingKeys.SPAM_DIGEST_FIELDS_KEY
 import com.fsck.k9.preferences.ExternalSettingKeys.SPAM_DIGEST_SENDER_ACCOUNT_KEY
 import com.fsck.k9.preferences.ExternalSettingKeys.SPAM_DIGEST_SEND_TIME_KEY
 import net.thunderbird.core.android.testing.RobolectricTest
 import net.thunderbird.feature.spamdigest.SpamDigestAccount
 import net.thunderbird.feature.spamdigest.SpamDigestAccounts
+import net.thunderbird.feature.spamdigest.SpamDigestField
 import net.thunderbird.feature.spamdigest.SpamDigestSettings
 import net.thunderbird.feature.spamdigest.SpamDigestSettingsRepository
 import net.thunderbird.feature.spamdigest.SpamDigestTime
@@ -43,8 +45,16 @@ class SpamDigestExternalSettingsTest : RobolectricTest() {
                 SPAM_DIGEST_SEND_TIME_KEY to "06:30",
                 SPAM_DIGEST_EXCLUDED_ACCOUNTS_KEY to """["me@home.example"]""",
                 SPAM_ALERT_ACCOUNTS_KEY to """["me@work.example"]""",
+                SPAM_DIGEST_FIELDS_KEY to """["SENDER_ADDRESS","SENDER_CHECKS","SENDER_NAME","SUBJECT"]""",
             ),
         )
+    }
+
+    @Test
+    fun `import should restore which fields the digest shows`() {
+        testSubject.importSettings(mapOf(SPAM_DIGEST_FIELDS_KEY to """["SENDER_NAME","SUBJECT","FROM_THE_FUTURE"]"""))
+
+        assertThat(repository.current.fields).isEqualTo(setOf(SpamDigestField.SENDER_NAME, SpamDigestField.SUBJECT))
     }
 
     @Test
@@ -119,6 +129,10 @@ class SpamDigestExternalSettingsTest : RobolectricTest() {
 
         override fun setSendTime(time: SpamDigestTime) {
             current = current.copy(sendTime = time)
+        }
+
+        override fun setFields(fields: Set<SpamDigestField>) {
+            current = current.copy(fields = fields)
         }
 
         override fun setAlertEnabled(accountId: String, enabled: Boolean) {
