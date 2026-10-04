@@ -11,6 +11,7 @@ import net.thunderbird.feature.debug.settings.navigation.SecretDebugSettingsRout
 import net.thunderbird.feature.funding.api.FundingRoute
 import net.thunderbird.feature.navigation.changelog.api.ChangeLogMode
 import net.thunderbird.feature.navigation.changelog.api.ChangelogRoute
+import net.thunderbird.feature.newsletter.NewsletterRoute
 
 sealed class FeatureLauncherTarget(
     val deepLinkUri: Uri,
@@ -50,6 +51,10 @@ sealed class FeatureLauncherTarget(
 
     data object Funding : FeatureLauncherTarget(
         deepLinkUri = FundingRoute.Contribution.route().toUri(),
+    )
+
+    data object Newsletters : FeatureLauncherTarget(
+        deepLinkUri = NewsletterRoute.Senders.route().toUri(),
     )
 
     data class Changelog(val changeLogMode: ChangeLogMode) : FeatureLauncherTarget(

@@ -611,6 +611,7 @@
     <string name="account_settings_spam_digest">Spam</string>
     <string name="all_mail_from_sender_action">All mail from this sender</string>
     <string name="sender_archive_all_action">Archive all</string>
+    <string name="manage_newsletters_action">Manage newsletters</string>
     <string name="sender_delete_all_action">Delete all</string>
     <plurals name="sender_archive_all_confirm">
         <item quantity="one">Archive <xliff:g id="count">%1$d</xliff:g> message from <xliff:g id="sender">%2$s</xliff:g>?</item>

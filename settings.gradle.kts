@@ -184,6 +184,11 @@ include(
 )
 
 include(
+    ":feature:newsletter:api",
+    ":feature:newsletter:internal",
+)
+
+include(
     ":feature:spamdigest:api",
     ":feature:spamdigest:internal",
 )

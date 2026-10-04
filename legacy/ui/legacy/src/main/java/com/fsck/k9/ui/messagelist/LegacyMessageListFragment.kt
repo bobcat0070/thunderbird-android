@@ -1337,6 +1337,7 @@ class LegacyMessageListFragment :
         menu.findItem(R.id.sender_archive_all).isVisible = hasSenderMail
         menu.findItem(R.id.sender_delete_all).isVisible = hasSenderMail
         menu.findItem(R.id.sender_unsubscribe).isVisible = hasSenderMail
+        menu.findItem(R.id.manage_newsletters).isVisible = displayedClassification == MessageClass.NEWSLETTER
         preparePinMenu(menu)
     }
 
@@ -1450,6 +1451,10 @@ class LegacyMessageListFragment :
             R.id.sender_archive_all -> confirmSenderBulkAction(archive = true)
             R.id.sender_delete_all -> confirmSenderBulkAction(archive = false)
             R.id.sender_unsubscribe -> onUnsubscribeFromSender()
+            R.id.manage_newsletters -> FeatureLauncherActivity.launch(
+                context = requireContext(),
+                target = FeatureLauncherTarget.Newsletters,
+            )
             R.id.debug_invalidate_access_token_local -> onDebugInvalidateAccessTokenLocal()
             R.id.debug_invalidate_access_token_server -> onDebugInvalidateAccessTokenServer()
             R.id.debug_force_auth_failure -> onDebugForceAuthFailure()

@@ -51,6 +51,9 @@ dependencies {
     implementation(projects.feature.spamdigest.internal)
     implementation(projects.feature.impersonation.api)
     implementation(projects.feature.impersonation.internal)
+    implementation(projects.feature.newsletter.api)
+    implementation(projects.feature.newsletter.internal)
+    implementation(projects.feature.mail.message.classification.api)
     implementation(projects.feature.widget.messageList)
 
     implementation(projects.feature.mail.message.api)

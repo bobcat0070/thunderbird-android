@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+    <string name="newsletter_senders_title">Newsletters</string>
+    <string name="newsletter_senders_empty">No newsletters waiting in your inbox.</string>
+    <plurals name="newsletter_message_count">
+        <item quantity="one"><xliff:g id="count">%d</xliff:g> newsletter</item>
+        <item quantity="other"><xliff:g id="count">%d</xliff:g> newsletters</item>
+    </plurals>
+    <string name="newsletter_unsubscribe">Unsubscribe</string>
+    <string name="newsletter_archive_all">Archive all</string>
+    <string name="newsletter_delete_all">Delete all</string>
+    <string name="newsletter_cancel">Cancel</string>
+    <string name="newsletter_unsubscribe_confirm">Ask <xliff:g id="sender">%s</xliff:g> to stop sending you mail? When the sender allows it, the app sends the request for you; otherwise their unsubscribe page opens.</string>
+    <plurals name="newsletter_archive_all_confirm">
+        <item quantity="one">Archive <xliff:g id="count">%1$d</xliff:g> message from <xliff:g id="sender">%2$s</xliff:g>?</item>
+        <item quantity="other">Archive all <xliff:g id="count">%1$d</xliff:g> messages from <xliff:g id="sender">%2$s</xliff:g>?</item>
+    </plurals>
+    <plurals name="newsletter_delete_all_confirm">
+        <item quantity="one">Move <xliff:g id="count">%1$d</xliff:g> message from <xliff:g id="sender">%2$s</xliff:g> to the trash?</item>
+        <item quantity="other">Move all <xliff:g id="count">%1$d</xliff:g> messages from <xliff:g id="sender">%2$s</xliff:g> to the trash?</item>
+    </plurals>
+    <string name="newsletter_unsubscribed">Unsubscribe request sent to <xliff:g id="sender">%s</xliff:g></string>
+    <string name="newsletter_unsubscribe_unavailable">This sender does not say how to unsubscribe</string>
+    <plurals name="newsletter_archived">
+        <item quantity="one"><xliff:g id="count">%d</xliff:g> message archived</item>
+        <item quantity="other"><xliff:g id="count">%d</xliff:g> messages archived</item>
+    </plurals>
+    <plurals name="newsletter_deleted">
+        <item quantity="one"><xliff:g id="count">%d</xliff:g> message moved to the trash</item>
+        <item quantity="other"><xliff:g id="count">%d</xliff:g> messages moved to the trash</item>
+    </plurals>
+</resources>
