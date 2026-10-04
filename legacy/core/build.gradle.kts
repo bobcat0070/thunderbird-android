@@ -28,6 +28,7 @@ dependencies {
     api(projects.legacy.message)
     implementation(projects.legacy.logging)
     implementation(projects.feature.notification.api)
+    implementation(projects.feature.impersonation.api)
 
     implementation(projects.plugins.openpgpApiLib.openpgpApi)
     implementation(projects.feature.telemetry.api)

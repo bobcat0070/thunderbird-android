@@ -73,6 +73,9 @@ class K9NotificationResourceProvider(private val context: Context) : Notificatio
 
     override fun noSubject(): String = context.getString(R.string.general_no_subject)
 
+    override fun possibleImpersonation(): String =
+        context.getString(R.string.notification_possible_impersonation)
+
     override fun recipientDisplayName(recipientDisplayName: String): String =
         context.getString(R.string.message_to_fmt, recipientDisplayName)
 

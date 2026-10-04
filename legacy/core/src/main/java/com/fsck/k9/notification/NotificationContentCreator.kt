@@ -9,11 +9,15 @@ import com.fsck.k9.mail.Message
 import com.fsck.k9.mailstore.LocalMessage
 import net.thunderbird.core.android.account.LegacyAccountDto
 import net.thunderbird.core.preference.display.visualSettings.message.list.MessageListPreferencesManager
+import net.thunderbird.feature.impersonation.ImpersonationChecker
+
+private const val WARNING_MARK = "\u26A0"
 
 internal class NotificationContentCreator(
     private val resourceProvider: NotificationResourceProvider,
     private val contactRepository: ContactRepository,
     private val messageListPreferencesManager: MessageListPreferencesManager,
+    private val impersonationChecker: ImpersonationChecker? = null,
 ) {
     fun createFromMessage(account: LegacyAccountDto, message: LocalMessage): NotificationContent {
         val sender = getMessageSender(account, message)
@@ -22,10 +26,28 @@ internal class NotificationContentCreator(
             messageReference = message.makeMessageReference(),
             sender = sender,
             subject = getMessageSubject(message),
-            preview = getMessagePreview(message),
+            preview = withImpersonationWarning(message, getMessagePreview(message)),
             summary = buildMessageSummary(sender.personal, getMessageSubject(message)),
             isSenderAuthenticated = message.isSenderAuthenticated,
         )
+    }
+
+    /**
+     * Puts a warning first when the sender looks like someone they are not, since a notification is often all of a
+     * message that is read before acting on it. Checked against the address the message came from, not the contact
+     * name the notification may show in its place.
+     */
+    private fun withImpersonationWarning(message: LocalMessage, preview: CharSequence): CharSequence {
+        val from = message.from?.firstOrNull()
+        from?.let { impersonationChecker?.check(it.personal, it.address) } ?: return preview
+
+        return SpannableStringBuilder().apply {
+            append(WARNING_MARK)
+            append(' ')
+            append(resourceProvider.possibleImpersonation())
+            append('\n')
+            append(preview)
+        }
     }
 
     private fun getMessagePreview(message: LocalMessage): CharSequence {

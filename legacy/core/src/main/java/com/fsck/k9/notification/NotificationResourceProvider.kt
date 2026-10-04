@@ -52,6 +52,7 @@ interface NotificationResourceProvider {
     fun additionalMessages(overflowMessagesCount: Int, accountName: String): String
     fun previewEncrypted(): String
     fun noSubject(): String
+    fun possibleImpersonation(): String
     fun recipientDisplayName(recipientDisplayName: String): String
     fun noSender(): String
 

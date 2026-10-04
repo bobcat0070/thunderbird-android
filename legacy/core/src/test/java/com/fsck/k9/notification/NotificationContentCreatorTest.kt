@@ -11,6 +11,7 @@ import com.fsck.k9.mailstore.LocalMessage
 import net.thunderbird.core.android.account.LegacyAccountDto
 import net.thunderbird.core.android.testing.RobolectricTest
 import net.thunderbird.core.preference.display.visualSettings.message.list.DisplayMessageListSettings
+import net.thunderbird.feature.impersonation.Impersonation
 import org.junit.Test
 import org.mockito.kotlin.any
 import org.mockito.kotlin.doReturn
@@ -44,6 +45,24 @@ class NotificationContentCreatorTest : RobolectricTest() {
         assertThat(content.subject).isEqualTo(SUBJECT)
         assertThat(content.preview.toString()).isEqualTo("$SUBJECT\n$PREVIEW")
         assertThat(content.summary.toString()).isEqualTo("$SENDER_NAME $SUBJECT")
+    }
+
+    @Test
+    fun createFromMessage_withPossibleImpersonation_shouldPutTheWarningFirst() {
+        val contentCreator = NotificationContentCreator(
+            resourceProvider,
+            contactRepository,
+            messageListPreferencesManager = mock {
+                on { getConfig() } doReturn DisplayMessageListSettings()
+            },
+            impersonationChecker = { name, address ->
+                Impersonation.KnownName(name.orEmpty(), address.orEmpty())
+            },
+        )
+
+        val content = contentCreator.createFromMessage(account, message)
+
+        assertThat(content.preview.toString()).isEqualTo("⚠ Possible impersonation\n$SUBJECT\n$PREVIEW")
     }
 
     @Test

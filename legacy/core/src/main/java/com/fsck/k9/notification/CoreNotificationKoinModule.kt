@@ -96,6 +96,7 @@ val coreNotificationModule = module {
             resourceProvider = get(),
             contactRepository = get(),
             messageListPreferencesManager = get(),
+            impersonationChecker = get(),
         )
     }
     factory { BaseNotificationDataCreator() }

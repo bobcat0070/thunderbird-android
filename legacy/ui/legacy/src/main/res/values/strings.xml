@@ -609,6 +609,8 @@
     <string name="account_settings_sync">Fetching mail</string>
     <string name="account_settings_folders">Folders</string>
     <string name="account_settings_spam_digest">Spam</string>
+    <string name="message_list_possible_impersonation">Possible impersonation</string>
+    <string name="notification_possible_impersonation">Possible impersonation</string>
     <string name="account_settings_spam_alert_label">Alert me about people I know</string>
     <string name="account_settings_spam_alert_summary">Notify me as soon as mail from someone I have written to, or a contact, lands in this account\'s spam folder. Turns on checking the spam folder with each mail check.</string>
     <string name="message_view_impersonation_named_elsewhere">Possible impersonation: the name shows <xliff:g id="named">%1$s</xliff:g>, but this came from <xliff:g id="domain">%2$s</xliff:g></string>

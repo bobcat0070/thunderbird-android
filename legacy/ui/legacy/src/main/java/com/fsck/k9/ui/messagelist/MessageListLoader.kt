@@ -13,6 +13,7 @@ import net.thunderbird.core.android.account.SortType
 import net.thunderbird.core.featureflag.FeatureFlagProvider
 import net.thunderbird.core.featureflag.keys.GeneratedFeatureFlagKey
 import net.thunderbird.core.preference.display.visualSettings.message.list.MessageListPreferencesManager
+import net.thunderbird.feature.impersonation.ImpersonationChecker
 import net.thunderbird.feature.mail.folder.api.OutboxFolderManager
 import net.thunderbird.feature.search.legacy.LocalMessageSearch
 import net.thunderbird.feature.search.legacy.api.MessageSearchField
@@ -29,6 +30,7 @@ class MessageListLoader(
     private val outboxFolderManager: OutboxFolderManager,
     private val featureFlagProvider: FeatureFlagProvider,
     private val contactLetterBitmapCreator: ContactLetterBitmapCreator,
+    private val impersonationChecker: ImpersonationChecker,
 ) {
 
     /**
@@ -77,6 +79,7 @@ class MessageListLoader(
                 featureFlagProvider.provide(GeneratedFeatureFlagKey.USE_COMPOSE_FOR_MESSAGE_LIST_ITEMS).isEnabled() ||
                     featureFlagProvider.provide(GeneratedFeatureFlagKey.ENABLE_MESSAGE_LIST_NEW_STATE).isEnabled()
             },
+            impersonationChecker = impersonationChecker,
         )
 
         return when {

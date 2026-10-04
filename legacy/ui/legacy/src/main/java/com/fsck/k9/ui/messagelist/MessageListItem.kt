@@ -38,6 +38,10 @@ data class MessageListItem(
      * [classification], which the app works out for itself.
      */
     val serverCategories: List<String> = emptyList(),
+    /**
+     * Whether the sender looks like someone they are not; see [net.thunderbird.feature.impersonation.Impersonation].
+     */
+    val isPossibleImpersonation: Boolean = false,
 ) {
     val messageReference: MessageReference
         get() = MessageReference(account.uuid, folderId, messageUid)

@@ -156,7 +156,7 @@ class MessageViewHolder(
             attachmentView.isVisible = hasAttachments
             attachmentView.setColorFilter(foregroundColor)
 
-            bindImportance(importance, foregroundColor)
+            bindImportance(importance, isPossibleImpersonation, foregroundColor)
 
             val statusHolder = buildStatusHolder(isForwarded, isAnswered)
             if (statusHolder != null) {
@@ -236,7 +236,21 @@ class MessageViewHolder(
         )
     }
 
-    private fun bindImportance(importance: MessageImportance, foregroundColor: Int) {
+    /**
+     * The slot beside the date shows the strongest signal: a possible impersonation outranks the sender's own claim of
+     * importance.
+     */
+    private fun bindImportance(importance: MessageImportance, isPossibleImpersonation: Boolean, foregroundColor: Int) {
+        if (isPossibleImpersonation) {
+            importanceView.setImageResource(Icons.Outlined.Warning)
+            importanceView.setColorFilter(
+                MaterialColors.getColor(importanceView, androidx.appcompat.R.attr.colorError),
+            )
+            importanceView.contentDescription = res.getString(R.string.message_list_possible_impersonation)
+            importanceView.isVisible = true
+            return
+        }
+
         when (importance) {
             MessageImportance.HIGH -> {
                 importanceView.setImageResource(Icons.Outlined.PriorityHigh)

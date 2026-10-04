@@ -20,6 +20,7 @@ val messageListUiModule = module {
             outboxFolderManager = get(),
             featureFlagProvider = get(),
             contactLetterBitmapCreator = get(),
+            impersonationChecker = get(),
         )
     }
     factory {
