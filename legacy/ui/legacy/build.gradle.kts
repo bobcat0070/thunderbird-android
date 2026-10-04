@@ -31,6 +31,7 @@ dependencies {
     implementation(projects.feature.navigation.drawer.api)
     implementation(projects.feature.navigation.drawer.dropdown)
     implementation(projects.feature.notification.api)
+    implementation(projects.feature.spamdigest.api)
     // TODO: Remove AccountOauth dependency
     implementation(projects.feature.account.oauth)
     implementation(projects.feature.account.avatar.api)

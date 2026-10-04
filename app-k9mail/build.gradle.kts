@@ -183,6 +183,7 @@ dependencies {
     testImplementation(projects.plugins.openpgpApiLib.openpgpApi)
     testImplementation(projects.feature.changelog.api)
     testImplementation(projects.feature.changelog.internal)
+    testImplementation(projects.feature.spamdigest.internal)
 
     testImplementation(libs.appauth)
 }

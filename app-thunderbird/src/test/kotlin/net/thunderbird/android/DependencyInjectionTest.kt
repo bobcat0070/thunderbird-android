@@ -36,6 +36,7 @@ import net.thunderbird.feature.mail.message.list.ui.dialog.SetupArchiveFolderDia
 import net.thunderbird.feature.mail.message.reader.api.css.CssClassNameProvider
 import net.thunderbird.feature.mail.message.reader.api.ui.MessageReaderViewContract
 import net.thunderbird.feature.navigation.changelog.api.ChangeLogMode
+import net.thunderbird.feature.spamdigest.internal.SpamDigestWorker
 import net.thunderbird.feature.thundermail.internal.common.ui.ThundermailContract
 import org.koin.core.KoinApplication
 import org.koin.core.annotation.KoinExperimentalAPI
@@ -80,6 +81,7 @@ class DependencyInjectionTest {
                 definition<FoldableStateObserver>(Activity::class),
                 definition<K9WebViewClient>(AttachmentResolver::class, MessageWebView.OnPageFinishedListener::class),
                 definition<MailSyncWorker>(WorkerParameters::class),
+                definition<SpamDigestWorker>(WorkerParameters::class),
                 definition<SyncDebugWorker>(WorkerParameters::class),
                 definition<OpenPgpApiManager>(LifecycleOwner::class),
                 definition<SetupArchiveFolderDialogContract.ViewModel>(SetupArchiveFolderDialogContract.State::class),

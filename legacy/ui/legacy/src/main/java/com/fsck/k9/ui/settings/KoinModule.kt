@@ -45,6 +45,7 @@ val settingsUiModule = module {
             notificationController = get(),
             messagingController = get(),
             pinnedFolderStore = get(),
+            spamDigestSettingsRepository = get(),
         )
     }
     single { PinnedFolderStore(context = get()) }

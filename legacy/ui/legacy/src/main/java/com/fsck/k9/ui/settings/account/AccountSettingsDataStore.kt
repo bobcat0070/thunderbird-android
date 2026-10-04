@@ -6,6 +6,7 @@ import com.fsck.k9.controller.MessagingController
 import com.fsck.k9.job.K9JobManager
 import com.fsck.k9.notification.NotificationChannelManager
 import com.fsck.k9.notification.NotificationController
+import java.util.Locale
 import java.util.concurrent.ExecutorService
 import net.thunderbird.core.android.account.DeletePolicy
 import net.thunderbird.core.android.account.Expunge
@@ -16,8 +17,13 @@ import net.thunderbird.core.android.account.ShowPictures
 import net.thunderbird.feature.mail.folder.api.SpecialFolderSelection
 import net.thunderbird.feature.notification.NotificationLight
 import net.thunderbird.feature.notification.NotificationVibration
+import net.thunderbird.feature.spamdigest.SpamDigestSettingsRepository
+import net.thunderbird.feature.spamdigest.SpamDigestTime
 
 const val PINNED_MOVE_FOLDERS = "pinned_move_folders"
+private const val SPAM_DIGEST_INCLUDE = "spam_digest_include"
+private const val SPAM_DIGEST_SEND_FROM = "spam_digest_send_from"
+private const val SPAM_DIGEST_TIME = "spam_digest_time"
 
 class AccountSettingsDataStore(
     private val preferences: Preferences,
@@ -28,6 +34,7 @@ class AccountSettingsDataStore(
     private val notificationController: NotificationController,
     private val messagingController: MessagingController,
     private val pinnedFolderStore: PinnedFolderStore,
+    private val spamDigestSettingsRepository: SpamDigestSettingsRepository,
 ) : PreferenceDataStore() {
     private var notificationSettingsChanged = false
 
@@ -70,6 +77,8 @@ class AccountSettingsDataStore(
             "upload_sent_messages" -> account.isUploadSentMessages
             "ignore_chat_messages" -> account.isIgnoreChatMessages
             "subscribed_folders_only" -> account.isSubscribedFoldersOnly
+            SPAM_DIGEST_INCLUDE -> spamDigestSettingsRepository.getSettings().isAccountIncluded(account.uuid)
+            SPAM_DIGEST_SEND_FROM -> spamDigestSettingsRepository.getSettings().senderAccountId == account.uuid
             else -> defValue
         }
     }
@@ -95,6 +104,8 @@ class AccountSettingsDataStore(
             "upload_sent_messages" -> account.isUploadSentMessages = value
             "ignore_chat_messages" -> account.isIgnoreChatMessages = value
             "subscribed_folders_only" -> updateSubscribedFoldersOnly(value)
+            SPAM_DIGEST_INCLUDE -> spamDigestSettingsRepository.setAccountIncluded(account.uuid, value)
+            SPAM_DIGEST_SEND_FROM -> setSpamDigestSender(value)
             else -> return
         }
 
@@ -160,6 +171,9 @@ class AccountSettingsDataStore(
             "account_remote_search_num_results" -> account.remoteSearchNumResults.toString()
             "account_ringtone" -> account.notificationSettings.ringtone
             "notification_light" -> account.notificationSettings.light.name
+            SPAM_DIGEST_TIME -> spamDigestSettingsRepository.getSettings().sendTime.let { time ->
+                "%02d:%02d".format(Locale.ROOT, time.hour, time.minute)
+            }
             else -> defValue
         }
     }
@@ -195,10 +209,28 @@ class AccountSettingsDataStore(
             "account_remote_search_num_results" -> account.remoteSearchNumResults = value.toInt()
             "account_ringtone" -> setNotificationSound(value)
             "notification_light" -> setNotificationLight(value)
+            SPAM_DIGEST_TIME -> setSpamDigestTime(value)
             else -> return
         }
 
         saveSettingsInBackground()
+    }
+
+    private fun setSpamDigestSender(isSender: Boolean) {
+        val currentSender = spamDigestSettingsRepository.getSettings().senderAccountId
+        when {
+            isSender -> spamDigestSettingsRepository.setSenderAccount(account.uuid)
+            // Switching it off here must not switch off a digest another account sends.
+            currentSender == account.uuid -> spamDigestSettingsRepository.setSenderAccount(null)
+        }
+    }
+
+    private fun setSpamDigestTime(value: String) {
+        val time = runCatching {
+            SpamDigestTime(hour = value.substringBefore(':').toInt(), minute = value.substringAfter(':').toInt())
+        }.getOrNull() ?: return
+
+        spamDigestSettingsRepository.setSendTime(time)
     }
 
     private fun setAccountColor(color: Int) {

@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+    <plurals name="spam_digest_subject">
+        <item quantity="one">Spam digest for <xliff:g id="date">%2$s</xliff:g>: <xliff:g id="count">%1$d</xliff:g> message</item>
+        <item quantity="other">Spam digest for <xliff:g id="date">%2$s</xliff:g>: <xliff:g id="count">%1$d</xliff:g> messages</item>
+    </plurals>
+    <plurals name="spam_digest_messages">
+        <item quantity="one"><xliff:g id="count">%d</xliff:g> message</item>
+        <item quantity="other"><xliff:g id="count">%d</xliff:g> messages</item>
+    </plurals>
+    <plurals name="spam_digest_accounts">
+        <item quantity="one"><xliff:g id="count">%d</xliff:g> account</item>
+        <item quantity="other"><xliff:g id="count">%d</xliff:g> accounts</item>
+    </plurals>
+    <string name="spam_digest_intro">Spam that arrived on <xliff:g id="date">%1$s</xliff:g>: <xliff:g id="messages">%2$s</xliff:g> across <xliff:g id="accounts">%3$s</xliff:g>.</string>
+    <string name="spam_digest_no_messages">No spam.</string>
+    <string name="spam_digest_no_spam_folder">No spam folder is set for this account.</string>
+    <string name="spam_digest_unreadable">The spam folder could not be read.</string>
+    <string name="spam_digest_not_refreshed">The server could not be checked, so this list may be incomplete.</string>
+    <string name="spam_digest_unknown_sender_name">(no name)</string>
+    <string name="spam_digest_unknown_sender_address">(no address)</string>
+    <string name="spam_digest_no_subject">(no subject)</string>
+    <string name="spam_digest_subject_line">Subject: <xliff:g id="subject">%s</xliff:g></string>
+    <string name="spam_digest_checks_not_reported">no checks reported by your server</string>
+    <string name="spam_digest_legend">✓ passed and matched the sender\'s domain. ✗ failed, did not match the sender\'s domain, or was not checked.</string>
+</resources>

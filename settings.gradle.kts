@@ -179,6 +179,11 @@ include(
 )
 
 include(
+    ":feature:spamdigest:api",
+    ":feature:spamdigest:internal",
+)
+
+include(
     ":feature:telemetry:api",
     ":feature:telemetry:noop",
     ":feature:telemetry:glean",

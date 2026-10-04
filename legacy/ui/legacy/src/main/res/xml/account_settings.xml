@@ -172,6 +172,35 @@
     </PreferenceScreen>
 
     <PreferenceScreen
+        android:icon="@drawable/ic_report"
+        android:key="spam_digest"
+        android:title="@string/account_settings_spam_digest"
+        >
+
+        <CheckBoxPreference
+            android:defaultValue="true"
+            android:key="spam_digest_include"
+            android:summary="@string/account_settings_spam_digest_include_summary"
+            android:title="@string/account_settings_spam_digest_include_label"
+            />
+
+        <SwitchPreference
+            android:key="spam_digest_send_from"
+            android:summary="@string/account_settings_spam_digest_send_from_summary"
+            android:title="@string/account_settings_spam_digest_send_from_label"
+            />
+
+        <com.takisoft.preferencex.TimePickerPreference
+            android:dependency="spam_digest_send_from"
+            android:key="spam_digest_time"
+            android:title="@string/account_settings_spam_digest_time_label"
+            app:pref_hourFormat="h24"
+            app:pref_summaryHasTime="%s"
+            />
+
+    </PreferenceScreen>
+
+    <PreferenceScreen
         android:icon="@drawable/ic_notifications"
         android:key="notifications"
         android:title="@string/notifications_title"

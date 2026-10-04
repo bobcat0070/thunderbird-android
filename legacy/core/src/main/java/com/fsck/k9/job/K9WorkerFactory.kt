@@ -15,7 +15,8 @@ class K9WorkerFactory : WorkerFactory() {
     ): ListenableWorker? {
         // Don't attempt to load classes outside of our namespace.
         if (!workerClassName.startsWith("com.fsck.k9") &&
-            !workerClassName.startsWith("net.thunderbird.app.common")) {
+            !workerClassName.startsWith("net.thunderbird.app.common") &&
+            !workerClassName.startsWith("net.thunderbird.feature.spamdigest")) {
             return null
         }
 

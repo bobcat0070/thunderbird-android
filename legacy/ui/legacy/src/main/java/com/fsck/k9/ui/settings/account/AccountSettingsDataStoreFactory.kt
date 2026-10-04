@@ -7,6 +7,7 @@ import com.fsck.k9.notification.NotificationChannelManager
 import com.fsck.k9.notification.NotificationController
 import java.util.concurrent.ExecutorService
 import net.thunderbird.core.android.account.LegacyAccountDto
+import net.thunderbird.feature.spamdigest.SpamDigestSettingsRepository
 
 class AccountSettingsDataStoreFactory(
     private val preferences: Preferences,
@@ -16,6 +17,7 @@ class AccountSettingsDataStoreFactory(
     private val notificationController: NotificationController,
     private val messagingController: MessagingController,
     private val pinnedFolderStore: PinnedFolderStore,
+    private val spamDigestSettingsRepository: SpamDigestSettingsRepository,
 ) {
     fun create(account: LegacyAccountDto): AccountSettingsDataStore {
         return AccountSettingsDataStore(
@@ -27,6 +29,7 @@ class AccountSettingsDataStoreFactory(
             notificationController,
             messagingController,
             pinnedFolderStore,
+            spamDigestSettingsRepository,
         )
     }
 }

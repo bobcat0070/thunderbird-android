@@ -8,6 +8,7 @@ import net.thunderbird.app.common.feature.account.appCommonFeatureAccountModule
 import net.thunderbird.app.common.feature.mail.appCommonFeatureMailModule
 import net.thunderbird.app.common.feature.settings.DefaultFolderPinSettings
 import net.thunderbird.app.common.feature.settings.RemoteImageSendersExternalSettings
+import net.thunderbird.app.common.feature.spamdigest.appCommonFeatureSpamDigestModule
 import net.thunderbird.feature.account.avatar.di.featureAccountAvatarModule
 import net.thunderbird.feature.mail.message.composer.internal.featureMessageComposerModule
 import net.thunderbird.feature.navigation.drawer.api.NavigationDrawerExternalContract
@@ -24,6 +25,7 @@ internal val appCommonFeatureModule = module {
     includes(featureLauncherModule)
     includes(featureMessageComposerModule)
     includes(featureThundermailCommonModule)
+    includes(appCommonFeatureSpamDigestModule)
 
     factory<FeatureLauncherExternalContract.MessageListLauncher> {
         MessageListLauncher(

@@ -30,6 +30,7 @@ import net.thunderbird.core.common.exception.ExceptionHandler
 import net.thunderbird.core.logging.Logger
 import net.thunderbird.core.logging.file.FileLogSink
 import net.thunderbird.core.ui.theme.manager.ThemeManager
+import net.thunderbird.feature.spamdigest.SpamDigestScheduler
 import net.thunderbird.legacy.logging.Log
 import org.koin.android.ext.android.inject
 import org.koin.core.module.Module
@@ -46,6 +47,7 @@ abstract class BaseApplication : Application(), WorkManagerConfiguration.Provide
     private val messageListWidgetManager: MessageListWidgetManager by inject()
     private val workManagerConfigurationProvider: WorkManagerConfigurationProvider by inject()
     private val messageReclassifier: MessageReclassifier by inject()
+    private val spamDigestScheduler: SpamDigestScheduler by inject()
     protected val logger: Logger by inject()
     private val syncDebugFileLogSink: FileLogSink by inject(named("syncDebug"))
 
@@ -81,6 +83,12 @@ abstract class BaseApplication : Application(), WorkManagerConfiguration.Provide
         ProcessLifecycleOwner.get().lifecycle.addObserver(LoggerLifecycleObserver(syncDebugFileLogSink))
 
         reclassifyStoredMessages()
+
+        // Puts the spam digest back on the schedule if nothing is waiting to send it, as after the app's data was
+        // restored onto a new device. Each digest schedules the next, so this does nothing on an ordinary launch.
+        appCoroutineScope.launch(Dispatchers.IO) {
+            spamDigestScheduler.ensureScheduled()
+        }
     }
 
     /**

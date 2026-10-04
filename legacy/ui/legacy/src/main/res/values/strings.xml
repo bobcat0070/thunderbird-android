@@ -608,6 +608,12 @@
     <string name="account_settings_reading_mail">Reading mail</string>
     <string name="account_settings_sync">Fetching mail</string>
     <string name="account_settings_folders">Folders</string>
+    <string name="account_settings_spam_digest">Spam digest</string>
+    <string name="account_settings_spam_digest_include_label">Include this account</string>
+    <string name="account_settings_spam_digest_include_summary">List what arrived in this account\'s spam folder in the daily spam digest</string>
+    <string name="account_settings_spam_digest_send_from_label">Send the digest from this account</string>
+    <string name="account_settings_spam_digest_send_from_summary">Once a day, email this account\'s own address a list of the previous day\'s spam from every included account. Only one account sends it: turning this on here turns it off for the others.</string>
+    <string name="account_settings_spam_digest_time_label">Send at</string>
     <string name="account_settings_quote_prefix_label">Quoted text prefix</string>
     <string name="account_settings_crypto">End-to-end encryption</string>
     <string name="account_settings_crypto_app">Enable OpenPGP support</string>
