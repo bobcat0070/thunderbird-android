@@ -31,11 +31,14 @@ public data class SpamDigestTime(
  * @param senderAccountId the account the digest is sent from and to, or `null` when the digest is off.
  * @param excludedAccountIds accounts whose spam folder is left out of the digest.
  * @param sendTime when the digest is sent.
+ * @param alertAccountIds accounts that raise a notification as soon as mail from someone the reader knows lands in
+ *   their spam folder, rather than waiting for the digest.
  */
 public data class SpamDigestSettings(
     val senderAccountId: String?,
     val excludedAccountIds: Set<String>,
     val sendTime: SpamDigestTime,
+    val alertAccountIds: Set<String> = emptySet(),
 ) {
     val isEnabled: Boolean
         get() = senderAccountId != null
@@ -58,4 +61,10 @@ public interface SpamDigestSettingsRepository {
     public fun setSenderAccount(accountId: String?)
 
     public fun setSendTime(time: SpamDigestTime)
+
+    /**
+     * Turns the alert for mail from known people landing in [accountId]'s spam folder on or off. Turning it on also
+     * has the spam folder checked with the account's other folders, since an alert can only be as quick as that.
+     */
+    public fun setAlertEnabled(accountId: String, enabled: Boolean)
 }

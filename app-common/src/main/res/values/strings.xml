@@ -1,3 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+    <string name="spam_alert_title">Mail from someone you know went to spam</string>
+    <string name="spam_alert_text"><xliff:g id="sender">%1$s</xliff:g>: <xliff:g id="subject">%2$s</xliff:g></string>
 </resources>

@@ -8,6 +8,7 @@ import java.util.Locale
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.atStartOfDayIn
+import net.thunderbird.feature.impersonation.Impersonation
 
 internal class AndroidSpamDigestStrings(
     context: Context,
@@ -23,8 +24,54 @@ internal class AndroidSpamDigestStrings(
         return DateFormat.getDateInstance(DateFormat.FULL, locale).format(startOfDay)
     }
 
-    override fun subject(date: String, messageCount: Int): String =
-        resources.getQuantityString(R.plurals.spam_digest_subject, messageCount, messageCount, date)
+    override fun subject(date: String, messageCount: Int, knownSenderCount: Int): String {
+        val subject = resources.getQuantityString(R.plurals.spam_digest_subject, messageCount, messageCount, date)
+        if (knownSenderCount == 0) return subject
+
+        return resources.getQuantityString(
+            R.plurals.spam_digest_subject_with_known_senders,
+            knownSenderCount,
+            subject,
+            knownSenderCount,
+        )
+    }
+
+    override fun knownSendersHeading(messageCount: Int): String =
+        resources.getQuantityString(R.plurals.spam_digest_known_senders_heading, messageCount, messageCount)
+
+    override fun noOtherMessages(): String = resources.getString(R.string.spam_digest_no_other_messages)
+
+    override fun accountLine(account: String): String = resources.getString(R.string.spam_digest_account_line, account)
+
+    override fun impersonation(impersonation: Impersonation): String = when (impersonation) {
+        is Impersonation.AddressInName -> resources.getString(
+            R.string.spam_digest_impersonation_named_elsewhere,
+            impersonation.namedAddress,
+            impersonation.senderDomain,
+        )
+
+        is Impersonation.DomainInName -> resources.getString(
+            R.string.spam_digest_impersonation_named_elsewhere,
+            impersonation.namedDomain,
+            impersonation.senderDomain,
+        )
+
+        is Impersonation.LookalikeDomain -> resources.getString(
+            R.string.spam_digest_impersonation_lookalike_domain,
+            impersonation.senderDomain,
+            impersonation.knownDomain,
+        )
+
+        is Impersonation.MixedScriptDomain -> resources.getString(
+            R.string.spam_digest_impersonation_mixed_script,
+            impersonation.senderDomain,
+        )
+
+        is Impersonation.KnownName -> resources.getString(
+            R.string.spam_digest_impersonation_known_name,
+            impersonation.senderAddress,
+        )
+    }
 
     override fun intro(date: String, messageCount: Int, accountCount: Int): String {
         val messages = resources.getQuantityString(R.plurals.spam_digest_messages, messageCount, messageCount)

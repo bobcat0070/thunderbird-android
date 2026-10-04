@@ -9,6 +9,11 @@ kotlin {
     android {
         namespace = "net.thunderbird.feature.spamdigest"
     }
+    sourceSets {
+        commonMain.dependencies {
+            api(projects.feature.impersonation.api)
+        }
+    }
 }
 
 codeCoverage {

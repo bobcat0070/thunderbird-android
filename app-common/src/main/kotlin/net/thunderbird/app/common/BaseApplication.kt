@@ -26,6 +26,7 @@ import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 import net.thunderbird.app.common.feature.LoggerLifecycleObserver
+import net.thunderbird.app.common.feature.spamdigest.SpamArrivalMessagingListener
 import net.thunderbird.core.common.exception.ExceptionHandler
 import net.thunderbird.core.logging.Logger
 import net.thunderbird.core.logging.file.FileLogSink
@@ -48,6 +49,7 @@ abstract class BaseApplication : Application(), WorkManagerConfiguration.Provide
     private val workManagerConfigurationProvider: WorkManagerConfigurationProvider by inject()
     private val messageReclassifier: MessageReclassifier by inject()
     private val spamDigestScheduler: SpamDigestScheduler by inject()
+    private val spamArrivalMessagingListener: SpamArrivalMessagingListener by inject()
     protected val logger: Logger by inject()
     private val syncDebugFileLogSink: FileLogSink by inject(named("syncDebug"))
 
@@ -77,6 +79,7 @@ abstract class BaseApplication : Application(), WorkManagerConfiguration.Provide
         messagingListenerProvider.listeners.forEach { listener ->
             messagingController.addListener(listener)
         }
+        messagingController.addListener(spamArrivalMessagingListener)
         val originalHandler = Thread.getDefaultUncaughtExceptionHandler()
         Thread.setDefaultUncaughtExceptionHandler(ExceptionHandler(originalHandler, logger))
 

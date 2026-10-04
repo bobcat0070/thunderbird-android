@@ -1,9 +1,11 @@
 package net.thunderbird.feature.spamdigest.internal
 
 import kotlinx.datetime.LocalDate
+import net.thunderbird.feature.impersonation.Impersonation
 import net.thunderbird.feature.spamdigest.SenderCheck
 import net.thunderbird.feature.spamdigest.SpamDigestAccount
 import net.thunderbird.feature.spamdigest.SpamFolderContents
+import net.thunderbird.feature.spamdigest.SpamMessage
 
 private const val MAX_NAME_LENGTH = 80
 private const val MAX_ADDRESS_LENGTH = 120
@@ -12,16 +14,20 @@ private const val ELLIPSIS = "…"
 private const val PASS_MARK = "✓"
 private const val FAIL_MARK = "✗"
 private const val INDENT = "   "
+private const val WARNING_MARK = "⚠"
 
 /**
  * The words of the digest, so they follow the app's language.
  */
+@Suppress("TooManyFunctions")
 internal interface SpamDigestStrings {
     fun formatDate(date: LocalDate): String
-    fun subject(date: String, messageCount: Int): String
+    fun subject(date: String, messageCount: Int, knownSenderCount: Int): String
     fun intro(date: String, messageCount: Int, accountCount: Int): String
+    fun knownSendersHeading(messageCount: Int): String
     fun accountMessageCount(messageCount: Int): String
     fun noMessages(): String
+    fun noOtherMessages(): String
     fun noSpamFolder(): String
     fun unreadable(): String
     fun notRefreshed(): String
@@ -29,6 +35,8 @@ internal interface SpamDigestStrings {
     fun unknownSenderAddress(): String
     fun noSubject(): String
     fun subjectLine(subject: String): String
+    fun accountLine(account: String): String
+    fun impersonation(impersonation: Impersonation): String
     fun checksNotReported(): String
     fun legend(): String
 }
@@ -57,16 +65,30 @@ internal data class ComposedDigest(
  *
  * Plain text on purpose: every name, address and subject in it was chosen by a spammer, and an HTML digest would
  * hand them markup in a message the reader trusts because the app sent it.
+ *
+ * Mail from people the reader knows comes first, under its own heading, because that is the mail a spam filter
+ * getting it wrong actually costs something. It is listed there instead of under its account, not as well.
  */
 internal class SpamDigestComposer(
     private val strings: SpamDigestStrings,
 ) {
     fun compose(day: LocalDate, accounts: List<AccountSpam>): ComposedDigest {
         val date = strings.formatDate(day)
-        val messageCount = accounts.sumOf { it.messageCount() }
+        val messageCount = accounts.sumOf { it.messages().size }
+        val fromKnownSenders = accounts.flatMap { accountSpam ->
+            accountSpam.messages().filter { it.isFromKnownSender }.map { accountSpam.account to it }
+        }
 
         val body = buildString {
             appendLine(strings.intro(date, messageCount, accounts.size))
+
+            if (fromKnownSenders.isNotEmpty()) {
+                appendLine()
+                appendLine("== ${strings.knownSendersHeading(fromKnownSenders.size)} ==")
+                fromKnownSenders.forEachIndexed { index, (account, message) ->
+                    appendMessage(index, message, account)
+                }
+            }
 
             for (accountSpam in accounts) {
                 appendLine()
@@ -78,19 +100,13 @@ internal class SpamDigestComposer(
         }
 
         return ComposedDigest(
-            subject = strings.subject(date, messageCount),
+            subject = strings.subject(date, messageCount, fromKnownSenders.size),
             body = body,
         )
     }
 
     private fun StringBuilder.appendAccount(accountSpam: AccountSpam) {
-        val account = accountSpam.account
-        val heading = if (account.name.isBlank() || account.name == account.email) {
-            account.email
-        } else {
-            "${account.name} <${account.email}>"
-        }
-        appendLine("== ${heading.sanitized(MAX_ADDRESS_LENGTH)} ==")
+        appendLine("== ${accountSpam.account.heading()} ==")
 
         when (val result = accountSpam.result) {
             SpamFolderResult.NoSpamFolder -> appendLine(strings.noSpamFolder())
@@ -102,24 +118,43 @@ internal class SpamDigestComposer(
     private fun StringBuilder.appendContents(contents: SpamFolderContents) {
         if (!contents.isRefreshed) appendLine(strings.notRefreshed())
 
-        if (contents.messages.isEmpty()) {
-            appendLine(strings.noMessages())
-            return
+        val others = contents.messages.filterNot { it.isFromKnownSender }
+        when {
+            contents.messages.isEmpty() -> appendLine(strings.noMessages())
+
+            others.isEmpty() -> appendLine(strings.noOtherMessages())
+
+            else -> {
+                appendLine(strings.accountMessageCount(others.size))
+                others.forEachIndexed { index, message -> appendMessage(index, message, account = null) }
+            }
         }
+    }
 
-        appendLine(strings.accountMessageCount(contents.messages.size))
+    /**
+     * @param account the account the message is in, named when the list it appears in is not already that
+     *   account's.
+     */
+    private fun StringBuilder.appendMessage(index: Int, message: SpamMessage, account: SpamDigestAccount?) {
+        val name = message.senderName?.sanitized(MAX_NAME_LENGTH).orEmpty().ifEmpty { strings.unknownSenderName() }
+        val address = message.senderAddress?.sanitized(MAX_ADDRESS_LENGTH).orEmpty()
+            .ifEmpty { strings.unknownSenderAddress() }
+        val subject = message.subject?.sanitized(MAX_SUBJECT_LENGTH).orEmpty().ifEmpty { strings.noSubject() }
 
-        contents.messages.forEachIndexed { index, message ->
-            val name = message.senderName?.sanitized(MAX_NAME_LENGTH).orEmpty().ifEmpty { strings.unknownSenderName() }
-            val address = message.senderAddress?.sanitized(MAX_ADDRESS_LENGTH).orEmpty()
-                .ifEmpty { strings.unknownSenderAddress() }
-            val subject = message.subject?.sanitized(MAX_SUBJECT_LENGTH).orEmpty().ifEmpty { strings.noSubject() }
-
-            appendLine()
-            appendLine("${index + 1}. $name")
-            appendLine("$INDENT$address  ${formatChecks(message.senderChecks)}")
-            appendLine(INDENT + strings.subjectLine(subject))
+        appendLine()
+        appendLine("${index + 1}. $name")
+        appendLine("$INDENT$address  ${formatChecks(message.senderChecks)}")
+        message.impersonation?.let { impersonation ->
+            // Built from what the sender wrote, so it goes through the same cleaning as everything else they wrote.
+            appendLine("$INDENT$WARNING_MARK ${strings.impersonation(impersonation).sanitized(MAX_SUBJECT_LENGTH)}")
         }
+        appendLine(INDENT + strings.subjectLine(subject))
+        account?.let { appendLine(INDENT + strings.accountLine(it.heading())) }
+    }
+
+    private fun SpamDigestAccount.heading(): String {
+        val heading = if (name.isBlank() || name == email) email else "$name <$email>"
+        return heading.sanitized(MAX_ADDRESS_LENGTH)
     }
 
     private fun formatChecks(checks: List<SenderCheck>): String {
@@ -130,7 +165,8 @@ internal class SpamDigestComposer(
         }
     }
 
-    private fun AccountSpam.messageCount(): Int = (result as? SpamFolderResult.Read)?.contents?.messages?.size ?: 0
+    private fun AccountSpam.messages(): List<SpamMessage> =
+        (result as? SpamFolderResult.Read)?.contents?.messages.orEmpty()
 }
 
 /**

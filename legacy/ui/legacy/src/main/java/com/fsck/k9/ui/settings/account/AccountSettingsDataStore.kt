@@ -24,6 +24,7 @@ const val PINNED_MOVE_FOLDERS = "pinned_move_folders"
 private const val SPAM_DIGEST_INCLUDE = "spam_digest_include"
 private const val SPAM_DIGEST_SEND_FROM = "spam_digest_send_from"
 private const val SPAM_DIGEST_TIME = "spam_digest_time"
+private const val SPAM_ALERT = "spam_alert"
 
 class AccountSettingsDataStore(
     private val preferences: Preferences,
@@ -79,6 +80,7 @@ class AccountSettingsDataStore(
             "subscribed_folders_only" -> account.isSubscribedFoldersOnly
             SPAM_DIGEST_INCLUDE -> spamDigestSettingsRepository.getSettings().isAccountIncluded(account.uuid)
             SPAM_DIGEST_SEND_FROM -> spamDigestSettingsRepository.getSettings().senderAccountId == account.uuid
+            SPAM_ALERT -> account.uuid in spamDigestSettingsRepository.getSettings().alertAccountIds
             else -> defValue
         }
     }
@@ -106,6 +108,7 @@ class AccountSettingsDataStore(
             "subscribed_folders_only" -> updateSubscribedFoldersOnly(value)
             SPAM_DIGEST_INCLUDE -> spamDigestSettingsRepository.setAccountIncluded(account.uuid, value)
             SPAM_DIGEST_SEND_FROM -> setSpamDigestSender(value)
+            SPAM_ALERT -> setSpamAlert(value)
             else -> return
         }
 
@@ -223,6 +226,14 @@ class AccountSettingsDataStore(
             // Switching it off here must not switch off a digest another account sends.
             currentSender == account.uuid -> spamDigestSettingsRepository.setSenderAccount(null)
         }
+    }
+
+    /**
+     * Also turns the spam folder's own sync on or off, which writes to the database, so it is kept off the main
+     * thread like saving the account is.
+     */
+    private fun setSpamAlert(enabled: Boolean) {
+        executorService.execute { spamDigestSettingsRepository.setAlertEnabled(account.uuid, enabled) }
     }
 
     private fun setSpamDigestTime(value: String) {

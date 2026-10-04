@@ -1,6 +1,7 @@
 package net.thunderbird.feature.spamdigest
 
 import kotlin.time.Instant
+import net.thunderbird.feature.impersonation.Impersonation
 
 /**
  * An account the digest can cover or be sent from.
@@ -48,6 +49,9 @@ public data class SenderCheck(
  *
  * @param senderChecks one entry per [SenderCheckMethod], or empty when the account's own server reported nothing
  *   that can be trusted.
+ * @param isFromKnownSender whether the sender is someone the reader knows - written to, or a contact - and nothing
+ *   about the message suggests it only pretends to be from them: no DMARC failure, no impersonation.
+ * @param impersonation what the sender appears to be impersonating, if anything.
  */
 public data class SpamMessage(
     val senderName: String?,
@@ -55,6 +59,8 @@ public data class SpamMessage(
     val subject: String?,
     val receivedAt: Instant,
     val senderChecks: List<SenderCheck>,
+    val isFromKnownSender: Boolean = false,
+    val impersonation: Impersonation? = null,
 )
 
 /**
@@ -108,4 +114,33 @@ public interface SpamDigestScheduler {
      * Schedules the next digest unless one is already scheduled. Safe to call on every app start.
      */
     public fun ensureScheduled()
+}
+
+/**
+ * Hears about mail arriving in a spam folder, to alert the reader when it is from someone they know.
+ */
+public fun interface SpamArrivalListener {
+    /**
+     * Called for each new message a sync brings into [accountId]'s spam folder.
+     */
+    public fun onSpamArrived(accountId: String, folderId: Long, messageServerId: String, message: SpamMessage)
+}
+
+/**
+ * Shows the alert that mail from someone the reader knows landed in spam.
+ */
+public fun interface SpamAlertNotifier {
+    public fun notify(accountId: String, folderId: Long, messageServerId: String, message: SpamMessage)
+}
+
+/**
+ * Whether an account's spam folder is checked with its other folders in the background.
+ */
+public interface SpamFolderBackgroundSync {
+    /**
+     * @return whether it is, or `null` when the account has no spam folder.
+     */
+    public fun isSyncEnabled(accountId: String): Boolean?
+
+    public fun setSyncEnabled(accountId: String, enabled: Boolean)
 }

@@ -14,6 +14,20 @@
     </plurals>
     <string name="spam_digest_intro">Spam that arrived on <xliff:g id="date">%1$s</xliff:g>: <xliff:g id="messages">%2$s</xliff:g> across <xliff:g id="accounts">%3$s</xliff:g>.</string>
     <string name="spam_digest_no_messages">No spam.</string>
+    <string name="spam_digest_no_other_messages">No other spam.</string>
+    <plurals name="spam_digest_subject_with_known_senders">
+        <item quantity="one"><xliff:g id="subject">%1$s</xliff:g>, <xliff:g id="count">%2$d</xliff:g> possibly not spam</item>
+        <item quantity="other"><xliff:g id="subject">%1$s</xliff:g>, <xliff:g id="count">%2$d</xliff:g> possibly not spam</item>
+    </plurals>
+    <plurals name="spam_digest_known_senders_heading">
+        <item quantity="one">Possibly not spam: <xliff:g id="count">%d</xliff:g> message from someone you know</item>
+        <item quantity="other">Possibly not spam: <xliff:g id="count">%d</xliff:g> messages from people you know</item>
+    </plurals>
+    <string name="spam_digest_account_line">In: <xliff:g id="account">%s</xliff:g></string>
+    <string name="spam_digest_impersonation_named_elsewhere">The name shows <xliff:g id="named">%1$s</xliff:g>, but it came from <xliff:g id="domain">%2$s</xliff:g></string>
+    <string name="spam_digest_impersonation_lookalike_domain"><xliff:g id="domain">%1$s</xliff:g> is made to look like <xliff:g id="known">%2$s</xliff:g></string>
+    <string name="spam_digest_impersonation_mixed_script"><xliff:g id="domain">%s</xliff:g> mixes alphabets to look like another address</string>
+    <string name="spam_digest_impersonation_known_name">Uses the name of someone you know, but from <xliff:g id="address">%s</xliff:g></string>
     <string name="spam_digest_no_spam_folder">No spam folder is set for this account.</string>
     <string name="spam_digest_unreadable">The spam folder could not be read.</string>
     <string name="spam_digest_not_refreshed">The server could not be checked, so this list may be incomplete.</string>

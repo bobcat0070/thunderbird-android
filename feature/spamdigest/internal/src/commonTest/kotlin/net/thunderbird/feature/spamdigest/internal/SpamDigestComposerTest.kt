@@ -5,6 +5,7 @@ import assertk.assertions.isEqualTo
 import kotlin.test.Test
 import kotlin.time.Instant
 import kotlinx.datetime.LocalDate
+import net.thunderbird.feature.impersonation.Impersonation
 import net.thunderbird.feature.spamdigest.SenderCheck
 import net.thunderbird.feature.spamdigest.SenderCheckMethod
 import net.thunderbird.feature.spamdigest.SpamDigestAccount
@@ -70,6 +71,60 @@ class SpamDigestComposerTest {
             |
             |== me@home.example ==
             |No spam folder.
+            |
+            |Legend.
+            |
+            """.trimMargin(),
+        )
+    }
+
+    @Test
+    fun `compose should list mail from people the reader knows first, and only there`() {
+        val known = spamMessage(
+            senderName = "Jordan Colleague",
+            senderAddress = "jordan@firm.example",
+            subject = "Contract",
+        )
+            .copy(isFromKnownSender = true)
+        val lookalike = spamMessage(senderName = "PayPal", senderAddress = "service@paypa1.com", subject = "Verify")
+            .copy(impersonation = Impersonation.LookalikeDomain("paypa1.com", "paypal.com"))
+        val accounts = listOf(
+            AccountSpam(work, SpamFolderResult.Read(SpamFolderContents(listOf(known, lookalike), isRefreshed = true))),
+            AccountSpam(
+                personal,
+                SpamFolderResult.Read(SpamFolderContents(listOf(known.copy(subject = "Lunch")), isRefreshed = true)),
+            ),
+        )
+
+        val result = testSubject.compose(day, accounts)
+
+        assertThat(result.subject).isEqualTo("Spam digest for 2026-10-02: 3, 2 known")
+        assertThat(result.body).isEqualTo(
+            """
+            |Spam on 2026-10-02: 3 in 2
+            |
+            |== From people you know: 2 ==
+            |
+            |1. Jordan Colleague
+            |   jordan@firm.example  (not reported)
+            |   Subject: Contract
+            |   In: Work <me@work.example>
+            |
+            |2. Jordan Colleague
+            |   jordan@firm.example  (not reported)
+            |   Subject: Lunch
+            |   In: me@home.example
+            |
+            |== Work <me@work.example> ==
+            |1 messages
+            |
+            |1. PayPal
+            |   service@paypa1.com  (not reported)
+            |   ⚠ paypa1.com looks like paypal.com
+            |   Subject: Verify
+            |
+            |== me@home.example ==
+            |No other spam.
             |
             |Legend.
             |

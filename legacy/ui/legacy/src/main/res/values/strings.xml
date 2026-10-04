@@ -608,7 +608,13 @@
     <string name="account_settings_reading_mail">Reading mail</string>
     <string name="account_settings_sync">Fetching mail</string>
     <string name="account_settings_folders">Folders</string>
-    <string name="account_settings_spam_digest">Spam digest</string>
+    <string name="account_settings_spam_digest">Spam</string>
+    <string name="account_settings_spam_alert_label">Alert me about people I know</string>
+    <string name="account_settings_spam_alert_summary">Notify me as soon as mail from someone I have written to, or a contact, lands in this account\'s spam folder. Turns on checking the spam folder with each mail check.</string>
+    <string name="message_view_impersonation_named_elsewhere">Possible impersonation: the name shows <xliff:g id="named">%1$s</xliff:g>, but this came from <xliff:g id="domain">%2$s</xliff:g></string>
+    <string name="message_view_impersonation_lookalike_domain">Possible impersonation: <xliff:g id="domain">%1$s</xliff:g> is made to look like <xliff:g id="known">%2$s</xliff:g></string>
+    <string name="message_view_impersonation_mixed_script">Possible impersonation: <xliff:g id="domain">%s</xliff:g> mixes alphabets to look like another address</string>
+    <string name="message_view_impersonation_known_name">Possible impersonation: you know someone by this name, but not at <xliff:g id="address">%s</xliff:g></string>
     <string name="account_settings_spam_digest_include_label">Include this account</string>
     <string name="account_settings_spam_digest_include_summary">List what arrived in this account\'s spam folder in the daily spam digest</string>
     <string name="account_settings_spam_digest_send_from_label">Send the digest from this account</string>

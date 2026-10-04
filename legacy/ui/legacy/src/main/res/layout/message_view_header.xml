@@ -165,6 +165,27 @@
             />
 
         <com.google.android.material.textview.MaterialTextView
+            android:id="@+id/impersonation_warning"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="16dp"
+            android:layout_marginTop="2dp"
+            android:layout_marginEnd="8dp"
+            android:drawablePadding="4dp"
+            android:maxLines="3"
+            android:textAppearance="?attr/textAppearanceLabelMedium"
+            android:textColor="?attr/colorError"
+            android:visibility="gone"
+            app:drawableStartCompat="@drawable/ic_warning"
+            app:drawableTint="?attr/colorError"
+            app:layout_constraintEnd_toStartOf="@+id/menu_primary_action"
+            app:layout_constraintStart_toEndOf="@id/contact_picture"
+            app:layout_constraintTop_toBottomOf="@+id/mark_verification"
+            tools:text="Possible impersonation: paypa1.com is made to look like paypal.com"
+            tools:visibility="visible"
+            />
+
+        <com.google.android.material.textview.MaterialTextView
             android:id="@+id/delivered_to"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
@@ -176,7 +197,7 @@
             android:visibility="gone"
             app:layout_constraintEnd_toStartOf="@+id/menu_primary_action"
             app:layout_constraintStart_toEndOf="@id/contact_picture"
-            app:layout_constraintTop_toBottomOf="@+id/mark_verification"
+            app:layout_constraintTop_toBottomOf="@+id/impersonation_warning"
             tools:text="to felix+shopping@example.com"
             tools:visibility="visible"
             />

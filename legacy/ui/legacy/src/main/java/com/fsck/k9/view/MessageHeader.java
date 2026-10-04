@@ -68,6 +68,8 @@ import net.thunderbird.feature.mail.message.reader.api.strategy.ReplyActionStrat
 import com.fsck.k9.mail.MessageImportance;
 import com.fsck.k9.mail.MessageImportanceKt;
 import com.fsck.k9.mailstore.LocalMessage;
+import net.thunderbird.feature.impersonation.Impersonation;
+import net.thunderbird.feature.impersonation.ImpersonationChecker;
 import com.fsck.k9.ui.servercategories.MessageLabels;
 
 
@@ -104,6 +106,8 @@ public class MessageHeader extends LinearLayout implements OnClickListener, OnLo
     private static final ExecutorService markVerificationExecutor = Executors.newSingleThreadExecutor();
 
     private String currentSenderDomain;
+    private MaterialTextView impersonationWarningView;
+    private String currentImpersonationSender;
     private MaterialTextView fromView;
     private ImageView cryptoStatusIcon;
     private RecipientNamesView recipientNamesView;
@@ -136,6 +140,7 @@ public class MessageHeader extends LinearLayout implements OnClickListener, OnLo
         starView = findViewById(R.id.flagged);
         contactPictureView = findViewById(R.id.contact_picture);
         markVerificationView = findViewById(R.id.mark_verification);
+        impersonationWarningView = findViewById(R.id.impersonation_warning);
         deliveredToView = findViewById(R.id.delivered_to);
         labelsView = findViewById(R.id.message_labels);
         labelsView.setOnClickListener(this);
@@ -268,6 +273,75 @@ public class MessageHeader extends LinearLayout implements OnClickListener, OnLo
             deliveredToView.setText(getContext().getString(R.string.message_view_delivered_to, deliveryAddress));
             deliveredToView.setVisibility(View.VISIBLE);
         }
+    }
+
+    /**
+     * Warns when the sender looks like someone they are not: a name the reader knows on a stranger's address, a
+     * domain dressed up as one the reader gets verified mail from, an address written into the display name.
+     *
+     * Worked out off the main thread, because the first check after a while reads who the reader knows from stored
+     * mail, and only shown if the header still shows the same sender by the time the answer arrives.
+     */
+    private void showImpersonationWarning(Address fromAddress) {
+        impersonationWarningView.setVisibility(View.GONE);
+        currentImpersonationSender = null;
+
+        if (fromAddress == null || fromAddress.getAddress() == null) {
+            return;
+        }
+
+        String address = fromAddress.getAddress();
+        String name = fromAddress.getPersonal();
+        String sender = name + "\n" + address;
+        currentImpersonationSender = sender;
+
+        markVerificationExecutor.execute(() -> {
+            Impersonation impersonation = DI.get(ImpersonationChecker.class).check(name, address);
+            if (impersonation == null) {
+                return;
+            }
+
+            String warning = impersonationWarning(impersonation);
+            post(() -> {
+                if (sender.equals(currentImpersonationSender)) {
+                    impersonationWarningView.setText(warning);
+                    impersonationWarningView.setVisibility(View.VISIBLE);
+                }
+            });
+        });
+    }
+
+    private String impersonationWarning(Impersonation impersonation) {
+        Context context = getContext();
+
+        if (impersonation instanceof Impersonation.AddressInName) {
+            Impersonation.AddressInName addressInName = (Impersonation.AddressInName) impersonation;
+            return context.getString(R.string.message_view_impersonation_named_elsewhere,
+                oneLine(addressInName.getNamedAddress()), oneLine(addressInName.getSenderDomain()));
+        } else if (impersonation instanceof Impersonation.DomainInName) {
+            Impersonation.DomainInName domainInName = (Impersonation.DomainInName) impersonation;
+            return context.getString(R.string.message_view_impersonation_named_elsewhere,
+                oneLine(domainInName.getNamedDomain()), oneLine(domainInName.getSenderDomain()));
+        } else if (impersonation instanceof Impersonation.LookalikeDomain) {
+            Impersonation.LookalikeDomain lookalike = (Impersonation.LookalikeDomain) impersonation;
+            return context.getString(R.string.message_view_impersonation_lookalike_domain,
+                oneLine(lookalike.getSenderDomain()), oneLine(lookalike.getKnownDomain()));
+        } else if (impersonation instanceof Impersonation.MixedScriptDomain) {
+            Impersonation.MixedScriptDomain mixedScript = (Impersonation.MixedScriptDomain) impersonation;
+            return context.getString(R.string.message_view_impersonation_mixed_script,
+                oneLine(mixedScript.getSenderDomain()));
+        } else {
+            Impersonation.KnownName knownName = (Impersonation.KnownName) impersonation;
+            return context.getString(R.string.message_view_impersonation_known_name,
+                oneLine(knownName.getSenderAddress()));
+        }
+    }
+
+    /**
+     * What the sender wrote, without the invisible direction marks that can make text display as something else.
+     */
+    private static String oneLine(String text) {
+        return text.replaceAll("\\p{Cf}", "").replaceAll("\\s+", " ").trim();
     }
 
     /**
@@ -541,6 +615,7 @@ public class MessageHeader extends LinearLayout implements OnClickListener, OnLo
         // Outside the contact-picture branch above: which address a message arrived on has nothing to do with
         // whether sender pictures are switched on.
         showDeliveryAddress(message, account);
+        showImpersonationWarning(fromAddress);
 
         importance = MessageImportanceKt.getImportance(message);
         List<String> serverCategories = message instanceof LocalMessage

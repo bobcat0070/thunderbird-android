@@ -162,6 +162,11 @@ private class FakeSettingsRepository(var current: SpamDigestSettings) : SpamDige
     override fun setSendTime(time: SpamDigestTime) {
         current = current.copy(sendTime = time)
     }
+
+    override fun setAlertEnabled(accountId: String, enabled: Boolean) {
+        val accounts = current.alertAccountIds
+        current = current.copy(alertAccountIds = if (enabled) accounts + accountId else accounts - accountId)
+    }
 }
 
 private class FakeDigestLog : SpamDigestLog {

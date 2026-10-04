@@ -3,6 +3,9 @@ package net.thunderbird.feature.spamdigest.internal
 import android.content.Context
 import android.content.SharedPreferences
 import androidx.core.content.edit
+import kotlin.time.Clock
+import kotlin.time.Duration.Companion.days
+import kotlin.time.Instant
 import kotlinx.datetime.LocalDate
 import net.thunderbird.feature.spamdigest.SpamDigestSettings
 import net.thunderbird.feature.spamdigest.SpamDigestTime
@@ -13,6 +16,16 @@ private const val KEY_EXCLUDED_ACCOUNT_IDS = "excludedAccountIds"
 private const val KEY_SEND_HOUR = "sendHour"
 private const val KEY_SEND_MINUTE = "sendMinute"
 private const val KEY_LAST_SENT_DAY = "lastSentDay"
+private const val KEY_ALERT_ACCOUNT_IDS = "alertAccountIds"
+private const val KEY_ALERT_ENABLED_AT_PREFIX = "alertEnabledAt."
+private const val KEY_ALERTED = "alerted"
+private const val KEY_SYNC_TURNED_ON_BY_ALERT = "syncTurnedOnByAlert"
+private const val ALERTED_SEPARATOR = ' '
+
+/**
+ * How long a message is remembered as alerted about. Longer than any alert is raised for, so nothing is alerted twice.
+ */
+private val ALERTED_RETENTION = 7.days
 
 /**
  * Keeps the digest settings in their own preferences file, so clearing or importing the main settings does not
@@ -20,6 +33,7 @@ private const val KEY_LAST_SENT_DAY = "lastSentDay"
  */
 internal class SharedPreferencesSpamDigestSettingsStore(
     context: Context,
+    private val clock: Clock,
 ) : SpamDigestSettingsStore {
 
     private val preferences: SharedPreferences =
@@ -32,6 +46,7 @@ internal class SharedPreferencesSpamDigestSettingsStore(
             senderAccountId = preferences.getString(KEY_SENDER_ACCOUNT_ID, null),
             excludedAccountIds = preferences.getStringSet(KEY_EXCLUDED_ACCOUNT_IDS, null).orEmpty().toSet(),
             sendTime = readSendTime(),
+            alertAccountIds = preferences.getStringSet(KEY_ALERT_ACCOUNT_IDS, null).orEmpty().toSet(),
         )
     }
 
@@ -56,6 +71,55 @@ internal class SharedPreferencesSpamDigestSettingsStore(
             preferences.edit {
                 putInt(KEY_SEND_HOUR, time.hour)
                 putInt(KEY_SEND_MINUTE, time.minute)
+            }
+        }
+    }
+
+    override fun setAlertEnabled(accountId: String, enabled: Boolean) {
+        synchronized(lock) {
+            val accounts = getSettings().alertAccountIds
+            preferences.edit {
+                if (enabled) {
+                    putStringSet(KEY_ALERT_ACCOUNT_IDS, accounts + accountId)
+                    putLong(KEY_ALERT_ENABLED_AT_PREFIX + accountId, clock.now().toEpochMilliseconds())
+                } else {
+                    putStringSet(KEY_ALERT_ACCOUNT_IDS, accounts - accountId)
+                    remove(KEY_ALERT_ENABLED_AT_PREFIX + accountId)
+                }
+            }
+        }
+    }
+
+    override fun alertEnabledAt(accountId: String): Instant? = synchronized(lock) {
+        if (accountId !in getSettings().alertAccountIds) return null
+        val millis = preferences.getLong(KEY_ALERT_ENABLED_AT_PREFIX + accountId, -1L).takeIf { it >= 0 }
+
+        millis?.let { Instant.fromEpochMilliseconds(it) }
+    }
+
+    /**
+     * Kept as "millis key" entries in one string set; a handful a day at most, pruned on every write.
+     */
+    override fun markAlerted(key: String, at: Instant): Boolean = synchronized(lock) {
+        val oldest = (at - ALERTED_RETENTION).toEpochMilliseconds()
+        val entries = preferences.getStringSet(KEY_ALERTED, null).orEmpty()
+            .filter { entry -> (entry.substringBefore(ALERTED_SEPARATOR).toLongOrNull() ?: 0L) >= oldest }
+        if (entries.any { it.substringAfter(ALERTED_SEPARATOR) == key }) return false
+
+        preferences.edit {
+            putStringSet(KEY_ALERTED, (entries + "${at.toEpochMilliseconds()}$ALERTED_SEPARATOR$key").toSet())
+        }
+        true
+    }
+
+    override fun isSyncTurnedOnByAlert(accountId: String): Boolean =
+        accountId in preferences.getStringSet(KEY_SYNC_TURNED_ON_BY_ALERT, null).orEmpty()
+
+    override fun setSyncTurnedOnByAlert(accountId: String, turnedOn: Boolean) {
+        synchronized(lock) {
+            val accounts = preferences.getStringSet(KEY_SYNC_TURNED_ON_BY_ALERT, null).orEmpty().toSet()
+            preferences.edit {
+                putStringSet(KEY_SYNC_TURNED_ON_BY_ALERT, if (turnedOn) accounts + accountId else accounts - accountId)
             }
         }
     }
