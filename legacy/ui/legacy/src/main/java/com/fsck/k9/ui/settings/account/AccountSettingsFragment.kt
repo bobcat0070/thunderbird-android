@@ -2,9 +2,12 @@ package com.fsck.k9.ui.settings.account
 
 import android.annotation.SuppressLint
 import android.app.Activity
+import android.app.AlarmManager
 import android.content.Intent
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.provider.Settings
 import android.view.Menu
 import android.view.MenuInflater
 import android.view.MenuItem
@@ -12,6 +15,7 @@ import android.view.View
 import android.widget.Toast
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.app.AlarmManagerCompat
 import androidx.core.net.toUri
 import androidx.core.view.MenuHost
 import androidx.core.view.MenuProvider
@@ -113,6 +117,7 @@ class AccountSettingsFragment : PreferenceFragmentCompat(), ConfirmationDialogFr
         initializeCryptoSettings(account)
         initializeFolderSettings(account)
         initializeNotifications(account)
+        initializeSpamDigestExactAlarm()
     }
 
     @Deprecated("Deprecated in Java")
@@ -148,6 +153,8 @@ class AccountSettingsFragment : PreferenceFragmentCompat(), ConfirmationDialogFr
 
     override fun onResume() {
         super.onResume()
+        // We might be returning from the system screen that allows exact alarms.
+        updateSpamDigestExactAlarmVisibility()
         // we might be returning from OpenPgpAppSelectDialog, make sure settings are up to date
         val account = getAccount()
         initializeCryptoSettings(account)
@@ -429,6 +436,29 @@ class AccountSettingsFragment : PreferenceFragmentCompat(), ConfirmationDialogFr
         }
     }
 
+    /**
+     * Offers to allow exact alarms while they are not allowed, since without them the digest's alarm may go off up to
+     * an hour after the chosen time. The digest reschedules itself as soon as they are allowed.
+     */
+    private fun initializeSpamDigestExactAlarm() {
+        findPreference<Preference>(PREFERENCE_SPAM_DIGEST_EXACT_ALARM)?.onClick {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                val intent = Intent(
+                    Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM,
+                    Uri.fromParts("package", requireContext().packageName, null),
+                )
+                startActivity(intent)
+            }
+        }
+        updateSpamDigestExactAlarmVisibility()
+    }
+
+    private fun updateSpamDigestExactAlarmVisibility() {
+        val alarmManager = requireContext().getSystemService(AlarmManager::class.java)
+        findPreference<Preference>(PREFERENCE_SPAM_DIGEST_EXACT_ALARM)?.isVisible =
+            alarmManager != null && !AlarmManagerCompat.canScheduleExactAlarms(alarmManager)
+    }
+
     private fun initializeFolderSettings(account: LegacyAccountDto) {
         findPreference<Preference>(PREFERENCE_FOLDERS)?.let {
             if (!messagingController.supportsFolderSubscriptions(account)) {
@@ -563,6 +593,7 @@ class AccountSettingsFragment : PreferenceFragmentCompat(), ConfirmationDialogFr
         private const val PREFERENCE_DRAFTS_FOLDER = "drafts_folder"
         private const val PREFERENCE_SENT_FOLDER = "sent_folder"
         private const val PREFERENCE_SPAM_FOLDER = "spam_folder"
+        private const val PREFERENCE_SPAM_DIGEST_EXACT_ALARM = "spam_digest_exact_alarm"
         private const val PREFERENCE_TRASH_FOLDER = "trash_folder"
         private const val PREFERENCE_NOTIFICATION_SOUND = "account_ringtone"
         private const val PREFERENCE_NOTIFICATION_LIGHT = "notification_light"

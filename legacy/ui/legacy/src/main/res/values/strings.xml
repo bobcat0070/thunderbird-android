@@ -626,6 +626,8 @@
     <string name="one_click_unsubscribe_failed">The sender did not accept the request. Opening their unsubscribe page instead.</string>
     <string name="message_list_possible_impersonation">Possible impersonation</string>
     <string name="notification_possible_impersonation">Possible impersonation</string>
+    <string name="account_settings_spam_digest_exact_alarm_label">Allow exact alarms</string>
+    <string name="account_settings_spam_digest_exact_alarm_summary">Without them Android may send the digest up to an hour late. Tap to allow.</string>
     <string name="account_settings_spam_digest_fields_label">Show in digest</string>
     <string name="account_settings_spam_digest_fields_summary">What the digest lists for each message</string>
     <string name="account_settings_spam_digest_field_sender_name">Sender name</string>

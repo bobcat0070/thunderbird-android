@@ -198,6 +198,14 @@
             app:pref_summaryHasTime="%s"
             />
 
+        <Preference
+            android:dependency="spam_digest_send_from"
+            android:key="spam_digest_exact_alarm"
+            android:summary="@string/account_settings_spam_digest_exact_alarm_summary"
+            android:title="@string/account_settings_spam_digest_exact_alarm_label"
+            app:isPreferenceVisible="false"
+            />
+
         <MultiSelectListPreference
             android:dependency="spam_digest_send_from"
             android:entries="@array/spam_digest_field_entries"
