@@ -41,6 +41,7 @@ import app.k9mail.core.ui.legacy.designsystem.atom.icon.Icons
 import app.k9mail.legacy.message.controller.MessageReference
 import com.eygraber.uri.toKmpUri
 import com.fsck.k9.activity.MessageCompose
+import com.fsck.k9.activity.MessageHomeActivity
 import com.fsck.k9.activity.MessageLoaderHelper
 import com.fsck.k9.activity.MessageLoaderHelper.MessageLoaderCallbacks
 import com.fsck.k9.activity.MessageLoaderHelperFactory
@@ -63,6 +64,7 @@ import com.fsck.k9.mailstore.hasDmarcPass
 import com.fsck.k9.mailstore.senderDomainOf
 import com.fsck.k9.mailstore.MessageViewInfo
 import com.fsck.k9.provider.RawMessageProvider
+import net.thunderbird.feature.search.legacy.createSenderSearch
 import org.koin.android.ext.android.get
 import org.koin.core.parameter.parametersOf
 import com.fsck.k9.ui.R
@@ -500,6 +502,7 @@ class MessageViewFragment :
         )
         menu.findItem(R.id.unsubscribe).isVisible = canMessageBeUnsubscribed()
         menu.findItem(R.id.classify).isVisible = senderAddress() != null
+        menu.findItem(R.id.all_mail_from_sender).isVisible = senderAddress() != null
         menu.findItem(R.id.server_categories).isVisible = canEditServerCategories
         menu.findItem(R.id.show_headers).isVisible = true
         menu.findItem(R.id.export_eml).isVisible =
@@ -542,6 +545,7 @@ class MessageViewFragment :
             R.id.move_to_drafts -> onMoveToDrafts()
             R.id.unsubscribe -> onUnsubscribe()
             R.id.classify -> onClassify()
+            R.id.all_mail_from_sender -> onShowAllMailFromSender()
             R.id.server_categories -> onServerCategories()
             R.id.show_headers -> onShowHeaders()
             R.id.print -> {
@@ -676,6 +680,21 @@ class MessageViewFragment :
             message.getHeader(authenticationResultsHeaderName()).orEmpty().toList(),
             senderDomainOf(senderAddress()),
             authenticationServerTrust.trustedServerId(account.uuid),
+        )
+    }
+
+    /**
+     * Lists everything this sender has sent, across accounts, where it can be archived, deleted or unsubscribed from
+     * in one go.
+     */
+    private fun onShowAllMailFromSender() {
+        val address = senderAddress() ?: return
+        MessageHomeActivity.actionDisplaySearch(
+            context = requireContext(),
+            search = createSenderSearch(address),
+            noThreading = true,
+            newTask = false,
+            clearTop = false,
         )
     }
 

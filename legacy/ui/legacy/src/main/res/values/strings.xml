@@ -609,6 +609,7 @@
     <string name="account_settings_sync">Fetching mail</string>
     <string name="account_settings_folders">Folders</string>
     <string name="account_settings_spam_digest">Spam</string>
+    <string name="all_mail_from_sender_action">All mail from this sender</string>
     <string name="message_list_possible_impersonation">Possible impersonation</string>
     <string name="notification_possible_impersonation">Possible impersonation</string>
     <string name="account_settings_spam_alert_label">Alert me about people I know</string>

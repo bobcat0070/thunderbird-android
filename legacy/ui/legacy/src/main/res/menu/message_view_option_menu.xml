@@ -89,6 +89,12 @@
         />
 
     <item
+        android:id="@+id/all_mail_from_sender"
+        android:title="@string/all_mail_from_sender_action"
+        app:showAsAction="never"
+        />
+
+    <item
         android:id="@+id/classify"
         android:title="@string/classify_action"
         app:showAsAction="never"

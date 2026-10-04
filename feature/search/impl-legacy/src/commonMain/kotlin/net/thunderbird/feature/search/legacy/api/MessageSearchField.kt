@@ -43,6 +43,18 @@ enum class MessageSearchField(
     CLASSIFICATION("classification", SearchFieldType.TEXT),
 
     /**
+     * The first sender's address, matched exactly and regardless of case - unlike [SENDER], whose LIKE pattern
+     * matches anything containing the value and treats `_` as a wildcard. The value is the lower-cased address
+     * followed by the separator the stored address list puts before a display name; see
+     * [net.thunderbird.feature.search.legacy.createSenderSearch].
+     */
+    SENDER_ADDRESS(
+        fieldName = "sender_address",
+        fieldType = SearchFieldType.CUSTOM,
+        customQueryTemplate = "instr(lower(messages.sender_list) || ';' || char(1), ?) = 1",
+    ),
+
+    /**
      * One of an account's special folders, by kind rather than by id - the value is a
      * [net.thunderbird.feature.search.legacy.UnifiedFolderKind] name.
      *
