@@ -20,6 +20,7 @@ private const val KEY_ALERT_ACCOUNT_IDS = "alertAccountIds"
 private const val KEY_ALERT_ENABLED_AT_PREFIX = "alertEnabledAt."
 private const val KEY_ALERTED = "alerted"
 private const val KEY_SYNC_TURNED_ON_BY_ALERT = "syncTurnedOnByAlert"
+private const val KEY_SCHEDULED_FOR = "scheduledFor"
 private const val ALERTED_SEPARATOR = ' '
 
 /**
@@ -120,6 +121,21 @@ internal class SharedPreferencesSpamDigestSettingsStore(
             val accounts = preferences.getStringSet(KEY_SYNC_TURNED_ON_BY_ALERT, null).orEmpty().toSet()
             preferences.edit {
                 putStringSet(KEY_SYNC_TURNED_ON_BY_ALERT, if (turnedOn) accounts + accountId else accounts - accountId)
+            }
+        }
+    }
+
+    override fun scheduledFor(): Instant? {
+        val millis = preferences.getLong(KEY_SCHEDULED_FOR, -1L).takeIf { it >= 0 } ?: return null
+        return Instant.fromEpochMilliseconds(millis)
+    }
+
+    override fun setScheduledFor(scheduledFor: Instant?) {
+        preferences.edit {
+            if (scheduledFor == null) {
+                remove(KEY_SCHEDULED_FOR)
+            } else {
+                putLong(KEY_SCHEDULED_FOR, scheduledFor.toEpochMilliseconds())
             }
         }
     }

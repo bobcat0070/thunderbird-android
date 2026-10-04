@@ -15,8 +15,9 @@ import org.koin.dsl.module
 /**
  * Binds the spam digest. The accounts, spam folders and sending it relies on are bound by the app, as
  * [net.thunderbird.feature.spamdigest.SpamDigestAccounts], [net.thunderbird.feature.spamdigest.SpamFolderReader],
- * [net.thunderbird.feature.spamdigest.SpamDigestMailer], [net.thunderbird.feature.spamdigest.SpamAlertNotifier] and
- * [net.thunderbird.feature.spamdigest.SpamFolderBackgroundSync].
+ * [net.thunderbird.feature.spamdigest.SpamDigestMailer], [net.thunderbird.feature.spamdigest.SpamAlertNotifier],
+ * [net.thunderbird.feature.spamdigest.SpamFolderBackgroundSync] and
+ * [net.thunderbird.feature.spamdigest.SpamDigestWorkNotification].
  */
 val featureSpamDigestModule: Module = module {
     single<SpamDigestSettingsStore> {
@@ -30,11 +31,13 @@ val featureSpamDigestModule: Module = module {
     single<TimeZoneProvider> { TimeZoneProvider { TimeZone.currentSystemDefault() } }
 
     single {
-        WorkManagerSpamDigestScheduler(
+        AlarmSpamDigestScheduler(
+            context = androidContext(),
             workManager = WorkManager.getInstance(androidContext()),
             settingsStore = get(),
             clock = get(),
             timeZoneProvider = get(),
+            logger = get(),
         )
     } bind SpamDigestScheduler::class
 
@@ -62,7 +65,7 @@ val featureSpamDigestModule: Module = module {
     factory { (parameters: WorkerParameters) ->
         SpamDigestWorker(
             sendSpamDigest = get(),
-            scheduler = get(),
+            workNotification = get(),
             logger = get(),
             context = androidContext(),
             parameters = parameters,

@@ -11,7 +11,14 @@ import net.thunderbird.feature.spamdigest.SpamFolderBackgroundSync
 /**
  * Where the digest's settings and its record of sent days are kept, without any effect on the schedule.
  */
-internal interface SpamDigestSettingsStore : SpamDigestSettingsRepository, SpamDigestLog, SpamAlertLog
+internal interface SpamDigestSettingsStore : SpamDigestSettingsRepository, SpamDigestLog, SpamAlertLog {
+    /**
+     * @return when the digest's alarm was last set to go off, or `null` when none is set.
+     */
+    fun scheduledFor(): Instant?
+
+    fun setScheduledFor(scheduledFor: Instant?)
+}
 
 /**
  * What the spam alert remembers between syncs.

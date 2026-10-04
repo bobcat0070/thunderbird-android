@@ -43,6 +43,24 @@ internal fun previousDay(now: Instant, timeZone: TimeZone): DigestDay {
 }
 
 /**
+ * Whether a digest whose alarm should already have gone off was missed - the phone was off, or the app was stopped
+ * - and should be sent now rather than waiting a day.
+ *
+ * @param scheduledFor when the last alarm was set to go off, or `null` when none was set.
+ * @param lastSentDay the day the last digest reported on.
+ */
+internal fun isDigestMissed(
+    scheduledFor: Instant?,
+    now: Instant,
+    lastSentDay: LocalDate?,
+    timeZone: TimeZone,
+): Boolean {
+    if (scheduledFor == null || scheduledFor > now) return false
+
+    return lastSentDay != previousDay(scheduledFor, timeZone).date
+}
+
+/**
  * The next time strictly after [now] that the clock in [timeZone] reads [time].
  *
  * On a day where [time] does not exist because the clocks went forward over it, this is the moment the clocks

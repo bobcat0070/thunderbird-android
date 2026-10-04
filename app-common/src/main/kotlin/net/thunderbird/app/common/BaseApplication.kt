@@ -22,11 +22,14 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.drop
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 import net.thunderbird.app.common.feature.LoggerLifecycleObserver
+import net.thunderbird.app.common.feature.spamdigest.PendingSpamDigestImport
 import net.thunderbird.app.common.feature.spamdigest.SpamArrivalMessagingListener
+import net.thunderbird.core.android.account.LegacyAccountDtoManager
 import net.thunderbird.core.common.exception.ExceptionHandler
 import net.thunderbird.core.logging.Logger
 import net.thunderbird.core.logging.file.FileLogSink
@@ -50,6 +53,8 @@ abstract class BaseApplication : Application(), WorkManagerConfiguration.Provide
     private val messageReclassifier: MessageReclassifier by inject()
     private val spamDigestScheduler: SpamDigestScheduler by inject()
     private val spamArrivalMessagingListener: SpamArrivalMessagingListener by inject()
+    private val pendingSpamDigestImport: PendingSpamDigestImport by inject()
+    private val accountManager: LegacyAccountDtoManager by inject()
     protected val logger: Logger by inject()
     private val syncDebugFileLogSink: FileLogSink by inject(named("syncDebug"))
 
@@ -92,6 +97,12 @@ abstract class BaseApplication : Application(), WorkManagerConfiguration.Provide
         appCoroutineScope.launch(Dispatchers.IO) {
             spamDigestScheduler.ensureScheduled()
         }
+
+        // Spam settings imported before the accounts they name are applied once those accounts exist.
+        accountManager.getAccountsFlow()
+            .onEach { pendingSpamDigestImport.applyAvailable() }
+            .flowOn(Dispatchers.IO)
+            .launchIn(appCoroutineScope)
     }
 
     /**

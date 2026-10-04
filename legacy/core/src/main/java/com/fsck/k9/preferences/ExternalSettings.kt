@@ -63,4 +63,8 @@ object ExternalSettingKeys {
     const val LEARNED_CLASSIFICATION_RULES_KEY = "learnedClassificationRules"
     const val REMOTE_IMAGE_TRUSTED_SENDERS_KEY = "remoteImageTrustedSenders"
     const val REMOTE_IMAGE_TRUSTED_DOMAINS_KEY = "remoteImageTrustedDomains"
+    const val SPAM_DIGEST_SENDER_ACCOUNT_KEY = "spamDigestSenderAccount"
+    const val SPAM_DIGEST_SEND_TIME_KEY = "spamDigestSendTime"
+    const val SPAM_DIGEST_EXCLUDED_ACCOUNTS_KEY = "spamDigestExcludedAccounts"
+    const val SPAM_ALERT_ACCOUNTS_KEY = "spamAlertAccounts"
 }

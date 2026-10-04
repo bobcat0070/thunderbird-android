@@ -5,6 +5,7 @@ import assertk.assertions.isEqualTo
 import assertk.assertions.isFalse
 import assertk.assertions.isTrue
 import kotlin.test.Test
+import kotlin.time.Instant
 import kotlinx.datetime.LocalDate
 import net.thunderbird.feature.spamdigest.SpamDigestScheduler
 import net.thunderbird.feature.spamdigest.SpamDigestSettings
@@ -96,6 +97,10 @@ class ReschedulingSpamDigestSettingsRepositoryTest {
         }
 
         override fun lastSentDay(): LocalDate? = null
+
+        override fun scheduledFor(): Instant? = null
+
+        override fun setScheduledFor(scheduledFor: Instant?) = Unit
 
         override fun markSent(day: LocalDate) = Unit
     }

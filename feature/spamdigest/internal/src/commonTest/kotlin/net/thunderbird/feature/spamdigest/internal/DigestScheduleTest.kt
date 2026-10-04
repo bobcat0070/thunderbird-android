@@ -2,6 +2,8 @@ package net.thunderbird.feature.spamdigest.internal
 
 import assertk.assertThat
 import assertk.assertions.isEqualTo
+import assertk.assertions.isFalse
+import assertk.assertions.isTrue
 import kotlin.test.Test
 import kotlin.time.Duration.Companion.hours
 import kotlin.time.Instant
@@ -35,6 +37,27 @@ class DigestScheduleTest {
 
         assertThat(testSubject.date).isEqualTo(LocalDate(2026, 11, 1))
         assertThat(testSubject.end - testSubject.start).isEqualTo(25.hours)
+    }
+
+    @Test
+    fun `a digest whose alarm passed unsent should count as missed`() {
+        val scheduledFor = Instant.parse("2026-10-03T11:00:00Z") // 07:00 in New York
+        val now = Instant.parse("2026-10-03T14:00:00Z")
+
+        assertThat(isDigestMissed(scheduledFor, now, lastSentDay = LocalDate(2026, 10, 1), newYork)).isTrue()
+    }
+
+    @Test
+    fun `a digest that was sent, or whose alarm is still ahead, should not count as missed`() {
+        val scheduledFor = Instant.parse("2026-10-03T11:00:00Z")
+
+        assertThat(
+            isDigestMissed(scheduledFor, Instant.parse("2026-10-03T14:00:00Z"), LocalDate(2026, 10, 2), newYork),
+        ).isFalse()
+        assertThat(
+            isDigestMissed(scheduledFor, Instant.parse("2026-10-03T10:00:00Z"), LocalDate(2026, 10, 1), newYork),
+        ).isFalse()
+        assertThat(isDigestMissed(null, Instant.parse("2026-10-03T14:00:00Z"), null, newYork)).isFalse()
     }
 
     @Test

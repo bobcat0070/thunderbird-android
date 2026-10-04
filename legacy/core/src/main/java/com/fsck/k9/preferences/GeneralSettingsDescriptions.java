@@ -68,6 +68,10 @@ import static net.thunderbird.core.preference.widget.WidgetSettingsKt.WIDGET_SET
 import static com.fsck.k9.preferences.ExternalSettingKeys.LEARNED_CLASSIFICATION_RULES_KEY;
 import static com.fsck.k9.preferences.ExternalSettingKeys.REMOTE_IMAGE_TRUSTED_DOMAINS_KEY;
 import static com.fsck.k9.preferences.ExternalSettingKeys.REMOTE_IMAGE_TRUSTED_SENDERS_KEY;
+import static com.fsck.k9.preferences.ExternalSettingKeys.SPAM_ALERT_ACCOUNTS_KEY;
+import static com.fsck.k9.preferences.ExternalSettingKeys.SPAM_DIGEST_EXCLUDED_ACCOUNTS_KEY;
+import static com.fsck.k9.preferences.ExternalSettingKeys.SPAM_DIGEST_SENDER_ACCOUNT_KEY;
+import static com.fsck.k9.preferences.ExternalSettingKeys.SPAM_DIGEST_SEND_TIME_KEY;
 import static net.thunderbird.core.preference.display.inboxSettings.DisplayInboxSettingsKt.DISPLAY_SETTINGS_DEFAULT_IS_MESSAGE_LIST_SENDER_ABOVE_SUBJECT;
 import static net.thunderbird.core.preference.display.inboxSettings.DisplayInboxSettingsKt.DISPLAY_SETTINGS_DEFAULT_IS_SHOW_COMPOSE_BUTTON_ON_MESSAGE_LIST;
 import static net.thunderbird.core.preference.display.inboxSettings.DisplayInboxSettingsKt.DISPLAY_SETTINGS_DEFAULT_IS_SHOW_MESSAGE_LIST_STAR;
@@ -421,6 +425,18 @@ class GeneralSettingsDescriptions {
         ));
         s.put(REMOTE_IMAGE_TRUSTED_DOMAINS_KEY, Settings.versions(
             new V(112, new StringSetting(""))
+        ));
+        s.put(SPAM_DIGEST_SENDER_ACCOUNT_KEY, Settings.versions(
+            new V(113, new StringSetting(""))
+        ));
+        s.put(SPAM_DIGEST_SEND_TIME_KEY, Settings.versions(
+            new V(113, new StringSetting(""))
+        ));
+        s.put(SPAM_DIGEST_EXCLUDED_ACCOUNTS_KEY, Settings.versions(
+            new V(113, new StringSetting(""))
+        ));
+        s.put(SPAM_ALERT_ACCOUNTS_KEY, Settings.versions(
+            new V(113, new StringSetting(""))
         ));
 
         // TODO: Add a way to properly support feature-specific settings.
