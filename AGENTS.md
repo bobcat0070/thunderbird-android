@@ -248,3 +248,19 @@ Agents MUST NOT:
 - Make breaking changes without explicit approval
 
 When in doubt, ask. It's always better to clarify than to guess wrong.
+
+## Fork features log
+
+This repository is a fork. [FORK_FEATURES.md](FORK_FEATURES.md) lists every feature and notable fix the fork adds on
+top of upstream, by area, with dates and links to the commits.
+
+Agents MUST keep it current:
+
+- Every change that adds or changes a user-visible feature, or fixes a bug in one, updates `FORK_FEATURES.md` before
+  it is pushed - in the same commit, or a `docs:` commit pushed with it.
+- Add a row under the right area, newest first: the date, what the user can now do and where to find it, and the
+  commits as links. Extend the existing row instead when the change finishes or fixes a listed feature.
+- Commit links use the hash the commit has on `main`; when commits are rebased or squashed, update them.
+- Refactors, test-only changes and CI fixes are not listed.
+- Update "Last updated" at the top, and the upstream version when upstream is merged.
+
