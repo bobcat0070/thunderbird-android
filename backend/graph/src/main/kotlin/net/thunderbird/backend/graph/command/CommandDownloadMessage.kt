@@ -7,6 +7,7 @@ import net.thunderbird.backend.graph.api.GraphApiClient
 import net.thunderbird.backend.graph.api.GraphMessage
 import net.thunderbird.backend.graph.api.MESSAGE_ENVELOPE_EXPAND
 import net.thunderbird.backend.graph.api.pathSegment
+import net.thunderbird.backend.graph.api.receivedDate
 import net.thunderbird.backend.graph.api.serverCategories
 import net.thunderbird.backend.graph.api.setServerImportance
 import net.thunderbird.backend.graph.api.setServerRelevance
@@ -45,6 +46,9 @@ internal class CommandDownloadMessage(
         val serverState = fetchServerState(messageServerId)
         message.setServerRelevance(serverState.inferenceClassification)
         message.setServerImportance(serverState.importance)
+        // The raw message carries no arrival time either, and saving it without one would move the message to
+        // the moment it was opened.
+        serverState.receivedDate()?.let { message.internalDate = it }
 
         backendStorage.getFolder(folderServerId).saveMessage(message, MessageDownloadState.FULL)
     }
@@ -65,7 +69,7 @@ internal class CommandDownloadMessage(
 
     private fun fetchServerState(messageServerId: String): GraphMessage {
         val url = client.url("me/messages/${pathSegment(messageServerId)}") {
-            addQueryParameter("\$select", "inferenceClassification,importance")
+            addQueryParameter("\$select", "inferenceClassification,importance,receivedDateTime")
         }
 
         return client.json.decodeFromString<GraphMessage>(client.getString(url))

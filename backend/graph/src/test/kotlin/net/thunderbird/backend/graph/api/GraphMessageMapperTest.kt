@@ -7,10 +7,22 @@ import assertk.assertions.isNull
 import com.fsck.k9.mail.MessageImportance
 import com.fsck.k9.mail.importance
 import com.fsck.k9.mail.internet.MessageExtractor
+import java.time.Instant
 import kotlin.test.Test
 import net.thunderbird.core.common.mail.Flag
 
 class GraphMessageMapperTest {
+
+    @Test
+    fun `when the mailbox received a message should be recorded as its internal date`() {
+        val envelope = GraphMessage(
+            id = "m1",
+            sentDateTime = "2026-10-01T23:00:00Z",
+            receivedDateTime = "2026-10-02T08:30:00Z",
+        ).toEnvelopeMessage()
+
+        assertThat(envelope.internalDate?.time).isEqualTo(Instant.parse("2026-10-02T08:30:00Z").toEpochMilli())
+    }
 
     @Test
     fun `where Focused Inbox sorted a message should be recorded on it`() {

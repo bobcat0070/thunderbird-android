@@ -15,6 +15,7 @@ import com.fsck.k9.mail.MessageImportance
 import com.fsck.k9.mail.importance
 import com.fsck.k9.mail.internet.BinaryTempFileBody
 import java.io.File
+import java.time.Instant
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
@@ -56,7 +57,21 @@ class CommandDownloadMessageTest {
         assertThat(backendStorage.getFolder(FOLDER_ID).getMessageFlags("m1")).contains(Flag.X_DOWNLOADED_FULL)
         // Where Focused Inbox put it, so opening the message does not change how it is classified.
         assertThat(server.takeRequest().requestUrl?.queryParameter("\$select"))
-            .isEqualTo("inferenceClassification,importance")
+            .isEqualTo("inferenceClassification,importance,receivedDateTime")
+    }
+
+    @Test
+    fun `a downloaded message should keep the time the mailbox received it`() = runTest {
+        createFolder()
+        server.enqueue(MockResponse().setBody(RAW_MIME))
+        server.enqueue(MockResponse().setBody("""{"id":"m1","receivedDateTime":"2026-10-02T08:30:00Z"}"""))
+        val savedMessages = mutableListOf<Message>()
+        val testSubject = createTestSubject(RecordingBackendStorage(backendStorage, savedMessages))
+
+        testSubject.downloadCompleteMessage(FOLDER_ID, "m1")
+
+        assertThat(savedMessages.single().internalDate?.time)
+            .isEqualTo(Instant.parse("2026-10-02T08:30:00Z").toEpochMilli())
     }
 
     @Test

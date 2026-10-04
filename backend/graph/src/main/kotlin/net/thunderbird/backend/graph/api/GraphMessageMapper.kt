@@ -49,6 +49,9 @@ internal fun GraphMessage.toEnvelopeMessage(): MimeMessage {
     bccRecipients.toAddressHeaderValue()?.let { message.setHeader("BCC", it) }
 
     sentDate()?.let { message.setSentDate(it, false) }
+    // When the mailbox received it, as IMAP's INTERNALDATE records. Without it the time the app happened to sync
+    // the message is stored instead, and "arrived on a given day" stops meaning anything.
+    receivedDate()?.let { message.internalDate = it }
 
     applyInternetHeaders(message)
     message.setServerRelevance(inferenceClassification)
