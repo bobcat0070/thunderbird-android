@@ -224,4 +224,24 @@ class RecipientIndexTest : RobolectricTest() {
 
         assertThat(testSubject.search("person", limit = 3)).hasSize(3)
     }
+
+    @Test
+    fun `recipient should say what is recorded about one address, whatever its case`() {
+        testSubject.recordRemoteContacts("account", listOf(RemoteContact("colleague@example.com", "A Colleague")))
+
+        val recipient = testSubject.recipient("Colleague@Example.com")
+
+        assertThat(recipient?.origin).isEqualTo(RecipientOrigin.REMOTE)
+        assertThat(recipient?.displayName).isEqualTo("A Colleague")
+        assertThat(testSubject.recipient("stranger@example.com")).isNull()
+    }
+
+    @Test
+    fun `all should list everyone written to and every fetched contact`() {
+        testSubject.recordSent("sam@example.com", "Sam Vimes", at = 1000)
+        testSubject.recordRemoteContacts("account", listOf(RemoteContact("colleague@example.com", "A Colleague")))
+
+        assertThat(testSubject.all().map { it.address }.sorted())
+            .containsExactly("colleague@example.com", "sam@example.com")
+    }
 }

@@ -43,6 +43,8 @@ data class IndexedRecipient(
  *
  * Reads happen on every keystroke of a recipient field, so a search is one indexed query and never a scan.
  */
+// One function per query against one table; splitting them up would only scatter the SQL that shares its schema.
+@Suppress("TooManyFunctions")
 class RecipientIndex internal constructor(
     private val helper: RecipientIndexDatabase,
 ) {
@@ -206,6 +208,29 @@ class RecipientIndex internal constructor(
             "SELECT times_used FROM $TABLE_RECIPIENTS WHERE address = ?",
             arrayOf(normalized),
         ).use { cursor -> if (cursor.moveToNext()) cursor.getInt(0) else 0 }
+    }
+
+    /**
+     * @return what is recorded about [address], or `null` when it was never written to or fetched as a contact.
+     */
+    fun recipient(address: String): IndexedRecipient? {
+        val normalized = address.normalizedAddress() ?: return null
+
+        return helper.readableDatabase.rawQuery(
+            "SELECT address, display_name, source, times_used, last_used FROM $TABLE_RECIPIENTS WHERE address = ?",
+            arrayOf(normalized),
+        ).use { cursor -> cursor.toRecipients().firstOrNull() }
+    }
+
+    /**
+     * @return every recorded address: everyone written to and every contact fetched from an account. For building
+     *   a picture of who the user knows, which is read now and then, not per keystroke.
+     */
+    fun all(): List<IndexedRecipient> {
+        return helper.readableDatabase.rawQuery(
+            "SELECT address, display_name, source, times_used, last_used FROM $TABLE_RECIPIENTS",
+            null,
+        ).use { cursor -> cursor.toRecipients() }
     }
 
     /**

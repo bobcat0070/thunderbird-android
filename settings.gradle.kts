@@ -179,6 +179,11 @@ include(
 )
 
 include(
+    ":feature:impersonation:api",
+    ":feature:impersonation:internal",
+)
+
+include(
     ":feature:spamdigest:api",
     ":feature:spamdigest:internal",
 )
