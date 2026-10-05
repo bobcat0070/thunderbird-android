@@ -3,7 +3,9 @@ package net.thunderbird.feature.account.settings.impl.domain.usecase
 import androidx.compose.ui.viewinterop.NoOpUpdate
 import assertk.assertThat
 import assertk.assertions.isEqualTo
+import assertk.assertions.isFalse
 import assertk.assertions.isInstanceOf
+import assertk.assertions.isTrue
 import com.fsck.k9.mail.AuthType
 import com.fsck.k9.mail.ConnectionSecurity
 import com.fsck.k9.mail.ServerSettings
@@ -135,6 +137,36 @@ internal class UpdateFetchingMailSettingsTest {
 
         val updated = requireNotNull(repo.updated)
         assertThat(updated.displayCount).isEqualTo(25)
+    }
+
+    @Test
+    fun `should mark folder limits for reset when local folder size changes`() = runTest {
+        // Folders keep their own limits; without the marker the new size never reaches them.
+        val account = createAccount()
+        val repo = repoWith(account)
+        val testSubject = UpdateFetchingMailSettings(repo)
+
+        testSubject(
+            account.id,
+            AccountSettingsDomainContract.UpdateFetchingMailSettingsCommand.UpdateLocalFolderSize(25),
+        )
+
+        assertThat(requireNotNull(repo.updated).isChangedVisibleLimits).isTrue()
+    }
+
+    @Test
+    fun `should leave folder limits alone when local folder size is unchanged`() = runTest {
+        // A folder whose limit "Load more messages" raised keeps it when the same size is picked again.
+        val account = createAccount()
+        val repo = repoWith(account)
+        val testSubject = UpdateFetchingMailSettings(repo)
+
+        testSubject(
+            account.id,
+            AccountSettingsDomainContract.UpdateFetchingMailSettingsCommand.UpdateLocalFolderSize(account.displayCount),
+        )
+
+        assertThat(requireNotNull(repo.updated).isChangedVisibleLimits).isFalse()
     }
 
     @Test
