@@ -3,6 +3,7 @@ package com.fsck.k9.ui.messagelist
 import androidx.lifecycle.LiveData
 import app.k9mail.legacy.mailstore.MessageListChangedListener
 import app.k9mail.legacy.mailstore.MessageListRepository
+import app.k9mail.legacy.message.controller.MessageReference
 import com.fsck.k9.search.getLegacyAccountUuids
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -57,14 +58,15 @@ class MessageListLiveData(
      *
      * A large list - a unified inbox holds thousands of messages - takes a second or more to read, and until then the
      * screen is blank. The newest [FIRST_LOAD_LIMIT] take a fraction of that and fill the screen; the rest of the list
-     * follows below them. The short list is shown only if the whole one has not arrived first.
+     * follows below them. The short list is shown only if the whole one has not arrived first, and only if it holds
+     * the message being read.
      */
     private fun showNewestMessagesThenAll() {
         coroutineScope.launch(Dispatchers.Main) {
             val newestMessages = withContext(Dispatchers.IO) {
                 messageListLoader.getMessageList(config, limit = FIRST_LOAD_LIMIT)
             }
-            if (value == null) value = newestMessages
+            if (value == null && newestMessages.canStandInForWholeList(config.activeMessage)) value = newestMessages
 
             loadMessageListAsync()
         }
@@ -84,6 +86,16 @@ class MessageListLiveData(
             }
         }
     }
+}
+
+/**
+ * Whether these, the newest messages of a list, can be shown until the whole list has loaded.
+ *
+ * The message being read has to be in the list shown with it: the reader closes as soon as a list arrives without it.
+ * An older message falls below the newest few, and a short list without it closed the reader the moment it opened.
+ */
+internal fun MessageListInfo.canStandInForWholeList(activeMessage: MessageReference?): Boolean {
+    return activeMessage == null || messageListItems.any { it.messageReference == activeMessage }
 }
 
 private const val PAUSE_BETWEEN_LOADS_MILLIS = 500L
