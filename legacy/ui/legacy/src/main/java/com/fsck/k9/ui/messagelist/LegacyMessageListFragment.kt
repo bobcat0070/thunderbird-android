@@ -140,6 +140,9 @@ import net.thunderbird.feature.search.legacy.LocalMessageSearch
 import net.thunderbird.feature.search.legacy.SearchAccount
 import net.thunderbird.feature.search.legacy.senderSearchAddress
 import net.thunderbird.feature.search.legacy.serialization.LocalMessageSearchSerializer
+import com.fsck.k9.ui.messageview.PinnedFolderMenu
+import com.fsck.k9.ui.messageview.moveToTitle
+import org.koin.android.ext.android.get
 import org.koin.android.ext.android.inject
 import org.koin.androidx.viewmodel.ext.android.viewModel
 import org.koin.core.parameter.parametersOf
@@ -184,6 +187,13 @@ class LegacyMessageListFragment :
     private val messageListPreferencesManager: MessageListPreferencesManager by inject()
     private val categoryGroupingStore: CategoryGroupingStore by inject()
     private val folderNameFormatter: FolderNameFormatter by inject { parametersOf(requireContext()) }
+    private val pinnedFolderMenu: PinnedFolderMenu by lazy {
+        PinnedFolderMenu(
+            pinnedFolderStore = get(),
+            remoteFolderQueryRepository = get(),
+            folderNameFormatter = folderNameFormatter,
+        )
+    }
     private val messagingController: MessagingControllerWrapper by inject()
     private val messagingControllerRegistry: MessagingControllerRegistry by inject()
     private val messageRepository: MessageRepository by inject()
@@ -2953,8 +2963,40 @@ class LegacyMessageListFragment :
             }
 
             menu.findItem(R.id.unsubscribe).isVisible = isSelectionUnsubscribable()
+            updateMoveActions(menu)
 
             return true
+        }
+
+        /**
+         * Offers the reader's pinned folders, and the folder picker, for what is selected.
+         *
+         * Only while the selection is all from one account: a folder belongs to one account, and mail cannot be
+         * moved between accounts. A list that spans accounts - the unified inbox, a sender's list - otherwise hides
+         * moving altogether, even when everything selected could be moved.
+         */
+        private fun updateMoveActions(menu: Menu) {
+            val selectedAccount = accountUuidsForSelected.singleOrNull()?.let { accountManager.getAccount(it) }
+            if (selectedAccount == null || isOutbox || !messagingController.isMoveCapable(selectedAccount.id)) {
+                pinnedFolderMenu.removeFrom(menu)
+                return
+            }
+
+            menu.findItem(R.id.move).isVisible = true
+
+            pinnedFolderMenu.addTo(
+                menu = menu,
+                account = selectedAccount,
+                currentFolderId = adapter.selectedMessages.map { it.folderId }.distinct().singleOrNull(),
+                title = moveToTitle(::getString),
+                // The selection toolbar already holds delete, read and archive, so one pinned folder fits beside
+                // them; the rest are in the overflow menu with the folder picker.
+                alwaysShown = 1,
+                onFolderChosen = { folderId ->
+                    move(selectedMessages, folderId)
+                    actionMode?.finish()
+                },
+            )
         }
 
         /**

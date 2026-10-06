@@ -1,5 +1,7 @@
 package com.fsck.k9.ui.messagelist.item
 
+import android.text.Spanned
+import android.graphics.Color
 import android.content.res.Resources
 import android.graphics.Typeface
 import android.graphics.drawable.Drawable
@@ -119,6 +121,16 @@ class MessageViewHolder(
             updateWithThreadCount(displayThreadCount)
             val beforePreviewText = if (appearance.senderAboveSubject) subject else displayName
             val messageStringBuilder = SpannableStringBuilder()
+            folderName?.let { name ->
+                // The same kind of label as a category, in the neutral grey of one that is not a category.
+                messageStringBuilder.append(name)
+                messageStringBuilder.setSpan(
+                    ServerCategoryChipSpan(Color.GRAY, res.displayMetrics.density),
+                    0,
+                    messageStringBuilder.length,
+                    Spanned.SPAN_EXCLUSIVE_EXCLUSIVE,
+                )
+            }
             ServerCategoryChipSpan.appendTo(
                 builder = messageStringBuilder,
                 categories = serverCategories,

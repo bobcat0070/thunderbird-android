@@ -8,7 +8,8 @@ import com.fsck.k9.ui.R
 import com.fsck.k9.ui.settings.account.PinnedFolderStore
 import kotlinx.coroutines.runBlocking
 import net.thunderbird.components.core.outcome.fold
-import net.thunderbird.core.android.account.LegacyAccountDto
+import net.thunderbird.feature.account.Account
+import net.thunderbird.feature.mail.account.api.BaseAccount
 import net.thunderbird.feature.mail.folder.api.RemoteFolder
 import net.thunderbird.feature.mail.folder.api.data.repository.RemoteFolderQueryRepository
 
@@ -51,24 +52,26 @@ internal class PinnedFolderMenu(
 
     /**
      * @param currentFolderId the folder the message is in, which is never offered - filing a message where it
-     *   already is does nothing and only clutters the menu.
+     *   already is does nothing and only clutters the menu. `null` when there is no one such folder.
+     * @param alwaysShown how many of the folders get a toolbar place outright, rather than only if there is room.
      * @param onFolderChosen invoked with the folder id to file into.
      */
-    fun addTo(
+    fun <T> addTo(
         menu: Menu,
-        account: LegacyAccountDto,
-        currentFolderId: Long,
+        account: T,
+        currentFolderId: Long?,
         title: (String) -> String,
+        alwaysShown: Int = PINNED_FOLDERS_ALWAYS_SHOWN,
         onFolderChosen: (Long) -> Unit,
-    ) {
-        menu.removeGroup(PINNED_FOLDER_GROUP)
+    ) where T : Account, T : BaseAccount {
+        removeFrom(menu)
 
         var shownInToolbar = 0
 
         for (folder in pinnedFolders(account)) {
             if (folder.id == currentFolderId) continue
 
-            val showAsAction = if (shownInToolbar < PINNED_FOLDERS_ALWAYS_SHOWN) {
+            val showAsAction = if (shownInToolbar < alwaysShown) {
                 shownInToolbar++
                 MenuItem.SHOW_AS_ACTION_ALWAYS
             } else {
@@ -90,8 +93,15 @@ internal class PinnedFolderMenu(
         }
     }
 
+    /**
+     * Takes away the items a previous [addTo] put in, for when they no longer apply.
+     */
+    fun removeFrom(menu: Menu) {
+        menu.removeGroup(PINNED_FOLDER_GROUP)
+    }
+
     @Suppress("TooGenericExceptionCaught", "SwallowedException")
-    private fun pinnedFolders(account: LegacyAccountDto): List<RemoteFolder> {
+    private fun <T> pinnedFolders(account: T): List<RemoteFolder> where T : Account, T : BaseAccount {
         val pinnedIds = pinnedFolderStore.pinnedFolderIds(account.uuid)
         if (pinnedIds.isEmpty()) return emptyList()
 

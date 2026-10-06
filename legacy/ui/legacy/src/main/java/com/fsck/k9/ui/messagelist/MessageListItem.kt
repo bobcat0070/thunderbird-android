@@ -42,6 +42,11 @@ data class MessageListItem(
      * Whether the sender looks like someone they are not; see [net.thunderbird.feature.impersonation.Impersonation].
      */
     val isPossibleImpersonation: Boolean = false,
+    /**
+     * The folder the message is in, named only when the list holds mail from more than one folder; see
+     * [withFolderNames].
+     */
+    val folderName: String? = null,
 ) {
     val messageReference: MessageReference
         get() = MessageReference(account.uuid, folderId, messageUid)

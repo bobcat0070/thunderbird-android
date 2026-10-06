@@ -56,6 +56,7 @@ class MessageListLoader(
             }
             .sortedWith(config)
             .let { items -> if (limit != null) items.take(limit) else items }
+            .withFolderNames { account, folderId -> loadFolderName(account, folderId) }
 
         val hasMoreMessages = loadHasMoreMessages(accounts, config.search.folderIds)
 
@@ -205,6 +206,16 @@ class MessageListLoader(
         }.thenByDescending { it.databaseId }
 
         return this.sortedWith(comparator)
+    }
+
+    @Suppress("TooGenericExceptionCaught", "SwallowedException")
+    private fun loadFolderName(account: LegacyAccount, folderId: Long): String? {
+        return try {
+            localStoreProvider.getInstanceByLegacyAccount(account).getFolder(folderId).apply { open() }.name
+        } catch (e: Exception) {
+            // A folder that cannot be read costs its label and nothing else.
+            null
+        }
     }
 
     private fun loadHasMoreMessages(accounts: List<LegacyAccount>, folderIds: List<Long>): Boolean {
