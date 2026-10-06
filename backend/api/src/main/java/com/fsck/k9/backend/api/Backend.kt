@@ -116,6 +116,16 @@ interface Backend {
         performFullTextSearch: Boolean,
     ): Map<String, List<String>>? = null
 
+    /**
+     * Searches every folder at once for mail from one sender, for a server that can tell the sender apart from the
+     * other addresses on a message.
+     *
+     * @return the matches by folder server id, or `null` when this server cannot - the app then searches for the
+     *   address as text, which also finds mail sent to it, and leaves those out itself.
+     */
+    @Throws(MessagingException::class)
+    fun searchAllFoldersFromSender(address: String): Map<String, List<String>>? = null
+
     @Throws(MessagingException::class)
     fun fetchPart(folderServerId: String, messageServerId: String, part: Part, bodyFactory: BodyFactory)
 

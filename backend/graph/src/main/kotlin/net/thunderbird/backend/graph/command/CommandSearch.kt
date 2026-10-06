@@ -7,6 +7,7 @@ import net.thunderbird.backend.graph.api.GraphMessage
 import net.thunderbird.backend.graph.api.pathSegment
 import net.thunderbird.backend.graph.api.toFlags
 import net.thunderbird.core.common.mail.Flag
+import okhttp3.HttpUrl
 
 private const val SEARCH_RESULT_LIMIT = 100
 
@@ -15,6 +16,13 @@ private const val SEARCH_RESULT_LIMIT = 100
  * among all of them.
  */
 private const val MAILBOX_SEARCH_RESULT_LIMIT = 250
+
+/**
+ * The most messages from one sender that are listed, a page at a time. Enough for anyone the reader corresponds
+ * with; past it, a mailing list's whole archive would be downloaded.
+ */
+private const val SENDER_RESULT_LIMIT = 1000
+private const val SENDER_PAGE_SIZE = 250
 
 /**
  * Searches messages on the server.
@@ -26,6 +34,8 @@ private const val MAILBOX_SEARCH_RESULT_LIMIT = 250
 internal class CommandSearch(
     private val client: GraphApiClient,
 ) {
+    private val searchMatchIds = SearchMatchIds(client)
+
     fun search(
         folderServerId: String,
         query: String?,
@@ -36,6 +46,7 @@ internal class CommandSearch(
             searchByFlags(folderServerId, requiredFlags, forbiddenFlags)
         } else {
             searchByText(folderServerId, query)
+                .let(searchMatchIds::withImmutableIds)
                 .filter { it.matchesFlags(requiredFlags, forbiddenFlags) }
         }
 
@@ -58,17 +69,57 @@ internal class CommandSearch(
 
         // Graph expects the search term as a quoted string; embedded quotes would end it early.
         val sanitizedQuery = query.replace("\"", " ")
+
+        return searchMailbox(sanitizedQuery)
+            .let(searchMatchIds::withImmutableIds)
+            .filter { it.matchesFlags(requiredFlags, forbiddenFlags) }
+            .groupByFolder()
+    }
+
+    /**
+     * Lists the mail from one sender across the whole mailbox.
+     *
+     * A listing filtered on the sender rather than a `$search`: the address searched as text also matches every
+     * message sent to it, and `$search` answers with Graph's default ids however it is asked, where everything the
+     * app has synchronized is stored under immutable ids - every match would be saved a second time.
+     *
+     * @return the matches by the folder they are in, or `null` when [address] is not a usable address.
+     */
+    fun searchAllFoldersFromSender(address: String): Map<String, List<String>>? {
+        val trimmedAddress = address.trim()
+        if (trimmedAddress.isEmpty()) return null
+
+        // Single quotes terminate an OData string literal and are escaped by doubling them.
+        val escapedAddress = trimmedAddress.replace("'", "''")
+        var url: HttpUrl? = client.url("me/messages") {
+            addQueryParameter("\$select", "id,parentFolderId")
+            addQueryParameter("\$filter", "from/emailAddress/address eq '$escapedAddress'")
+            addQueryParameter("\$top", SENDER_PAGE_SIZE.toString())
+        }
+
+        val messages = mutableListOf<GraphMessage>()
+        while (url != null && messages.size < SENDER_RESULT_LIMIT) {
+            val page = client.json.decodeFromString<GraphCollection<GraphMessage>>(client.getString(url))
+            messages += page.value
+            url = page.nextLink?.let(client::absoluteUrl)
+        }
+
+        return messages.take(SENDER_RESULT_LIMIT).groupByFolder()
+    }
+
+    private fun searchMailbox(searchTerm: String): List<GraphMessage> {
         val url = client.url("me/messages") {
-            addQueryParameter("\$select", "id,parentFolderId,isRead,isDraft,flag")
-            addQueryParameter("\$search", "\"$sanitizedQuery\"")
+            addQueryParameter("\$select", TEXT_SEARCH_SELECT)
+            addQueryParameter("\$search", "\"$searchTerm\"")
             addQueryParameter("\$top", MAILBOX_SEARCH_RESULT_LIMIT.toString())
         }
 
         return client.json.decodeFromString<GraphCollection<GraphMessage>>(client.getString(url)).value
-            .filter { it.matchesFlags(requiredFlags, forbiddenFlags) }
-            .mapNotNull { message -> message.parentFolderId?.let { folderId -> folderId to message.id } }
-            .groupBy({ (folderId, _) -> folderId }, { (_, messageId) -> messageId })
     }
+
+    private fun List<GraphMessage>.groupByFolder(): Map<String, List<String>> =
+        mapNotNull { message -> message.parentFolderId?.let { folderId -> folderId to message.id } }
+            .groupBy({ (folderId, _) -> folderId }, { (_, messageId) -> messageId })
 
     /**
      * Finds a message by its RFC 5322 `Message-ID`, used to locate the server copy of a message the app already has.
@@ -94,7 +145,7 @@ internal class CommandSearch(
         val sanitizedQuery = query.replace("\"", " ")
 
         val url = client.url("me/mailFolders/${pathSegment(folderServerId)}/messages") {
-            addQueryParameter("\$select", "id,isRead,isDraft,flag")
+            addQueryParameter("\$select", TEXT_SEARCH_SELECT)
             addQueryParameter("\$search", "\"$sanitizedQuery\"")
             addQueryParameter("\$top", SEARCH_RESULT_LIMIT.toString())
         }

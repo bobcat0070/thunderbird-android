@@ -621,6 +621,19 @@
         <item quantity="one">Move <xliff:g id="count">%1$d</xliff:g> message from <xliff:g id="sender">%2$s</xliff:g> to the trash?</item>
         <item quantity="other">Move all <xliff:g id="count">%1$d</xliff:g> messages from <xliff:g id="sender">%2$s</xliff:g> to the trash?</item>
     </plurals>
+    <!-- Shown under the sender's address while their list is searched for on the server. -->
+    <string name="sender_server_search_running">Searching server…</string>
+    <plurals name="sender_server_search_running_found">
+        <item quantity="one">Searching server… <xliff:g id="count">%1$d</xliff:g> more</item>
+        <item quantity="other">Searching server… <xliff:g id="count">%1$d</xliff:g> more</item>
+    </plurals>
+    <plurals name="sender_server_search_found">
+        <item quantity="one">Server: <xliff:g id="count">%1$d</xliff:g> more added</item>
+        <item quantity="other">Server: <xliff:g id="count">%1$d</xliff:g> more added</item>
+    </plurals>
+    <string name="sender_server_search_nothing_new">Server: nothing more</string>
+    <string name="sender_server_search_offline">Offline: this device only</string>
+    <string name="sender_server_search_failed">Server search failed. Pull to retry.</string>
     <string name="one_click_unsubscribe_confirm">Ask <xliff:g id="sender">%s</xliff:g> to stop sending you mail? The app sends the request for you.</string>
     <string name="one_click_unsubscribe_done">Unsubscribe request sent</string>
     <string name="one_click_unsubscribe_failed">The sender did not accept the request. Opening their unsubscribe page instead.</string>

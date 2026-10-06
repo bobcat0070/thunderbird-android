@@ -86,6 +86,17 @@ class MessagingControllerWrapper(
     )
 
     /**
+     * Finds all mail from [address] on the server and downloads it.
+     *
+     * @param ids the accounts to search, or empty for every account.
+     */
+    fun searchRemoteSenderEverywhere(
+        ids: List<AccountId>,
+        address: String,
+        listener: MessagingListener,
+    ): Future<*>? = messagingController.searchRemoteSenderEverywhere(ids.map { it.toString() }, address, listener)
+
+    /**
      * Whether this account server can be asked to search at all.
      */
     fun isRemoteSearchSupported(id: AccountId): Boolean {

@@ -210,6 +210,9 @@ class GraphBackend internal constructor(
         performFullTextSearch: Boolean,
     ): Map<String, List<String>>? = commandSearch.searchAllFolders(query, requiredFlags, forbiddenFlags)
 
+    override fun searchAllFoldersFromSender(address: String): Map<String, List<String>>? =
+        commandSearch.searchAllFoldersFromSender(address)
+
     /**
      * Fetching an individual part is not supported: Graph serves message content as a whole MIME document, so the
      * complete message is downloaded instead.

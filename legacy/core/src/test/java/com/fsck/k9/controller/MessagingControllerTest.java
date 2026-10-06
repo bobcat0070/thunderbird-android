@@ -94,6 +94,7 @@ import static org.mockito.Mockito.when;
 public class MessagingControllerTest extends K9RobolectricTest {
     private static final long FOLDER_ID = 23;
     private static final String FOLDER_NAME = "Folder";
+    private static final String SENDER_ADDRESS = "sender@example.com";
     private static final long SENT_FOLDER_ID = 10;
     private static final long ARCHIVE_FOLDER_ID = 24;
     private static final String ARCHIVE_FOLDER_NAME = "Archive";
@@ -564,6 +565,7 @@ public class MessagingControllerTest extends K9RobolectricTest {
         // with an empty map instead, which reads as "searched everything, found nothing".
         when(backend.searchAllFolders(nullable(String.class), nullable(Set.class), nullable(Set.class), anyBoolean()))
             .thenReturn(null);
+        when(backend.searchAllFoldersFromSender(nullable(String.class))).thenReturn(null);
     }
 
     private void configureAccount() {
@@ -663,6 +665,74 @@ public class MessagingControllerTest extends K9RobolectricTest {
 
         verify(backend, never()).search(anyString(), anyString(), nullable(Set.class), nullable(Set.class),
             anyBoolean());
+    }
+
+    @Test
+    public void searchRemoteSenderEverywhere_shouldAskTheServerForMailFromTheSender() throws Exception {
+        // Searching for the address as text would also find, and spend the result limit on, mail sent to it.
+        setupRemoteSearch();
+        when(backend.searchAllFoldersFromSender(SENDER_ADDRESS))
+            .thenReturn(Collections.singletonMap(FOLDER_NAME, remoteMessages));
+
+        controller.searchRemoteSenderEverywhereSynchronous(Collections.<String>emptyList(), SENDER_ADDRESS, listener);
+
+        verify(backend, never()).searchAllFolders(anyString(), nullable(Set.class), nullable(Set.class),
+            anyBoolean());
+        verify(localFolder).extractNewMessages(remoteMessages);
+        verify(listener).remoteSearchServerQueryComplete(eq(FOLDER_ID), anyInt(), anyInt());
+    }
+
+    @Test
+    public void searchRemoteMessagesEverywhere_shouldSaveMatchesInAFolderNamedByItsServerId() throws Exception {
+        // A folder made from a server id has no database id until it is opened, so it must not be asked whether
+        // it exists first: that answered "no" for every folder, and every match was dropped.
+        setupRemoteSearch();
+        when(localFolder.exists()).thenReturn(false);
+        when(backend.searchAllFolders(eq("query"), nullable(Set.class), nullable(Set.class), anyBoolean()))
+            .thenReturn(Collections.singletonMap(FOLDER_NAME, remoteMessages));
+
+        controller.searchRemoteMessagesEverywhereSynchronous(Collections.<String>emptyList(), "query", reqFlags,
+            forbiddenFlags, listener);
+
+        verify(localFolder).extractNewMessages(remoteMessages);
+    }
+
+    @Test
+    public void searchRemoteMessagesEverywhere_shouldSkipMatchesInAFolderTheDeviceDoesNotHave() throws Exception {
+        // Its matches have nowhere to go until the next folder list refresh.
+        setupRemoteSearch();
+        doThrow(new MessagingException("Folder not found")).when(localFolder).open();
+        when(backend.searchAllFolders(eq("query"), nullable(Set.class), nullable(Set.class), anyBoolean()))
+            .thenReturn(Collections.singletonMap(FOLDER_NAME, remoteMessages));
+
+        controller.searchRemoteMessagesEverywhereSynchronous(Collections.<String>emptyList(), "query", reqFlags,
+            forbiddenFlags, listener);
+
+        verify(localFolder, never()).extractNewMessages(ArgumentMatchers.<String>anyList());
+        verify(listener, never()).remoteSearchFailed(nullable(String.class), nullable(String.class));
+    }
+
+    @Test
+    public void searchRemoteSenderEverywhere_whenTheServerCannotTellSendersApart_shouldSearchForTheAddress()
+        throws Exception {
+        setupRemoteSearch();
+
+        controller.searchRemoteSenderEverywhereSynchronous(Collections.<String>emptyList(), SENDER_ADDRESS, listener);
+
+        verify(backend).search(FOLDER_NAME, SENDER_ADDRESS, null, null, false);
+    }
+
+    @Test
+    public void searchRemoteSenderEverywhere_shouldDownloadPastTheResultLimit() throws Exception {
+        // The sender's list is meant to show all of their mail, not the first few matches of a quick search.
+        setupRemoteSearch();
+        account.setRemoteSearchNumResults(1);
+        when(backend.searchAllFoldersFromSender(SENDER_ADDRESS))
+            .thenReturn(Collections.singletonMap(FOLDER_NAME, remoteMessages));
+
+        controller.searchRemoteSenderEverywhereSynchronous(Collections.<String>emptyList(), SENDER_ADDRESS, listener);
+
+        verify(backend).downloadMessageStructure(eq(FOLDER_NAME), eq("newMessageUid2"));
     }
 
     @Test

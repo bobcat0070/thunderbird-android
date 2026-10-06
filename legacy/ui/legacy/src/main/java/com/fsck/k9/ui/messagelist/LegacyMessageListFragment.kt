@@ -283,6 +283,11 @@ class LegacyMessageListFragment :
         private set
     private var isSingleFolderMode = false
     private var isRemoteSearch = false
+
+    /**
+     * How far the server search of a "mail from this sender" list has got; unused by any other list.
+     */
+    private var senderServerSearch: SenderServerSearchStatus = SenderServerSearchStatus.NotStarted
     private var initialMessageListLoad = true
 
     private val isUnifiedFolders: Boolean
@@ -808,7 +813,10 @@ class LegacyMessageListFragment :
         }
 
         val subtitle = account.let { account ->
-            if (account == null || isUnifiedFolders || accountManager.getAccounts().size == 1) {
+            if (sender != null) {
+                // The sender's list spans accounts; what it needs to say is whether it is complete.
+                senderServerSearch.describe(resources)
+            } else if (account == null || isUnifiedFolders || accountManager.getAccounts().size == 1) {
                 null
             } else {
                 account.profile.name
@@ -1051,7 +1059,23 @@ class LegacyMessageListFragment :
 
         messagingControllerRegistry.addListener(activityListener)
 
+        startSenderServerSearchIfNeeded()
         updateTitle()
+    }
+
+    /**
+     * Searches the server for the sender's mail when their list opens, since the device holds only the newest part
+     * of each folder. Runs again on return if it was stopped before it finished.
+     */
+    private fun startSenderServerSearchIfNeeded() {
+        if (senderAddress == null || senderServerSearch != SenderServerSearchStatus.NotStarted) return
+        if (searchableAccountIds.isEmpty()) return
+
+        if (connectivityManager.isNetworkAvailable()) {
+            onRemoteSearchRequested()
+        } else {
+            senderServerSearch = SenderServerSearchStatus.Offline
+        }
     }
 
     override fun onPause() {
@@ -1078,6 +1102,12 @@ class LegacyMessageListFragment :
     }
 
     private fun onRemoteSearchRequested() {
+        val sender = senderAddress
+        if (sender != null) {
+            onSenderServerSearchRequested(sender)
+            return
+        }
+
         val queryString = localSearch.remoteSearchArguments
 
         isRemoteSearch = true
@@ -1108,6 +1138,21 @@ class LegacyMessageListFragment :
             )
         }
 
+        invalidateMenu()
+    }
+
+    private fun onSenderServerSearchRequested(address: String) {
+        isRemoteSearch = true
+        swipeRefreshLayout?.isEnabled = false
+        senderServerSearch = SenderServerSearchStatus.Searching(newMessages = 0)
+
+        remoteSearchFuture = messagingController.searchRemoteSenderEverywhere(
+            searchableAccountIds,
+            address,
+            activityListener,
+        )
+
+        updateTitle()
         invalidateMenu()
     }
 
@@ -1331,7 +1376,7 @@ class LegacyMessageListFragment :
             menu.findItem(R.id.expunge).isVisible = false
         }
 
-        menu.findItem(R.id.search_remote).isVisible = !isRemoteSearch && isRemoteSearchAllowed
+        menu.findItem(R.id.search_remote).isVisible = isRemoteSearchAllowed
         menu.findItem(R.id.search_everywhere).isVisible = isManualSearch && !localSearch.searchAllAccounts()
         val hasSenderMail = senderAddress != null && !currentMessageListItems.isNullOrEmpty()
         menu.findItem(R.id.sender_archive_all).isVisible = hasSenderMail
@@ -2088,6 +2133,11 @@ class LegacyMessageListFragment :
                     logger.error(logTag) { "Could not cancel remote search future." }
                 }
 
+                // Stopped before it finished, so it runs again when the list is back.
+                if (senderServerSearch.isRunning) {
+                    senderServerSearch = SenderServerSearchStatus.NotStarted
+                }
+
                 // Closing the folder will kill off the connection if we're mid-search.
                 val searchAccount = account!!
 
@@ -2354,7 +2404,12 @@ class LegacyMessageListFragment :
      * which names no folder, and any search for something that has since been filed away.
      */
     private val isRemoteSearchAllowed: Boolean
-        get() = isManualSearch && !isRemoteSearch && searchableAccountIds.isNotEmpty()
+        get() = isManualSearch && searchableAccountIds.isNotEmpty() && if (senderAddress != null) {
+            // The sender's list searches the server by itself, and can be asked again once that is done.
+            !senderServerSearch.isRunning
+        } else {
+            !isRemoteSearch
+        }
 
     /**
      * The accounts this search covers whose server can be searched, which is not all of them - POP3 cannot.
@@ -2450,6 +2505,18 @@ class LegacyMessageListFragment :
 
     override fun remoteSearchFinished() {
         remoteSearchFuture = null
+    }
+
+    private fun updateSenderServerSearch(status: SenderServerSearchStatus) {
+        if (senderAddress == null || status == senderServerSearch) return
+
+        senderServerSearch = status
+        if (!status.isRunning) {
+            swipeRefreshLayout?.isEnabled = isPullToRefreshAllowed
+        }
+
+        updateTitle()
+        invalidateMenu()
     }
 
     override fun setActiveMessage(messageReference: MessageReference?) {
@@ -2702,6 +2769,10 @@ class LegacyMessageListFragment :
 
         override fun remoteSearchFailed(folderServerId: String?, err: String?) {
             handler.post {
+                if (senderAddress != null) {
+                    updateSenderServerSearch(SenderServerSearchStatus.Failed)
+                }
+
                 activity?.let { activity ->
                     Toast.makeText(activity, R.string.remote_search_error, Toast.LENGTH_LONG).show()
                 }
@@ -2725,6 +2796,7 @@ class LegacyMessageListFragment :
         ) {
             handler.progress(false)
             handler.remoteSearchFinished()
+            handler.post { updateSenderServerSearch(senderServerSearch.finished()) }
 
             extraSearchResults = extraResults
             if (extraResults != null && extraResults.isNotEmpty()) {
@@ -2736,6 +2808,7 @@ class LegacyMessageListFragment :
 
         override fun remoteSearchServerQueryComplete(folderId: Long, numResults: Int, maxResults: Int) {
             handler.progress(true)
+            handler.post { updateSenderServerSearch(senderServerSearch.withFolderSearched(numResults)) }
 
             val footerText = if (maxResults != 0 && numResults > maxResults) {
                 resources.getQuantityString(

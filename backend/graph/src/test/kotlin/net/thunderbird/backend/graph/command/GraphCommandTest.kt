@@ -258,14 +258,25 @@ class GraphCommandTest {
     }
 
     @Test
-    fun `searching all folders should be one request with the matches grouped by folder`() {
+    fun `searching all folders should search the whole mailbox and group the matches by folder`() {
         server.enqueue(
             MockResponse().setBody(
                 """
                 {"value": [
-                  {"id": "m1", "parentFolderId": "inbox-id", "isRead": true},
-                  {"id": "m2", "parentFolderId": "archive-id", "isRead": false},
-                  {"id": "m3", "parentFolderId": "inbox-id", "isRead": false}
+                  {"id": "d1", "parentFolderId": "inbox-id", "internetMessageId": "<1@x>", "isRead": true},
+                  {"id": "d2", "parentFolderId": "archive-id", "internetMessageId": "<2@x>", "isRead": false},
+                  {"id": "d3", "parentFolderId": "inbox-id", "internetMessageId": "<3@x>", "isRead": false}
+                ]}
+                """.trimIndent(),
+            ),
+        )
+        server.enqueue(
+            MockResponse().setBody(
+                """
+                {"value": [
+                  {"id": "m1", "parentFolderId": "inbox-id", "internetMessageId": "<1@x>", "isRead": true},
+                  {"id": "m2", "parentFolderId": "archive-id", "internetMessageId": "<2@x>", "isRead": false},
+                  {"id": "m3", "parentFolderId": "inbox-id", "internetMessageId": "<3@x>", "isRead": false}
                 ]}
                 """.trimIndent(),
             ),
@@ -279,23 +290,138 @@ class GraphCommandTest {
         val request = server.takeRequest().requestUrl
         assertThat(request?.encodedPath).isEqualTo("/v1.0/me/messages")
         assertThat(request?.queryParameter("\$search")).isEqualTo("\"invoice\"")
+    }
+
+    @Test
+    fun `search matches should be saved under their immutable ids`() {
+        // $search answers with default ids however it is asked; saved as they come, every match already on the
+        // device was stored a second time.
+        server.enqueue(
+            MockResponse().setBody(
+                """{"value": [{"id": "default-id", "parentFolderId": "inbox-id", "internetMessageId": "<1@x>"}]}""",
+            ),
+        )
+        server.enqueue(
+            MockResponse().setBody(
+                """
+                {"value": [
+                  {"id": "immutable-id", "parentFolderId": "inbox-id", "internetMessageId": "<1@x>"},
+                  {"id": "sent-copy", "parentFolderId": "sent-id", "internetMessageId": "<1@x>"}
+                ]}
+                """.trimIndent(),
+            ),
+        )
+
+        val result = CommandSearch(createClient()).searchAllFolders("invoice", requiredFlags = null, null)
+
+        // Only the copy that matched: the one in Sent shares its Message-ID but was not found by the search.
+        assertThat(result).isEqualTo(mapOf("inbox-id" to listOf("immutable-id")))
+        server.takeRequest()
+        val lookup = server.takeRequest().requestUrl
+        assertThat(lookup?.queryParameter("\$filter")).isEqualTo("internetMessageId eq '<1@x>'")
+        assertThat(lookup?.queryParameter("\$search")).isNull()
+    }
+
+    @Test
+    fun `a search match with no message id should be left out`() {
+        // There is nothing to look it up again by, and saved under its default id it would be a duplicate.
+        server.enqueue(MockResponse().setBody("""{"value": [{"id": "d1", "parentFolderId": "inbox-id"}]}"""))
+
+        val result = CommandSearch(createClient()).searchAllFolders("invoice", requiredFlags = null, null)
+
+        assertThat(result).isEqualTo(emptyMap())
         assertThat(server.requestCount).isEqualTo(1)
     }
 
     @Test
-    fun `searching all folders should still respect the requested flags`() {
+    fun `a message id containing a quote should be escaped when looked up again`() {
         server.enqueue(
             MockResponse().setBody(
-                """
-                {"value": [{"id": "m1", "parentFolderId": "f", "isRead": true}, {"id": "m2", "parentFolderId": "f"}]}
-                """.trimIndent(),
+                """{"value": [{"id": "d1", "parentFolderId": "f", "internetMessageId": "<o'brien@x>"}]}""",
             ),
         )
+        server.enqueue(MockResponse().setBody("""{"value": []}"""))
+
+        CommandSearch(createClient()).searchAllFolders("invoice", requiredFlags = null, forbiddenFlags = null)
+
+        server.takeRequest()
+        val filter = server.takeRequest().requestUrl?.queryParameter("\$filter")
+        assertThat(filter).isEqualTo("internetMessageId eq '<o''brien@x>'")
+    }
+
+    @Test
+    fun `searching all folders should still respect the requested flags`() {
+        val matches = """
+            {"value": [
+              {"id": "m1", "parentFolderId": "f", "internetMessageId": "<1@x>", "isRead": true},
+              {"id": "m2", "parentFolderId": "f", "internetMessageId": "<2@x>"}
+            ]}
+        """.trimIndent()
+        server.enqueue(MockResponse().setBody(matches))
+        server.enqueue(MockResponse().setBody(matches))
 
         val result = CommandSearch(createClient())
             .searchAllFolders("invoice", requiredFlags = null, forbiddenFlags = setOf(Flag.SEEN))
 
         assertThat(result).isEqualTo(mapOf("f" to listOf("m2")))
+    }
+
+    @Test
+    fun `searching for a sender should list mail from them only`() {
+        server.enqueue(
+            MockResponse().setBody(
+                """
+                {"value": [{"id": "m1", "parentFolderId": "inbox-id"}, {"id": "m2", "parentFolderId": "misc-id"}]}
+                """.trimIndent(),
+            ),
+        )
+
+        val result = CommandSearch(createClient()).searchAllFoldersFromSender("eva@example.com")
+
+        assertThat(result).isEqualTo(mapOf("inbox-id" to listOf("m1"), "misc-id" to listOf("m2")))
+        val request = server.takeRequest().requestUrl
+        assertThat(request?.encodedPath).isEqualTo("/v1.0/me/messages")
+        // A listing rather than a $search: the address as text also matches mail sent to it, and $search answers
+        // with ids the synchronized mail is not stored under.
+        assertThat(request?.queryParameter("\$filter")).isEqualTo("from/emailAddress/address eq 'eva@example.com'")
+        assertThat(request?.queryParameter("\$search")).isNull()
+    }
+
+    @Test
+    fun `a sender search should follow the listing to its next page`() {
+        server.enqueue(
+            MockResponse().setBody(
+                """
+                {"value": [{"id": "m1", "parentFolderId": "inbox-id"}],
+                 "@odata.nextLink": "${server.url("/v1.0/me/messages?page=2")}"}
+                """.trimIndent(),
+            ),
+        )
+        server.enqueue(MockResponse().setBody("""{"value": [{"id": "m2", "parentFolderId": "inbox-id"}]}"""))
+
+        val result = CommandSearch(createClient()).searchAllFoldersFromSender("eva@example.com")
+
+        assertThat(result).isEqualTo(mapOf("inbox-id" to listOf("m1", "m2")))
+        assertThat(server.requestCount).isEqualTo(2)
+    }
+
+    @Test
+    fun `a sender address containing a quote should be escaped for OData`() {
+        server.enqueue(MockResponse().setBody("""{"value": []}"""))
+
+        CommandSearch(createClient()).searchAllFoldersFromSender("o'brien@example.com")
+
+        // A bare single quote would end the string literal and let the rest of the address into the filter.
+        val filter = server.takeRequest().requestUrl?.queryParameter("\$filter")
+        assertThat(filter).isEqualTo("from/emailAddress/address eq 'o''brien@example.com'")
+    }
+
+    @Test
+    fun `a sender search with no address should not reach the server`() {
+        val result = CommandSearch(createClient()).searchAllFoldersFromSender("  ")
+
+        assertThat(result).isNull()
+        assertThat(server.requestCount).isEqualTo(0)
     }
 
     @Test
@@ -355,11 +481,14 @@ class GraphCommandTest {
 
     @Test
     fun `text search results should still respect the requested flags`() {
-        server.enqueue(
-            MockResponse().setBody(
-                """{"value":[{"id":"read","isRead":true},{"id":"unread","isRead":false}]}""",
-            ),
-        )
+        val matches = """
+            {"value":[
+              {"id":"read","parentFolderId":"inbox-id","internetMessageId":"<1@x>","isRead":true},
+              {"id":"unread","parentFolderId":"inbox-id","internetMessageId":"<2@x>","isRead":false}
+            ]}
+        """.trimIndent()
+        server.enqueue(MockResponse().setBody(matches))
+        server.enqueue(MockResponse().setBody(matches))
 
         val result = CommandSearch(createClient())
             .search("inbox-id", "invoice", requiredFlags = null, forbiddenFlags = setOf(Flag.SEEN))
