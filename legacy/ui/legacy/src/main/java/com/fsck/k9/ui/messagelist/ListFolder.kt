@@ -1,30 +1,47 @@
 package com.fsck.k9.ui.messagelist
 
+import com.fsck.k9.mail.FolderType
 import net.thunderbird.core.android.account.LegacyAccount
 
 /**
- * Names the folder of each message, when the list holds mail from more than one.
+ * A folder a message list draws from: its name, and what kind of folder it is.
+ */
+internal data class ListFolder(val name: String, val type: FolderType)
+
+/**
+ * Names the folder of each message, when the list holds mail from mixed folders.
  *
  * In a sender's list or a search a message could be filed anywhere, and filing it again means knowing where it is
- * now. A list from one folder says so in its title already, and a unified inbox, whose folders all have the same
- * name, would only repeat it on every row.
+ * now. A list from one folder says so in its title already. Nor are the inboxes of a unified inbox mixed, though
+ * each account names its own differently ("Inbox", "INBOX"): every row would only say the same thing. So folders
+ * of the same special kind count as one, and others as one when their names differ only in case.
  *
- * @param folderName the name of a folder, looked up once for each folder in the list.
+ * @param folder the folder a message is in, looked up once for each folder in the list.
  */
 internal fun List<MessageListItem>.withFolderNames(
-    folderName: (account: LegacyAccount, folderId: Long) -> String?,
+    folder: (account: LegacyAccount, folderId: Long) -> ListFolder?,
 ): List<MessageListItem> {
     val folders = distinctBy { it.account.uuid to it.folderId }
     if (folders.size < 2) return this
 
-    val names = folders.associate { item ->
-        (item.account.uuid to item.folderId) to folderName(item.account, item.folderId)
+    val listFolders = folders.associate { item ->
+        (item.account.uuid to item.folderId) to folder(item.account, item.folderId)
     }
-    val isFromDifferentlyNamedFolders = names.values.filterNotNull().distinct().size > 1
+    val isFromMixedFolders = listFolders.values.filterNotNull().distinctBy { it.kind }.size > 1
 
-    return if (isFromDifferentlyNamedFolders) {
-        map { item -> item.copy(folderName = names[item.account.uuid to item.folderId]) }
+    return if (isFromMixedFolders) {
+        map { item -> item.copy(folderName = listFolders[item.account.uuid to item.folderId]?.name) }
     } else {
         this
     }
 }
+
+private val ListFolder.kind: Any
+    get() = when {
+        type != FolderType.REGULAR -> type
+        // IMAP reserves the name INBOX in any case, whether or not the account has recorded it as its inbox.
+        name.equals(IMAP_INBOX, ignoreCase = true) -> FolderType.INBOX
+        else -> name.lowercase()
+    }
+
+private const val IMAP_INBOX = "INBOX"

@@ -3,13 +3,14 @@ package com.fsck.k9.ui.messagelist
 import assertk.assertThat
 import assertk.assertions.containsExactly
 import assertk.assertions.isEqualTo
+import com.fsck.k9.mail.FolderType
 import net.thunderbird.core.android.account.LegacyAccount
 import net.thunderbird.feature.mail.message.classification.api.MessageClass
 import org.junit.Test
 import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.mock
 
-class MessageListFolderNamesTest {
+class ListFolderTest {
 
     @Test
     fun `messages from different folders should be named by their folder`() {
@@ -30,12 +31,42 @@ class MessageListFolderNamesTest {
     }
 
     @Test
-    fun `folders with the same name in different accounts should not be named`() {
-        // A unified inbox: every row would say "Inbox".
+    fun `the inboxes of a unified inbox should not be named though their names differ`() {
+        // Gmail calls its inbox "INBOX" and Microsoft 365 "Inbox"; naming them labelled every row of the unified inbox.
         val otherAccount = account("other")
         val testSubject = listOf(item(1, INBOX_ID), item(2, INBOX_ID, otherAccount))
 
-        val result = testSubject.withFolderNames { _, _ -> "Inbox" }
+        val result = testSubject.withFolderNames { account, _ ->
+            ListFolder(if (account === otherAccount) "INBOX" else "Inbox", FolderType.INBOX)
+        }
+
+        assertThat(result.map { it.folderName }).containsExactly(null, null)
+    }
+
+    @Test
+    fun `an inbox not recorded as one should still count as an inbox`() {
+        val otherAccount = account("other")
+        val testSubject = listOf(item(1, INBOX_ID), item(2, INBOX_ID, otherAccount))
+
+        val result = testSubject.withFolderNames { account, _ ->
+            if (account === otherAccount) {
+                ListFolder("INBOX", FolderType.REGULAR)
+            } else {
+                ListFolder("Inbox", FolderType.INBOX)
+            }
+        }
+
+        assertThat(result.map { it.folderName }).containsExactly(null, null)
+    }
+
+    @Test
+    fun `ordinary folders whose names differ only in case should not be named`() {
+        val otherAccount = account("other")
+        val testSubject = listOf(item(1, MISC_ID), item(2, MISC_ID, otherAccount))
+
+        val result = testSubject.withFolderNames { account, _ ->
+            ListFolder(if (account === otherAccount) "MISC" else "Misc", FolderType.REGULAR)
+        }
 
         assertThat(result.map { it.folderName }).containsExactly(null, null)
     }
@@ -84,7 +115,10 @@ class MessageListFolderNamesTest {
     private companion object {
         const val INBOX_ID = 1L
         const val MISC_ID = 2L
-        val FOLDER_NAMES = mapOf(INBOX_ID to "Inbox", MISC_ID to "Misc")
+        val FOLDER_NAMES = mapOf(
+            INBOX_ID to ListFolder("Inbox", FolderType.INBOX),
+            MISC_ID to ListFolder("Misc", FolderType.REGULAR),
+        )
         val ACCOUNT: LegacyAccount = mock { on { uuid } doReturn "account" }
     }
 }
