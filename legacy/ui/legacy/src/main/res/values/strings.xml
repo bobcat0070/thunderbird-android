@@ -404,6 +404,29 @@
     <string name="undo_send_sending">Sending…</string>
     <string name="undo_send_action">Undo</string>
     <string name="undo_send_too_late">The message has already been sent</string>
+    <!-- Shown for a few seconds after mail is deleted or moved, beside "Undo". -->
+    <plurals name="undo_mail_deleted">
+        <item quantity="one">Message deleted</item>
+        <item quantity="other"><xliff:g id="count">%1$d</xliff:g> messages deleted</item>
+    </plurals>
+    <plurals name="undo_mail_archived">
+        <item quantity="one">Message archived</item>
+        <item quantity="other"><xliff:g id="count">%1$d</xliff:g> messages archived</item>
+    </plurals>
+    <plurals name="undo_mail_spam">
+        <item quantity="one">Message moved to spam</item>
+        <item quantity="other"><xliff:g id="count">%1$d</xliff:g> messages moved to spam</item>
+    </plurals>
+    <plurals name="undo_mail_moved_to">
+        <item quantity="one">Moved to <xliff:g id="folder">%2$s</xliff:g></item>
+        <item quantity="other"><xliff:g id="count">%1$d</xliff:g> messages moved to <xliff:g id="folder">%2$s</xliff:g></item>
+    </plurals>
+    <plurals name="undo_mail_moved">
+        <item quantity="one">Message moved</item>
+        <item quantity="other"><xliff:g id="count">%1$d</xliff:g> messages moved</item>
+    </plurals>
+    <string name="undo_mail_action">Undo</string>
+    <string name="undo_mail_too_late">It has already been done</string>
     <string name="deceptive_link_title">Check this link</string>
     <string name="deceptive_link_message">The link says <xliff:g id="shown_site">%1$s</xliff:g>, but it opens <xliff:g id="actual_site">%2$s</xliff:g>. Links like this are often used for phishing.</string>
     <string name="deceptive_link_open_anyway">Open anyway</string>

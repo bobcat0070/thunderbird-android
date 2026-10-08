@@ -2,6 +2,7 @@ package com.fsck.k9.ui.messagelist
 
 import app.k9mail.legacy.mailstore.MessageListRepository
 import com.fsck.k9.contacts.ContactLetterBitmapCreator
+import com.fsck.k9.controller.MailActionHold
 import com.fsck.k9.helper.MessageHelper
 import com.fsck.k9.mailstore.LocalStoreProvider
 import com.fsck.k9.mailstore.MessageColumns
@@ -31,6 +32,7 @@ class MessageListLoader(
     private val featureFlagProvider: FeatureFlagProvider,
     private val contactLetterBitmapCreator: ContactLetterBitmapCreator,
     private val impersonationChecker: ImpersonationChecker,
+    private val mailActionHold: MailActionHold,
 ) {
 
     /**
@@ -49,11 +51,14 @@ class MessageListLoader(
 
     private fun getMessageListInfo(config: MessageListConfig, limit: Int?): MessageListInfo {
         val accounts = config.search.getLegacyAccounts(accountManager)
+        // Mail waiting to be deleted or moved has already left, as far as the reader is concerned.
+        val heldMessages = mailActionHold.heldActions.value.flatMapTo(mutableSetOf()) { it.messages }
         // Each account's first messages are enough to find the first of all of them.
         val messageListItems = accounts
             .flatMap { account ->
                 loadMessageListForAccount(account, config, limit)
             }
+            .filterNot { it.messageReference in heldMessages }
             .sortedWith(config)
             .let { items -> if (limit != null) items.take(limit) else items }
             .withFolderNames { account, folderId -> loadFolder(account, folderId) }

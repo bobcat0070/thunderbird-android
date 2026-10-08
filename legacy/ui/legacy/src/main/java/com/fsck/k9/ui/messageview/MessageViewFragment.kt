@@ -46,6 +46,7 @@ import com.fsck.k9.activity.MessageLoaderHelper
 import com.fsck.k9.activity.MessageLoaderHelper.MessageLoaderCallbacks
 import com.fsck.k9.activity.MessageLoaderHelperFactory
 import com.fsck.k9.activity.compose.MessageActions
+import com.fsck.k9.controller.MailActionHold
 import com.fsck.k9.controller.MessagingController
 import com.fsck.k9.fragment.AttachmentDownloadDialogFragment
 import com.fsck.k9.fragment.ConfirmationDialogFragment
@@ -136,6 +137,7 @@ class MessageViewFragment :
     private val accountManager: LegacyAccountDtoManager by inject()
     private val authenticationServerTrust: AuthenticationServerTrust by inject()
     private val messagingController: MessagingController by inject()
+    private val mailActionHold: MailActionHold by inject()
     private val attachmentLoadingController: AttachmentLoadingController by inject()
     private val shareIntentBuilder: ShareIntentBuilder by inject()
     private val generalSettingsManager: GeneralSettingsManager by inject()
@@ -850,7 +852,9 @@ class MessageViewFragment :
 
         fragmentListener.performNavigationAfterMessageRemoval()
 
-        messagingController.deleteMessage(messageReference)
+        val controller = messagingController
+        val reference = messageReference
+        mailActionHold.hold(MailActionHold.Kind.Delete, listOf(reference)) { controller.deleteMessage(reference) }
     }
 
     private fun disableDeleteMenuItem() {
@@ -879,8 +883,25 @@ class MessageViewFragment :
     private fun refileMessage(destinationFolderId: Long) {
         fragmentListener.performNavigationAfterMessageRemoval()
 
-        val sourceFolderId = messageReference.folderId
-        messagingController.moveMessage(account, sourceFolderId, messageReference, destinationFolderId)
+        val kind = if (destinationFolderId == account.spamFolderId) {
+            MailActionHold.Kind.Spam
+        } else {
+            MailActionHold.Kind.Move(destinationFolderId)
+        }
+        holdMove(kind, destinationFolderId)
+    }
+
+    /**
+     * Moves the message after the moment "Undo" is offered for, with everything captured now: by then the reader
+     * has moved on to another message, or back to the list.
+     */
+    private fun holdMove(kind: MailActionHold.Kind, destinationFolderId: Long) {
+        val controller = messagingController
+        val account = account
+        val reference = messageReference
+        mailActionHold.hold(kind, listOf(reference)) {
+            controller.moveMessage(account, reference.folderId, reference, destinationFolderId)
+        }
     }
 
     fun onReply(forceReplyAction: Boolean = false) {
@@ -986,7 +1007,10 @@ class MessageViewFragment :
         }
 
         fragmentListener.performNavigationAfterMessageRemoval()
-        messagingController.archiveMessage(messageReference)
+
+        val controller = messagingController
+        val reference = messageReference
+        mailActionHold.hold(MailActionHold.Kind.Archive, listOf(reference)) { controller.archiveMessage(reference) }
     }
 
     private fun onSpam() {
@@ -1071,7 +1095,7 @@ class MessageViewFragment :
 
         fragmentListener.performNavigationAfterMessageRemoval()
 
-        moveMessage(messageReference, destinationFolderId)
+        holdMove(MailActionHold.Kind.Move(destinationFolderId), destinationFolderId)
     }
 
     private fun onChooseFolderCopyResult(result: ChooseFolderResultContract.Result?) {
@@ -1150,10 +1174,6 @@ class MessageViewFragment :
         serverCategories?.let { messageTopView.messageHeaderView.setServerCategories(it) }
 
         invalidateMenu()
-    }
-
-    private fun moveMessage(reference: MessageReference?, folderId: Long) {
-        messagingController.moveMessage(account, messageReference.folderId, reference, folderId)
     }
 
     private fun copyMessage(reference: MessageReference?, folderId: Long) {

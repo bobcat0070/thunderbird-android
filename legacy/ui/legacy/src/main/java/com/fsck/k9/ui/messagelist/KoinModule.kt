@@ -21,6 +21,7 @@ val messageListUiModule = module {
             featureFlagProvider = get(),
             contactLetterBitmapCreator = get(),
             impersonationChecker = get(),
+            mailActionHold = get(),
         )
     }
     factory {
@@ -28,6 +29,7 @@ val messageListUiModule = module {
             messageListLoader = get(),
             accountManager = get(),
             messageListRepository = get(),
+            mailActionHold = get(),
         )
     }
     factory {

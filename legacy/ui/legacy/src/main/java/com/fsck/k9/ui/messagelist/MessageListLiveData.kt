@@ -4,9 +4,12 @@ import androidx.lifecycle.LiveData
 import app.k9mail.legacy.mailstore.MessageListChangedListener
 import app.k9mail.legacy.mailstore.MessageListRepository
 import app.k9mail.legacy.message.controller.MessageReference
+import com.fsck.k9.controller.MailActionHold
 import com.fsck.k9.search.getLegacyAccountUuids
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.plus
 import kotlinx.coroutines.withContext
@@ -16,6 +19,7 @@ class MessageListLiveData(
     private val messageListLoader: MessageListLoader,
     private val accountManager: LegacyAccountManager,
     private val messageListRepository: MessageListRepository,
+    private val mailActionHold: MailActionHold,
     private val coroutineScope: CoroutineScope,
     val config: MessageListConfig,
 ) : LiveData<MessageListInfo>() {
@@ -41,10 +45,19 @@ class MessageListLiveData(
         loader.requestLoad()
     }
 
+    /**
+     * Reloads the list when mail is held for deleting or moving, or let go by "Undo", which is when it leaves the
+     * list or comes back to it.
+     */
+    private var heldActionsJob: Job? = null
+
     override fun onActive() {
         super.onActive()
 
         registerMessageListChangedListenerAsync()
+        heldActionsJob = coroutineScope.launch(Dispatchers.Main) {
+            mailActionHold.heldActions.drop(1).collect { loadMessageListAsync() }
+        }
 
         if (value == null) {
             showNewestMessagesThenAll()
@@ -75,6 +88,8 @@ class MessageListLiveData(
     override fun onInactive() {
         super.onInactive()
         messageListRepository.removeListener(messageListChangedListener)
+        heldActionsJob?.cancel()
+        heldActionsJob = null
     }
 
     private fun registerMessageListChangedListenerAsync() {

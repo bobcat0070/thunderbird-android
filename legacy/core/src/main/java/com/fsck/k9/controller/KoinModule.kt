@@ -52,6 +52,8 @@ val controllerModule = module {
         UndoSendHold(delaySeconds = { generalSettingsManager.getConfig().interaction.undoSendDelaySeconds })
     }
 
+    single { MailActionHold() }
+
     single {
         MessagingControllerWrapper(
             messagingController = get(),

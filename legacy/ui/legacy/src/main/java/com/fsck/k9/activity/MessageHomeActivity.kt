@@ -92,6 +92,7 @@ import net.thunderbird.feature.search.legacy.api.SearchAttribute
 import net.thunderbird.feature.search.legacy.api.SearchCondition
 import net.thunderbird.feature.search.legacy.serialization.LocalMessageSearchSerializer
 import net.thunderbird.legacy.logging.Log
+import org.koin.android.ext.android.get
 import org.koin.android.ext.android.inject
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
@@ -128,6 +129,14 @@ open class MessageHomeActivity :
     private val generalSettingsManager: GeneralSettingsManager by inject()
     private val messagingController: MessagingController by inject()
     private val undoSendHold: UndoSendHold by inject()
+    private val mailActionUndoBar: MailActionUndoBar by lazy {
+        MailActionUndoBar(
+            activity = this,
+            mailActionHold = get(),
+            messageStoreManager = get(),
+            host = { findViewById(R.id.message_list_coordinator) ?: findViewById(android.R.id.content) },
+        )
+    }
 
     /**
      * The held message the "Undo" snackbar on screen is for, so the same one is not offered twice.
@@ -234,6 +243,7 @@ open class MessageHomeActivity :
         openLaunchThread()
         initializeFoldableObserver()
         initializeUndoSend()
+        mailActionUndoBar.start()
 
         val backPressedCallback = object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
@@ -767,6 +777,15 @@ open class MessageHomeActivity :
 
         if (contactRepository is CachingRepository) {
             (contactRepository as CachingRepository).clearCache()
+        }
+    }
+
+    override fun onStop() {
+        super.onStop()
+
+        // A rotation brings the screen straight back, with "Undo" still on it.
+        if (!isChangingConfigurations) {
+            mailActionUndoBar.releaseWaitingActions()
         }
     }
 

@@ -140,6 +140,7 @@ import net.thunderbird.feature.search.legacy.LocalMessageSearch
 import net.thunderbird.feature.search.legacy.SearchAccount
 import net.thunderbird.feature.search.legacy.senderSearchAddress
 import net.thunderbird.feature.search.legacy.serialization.LocalMessageSearchSerializer
+import com.fsck.k9.controller.MailActionHold
 import com.fsck.k9.ui.messageview.PinnedFolderMenu
 import com.fsck.k9.ui.messageview.moveToTitle
 import org.koin.android.ext.android.get
@@ -195,6 +196,7 @@ class LegacyMessageListFragment :
         )
     }
     private val messagingController: MessagingControllerWrapper by inject()
+    private val mailActionHold: MailActionHold by inject()
     private val messagingControllerRegistry: MessagingControllerRegistry by inject()
     private val messageRepository: MessageRepository by inject()
     private val oneClickUnsubscriber: OneClickUnsubscriber by inject()
@@ -1236,10 +1238,11 @@ class LegacyMessageListFragment :
     }
 
     private fun onDeleteConfirmed(messages: List<MessageReference>) {
-        if (showingThreadedList) {
-            messagingController.deleteThreads(messages)
-        } else {
-            messagingController.deleteMessages(messages)
+        // Captured now: the hold runs this after a moment, by which time the list may be gone.
+        val controller = messagingController
+        val isThreads = showingThreadedList
+        mailActionHold.hold(MailActionHold.Kind.Delete, messages) {
+            if (isThreads) controller.deleteThreads(messages) else controller.deleteMessages(messages)
         }
     }
 
@@ -1930,10 +1933,10 @@ class LegacyMessageListFragment :
     private fun onArchive(messages: List<MessageReference>) {
         if (!checkCopyOrMovePossible(messages, FolderOperation.MOVE)) return
 
-        if (showingThreadedList) {
-            messagingController.archiveThreads(messages)
-        } else {
-            messagingController.archiveMessages(messages)
+        val controller = messagingController
+        val isThreads = showingThreadedList
+        mailActionHold.hold(MailActionHold.Kind.Archive, messages) {
+            if (isThreads) controller.archiveThreads(messages) else controller.archiveMessages(messages)
         }
     }
 
@@ -1954,11 +1957,15 @@ class LegacyMessageListFragment :
     }
 
     private fun onSpamConfirmed(messages: List<MessageReference>) {
-        for ((account, messagesInAccount) in groupMessagesByAccount(messages)) {
+        if (!checkCopyOrMovePossible(messages, FolderOperation.MOVE)) return
+
+        // One undo for the whole selection, though each account's mail goes to its own spam folder.
+        val moves = groupMessagesByAccount(messages).flatMap { (account, messagesInAccount) ->
             account.spamFolderId?.let { spamFolderId ->
-                move(messagesInAccount, spamFolderId)
-            }
+                copyOrMoveCalls(messagesInAccount, spamFolderId, FolderOperation.MOVE)
+            }.orEmpty()
         }
+        mailActionHold.hold(MailActionHold.Kind.Spam, messages) { moves.forEach { it() } }
     }
 
     private fun checkCopyOrMovePossible(messages: List<MessageReference>, operation: FolderOperation): Boolean {
@@ -2003,54 +2010,55 @@ class LegacyMessageListFragment :
     private fun copyOrMove(messages: List<MessageReference>, destinationFolderId: Long, operation: FolderOperation) {
         if (!checkCopyOrMovePossible(messages, operation)) return
 
+        val calls = copyOrMoveCalls(messages, destinationFolderId, operation)
+        if (operation == FolderOperation.MOVE) {
+            val moved = messages.filterNot { it.folderId == destinationFolderId }
+            mailActionHold.hold(MailActionHold.Kind.Move(destinationFolderId), moved) { calls.forEach { it() } }
+        } else {
+            calls.forEach { it() }
+        }
+    }
+
+    /**
+     * The controller calls that copy or move [messages], one per folder they are in, with everything they need
+     * captured now so they can be run later, when the list may be gone.
+     */
+    private fun copyOrMoveCalls(
+        messages: List<MessageReference>,
+        destinationFolderId: Long,
+        operation: FolderOperation,
+    ): List<() -> Unit> {
+        val controller = messagingController
+        val isThreads = showingThreadedList
         val folderMap = messages.asSequence()
             .filterNot { it.folderId == destinationFolderId }
             .groupBy { it.folderId }
 
-        for ((folderId, messagesInFolder) in folderMap) {
+        return folderMap.mapNotNull { (folderId, messagesInFolder) ->
             val account = accountManager.getAccount(messagesInFolder.first().accountUuid)
             if (account == null) {
                 logger.debug(logTag) {
                     "Account for message ${messagesInFolder.first()} not found, skipping copy/move operation"
                 }
-                continue
+                return@mapNotNull null
             }
 
+            val accountId = account.id
             when (operation) {
-                FolderOperation.MOVE if showingThreadedList -> {
-                    messagingController.moveMessagesInThread(
-                        account.id,
-                        folderId,
-                        messagesInFolder,
-                        destinationFolderId,
-                    )
+                FolderOperation.MOVE if isThreads -> {
+                    { controller.moveMessagesInThread(accountId, folderId, messagesInFolder, destinationFolderId) }
                 }
 
                 FolderOperation.MOVE -> {
-                    messagingController.moveMessages(
-                        account.id,
-                        folderId,
-                        messagesInFolder,
-                        destinationFolderId,
-                    )
+                    { controller.moveMessages(accountId, folderId, messagesInFolder, destinationFolderId) }
                 }
 
-                FolderOperation.COPY if showingThreadedList -> {
-                    messagingController.copyMessagesInThread(
-                        account.id,
-                        folderId,
-                        messagesInFolder,
-                        destinationFolderId,
-                    )
+                FolderOperation.COPY if isThreads -> {
+                    { controller.copyMessagesInThread(accountId, folderId, messagesInFolder, destinationFolderId) }
                 }
 
                 FolderOperation.COPY -> {
-                    messagingController.copyMessages(
-                        account.id,
-                        folderId,
-                        messagesInFolder,
-                        destinationFolderId,
-                    )
+                    { controller.copyMessages(accountId, folderId, messagesInFolder, destinationFolderId) }
                 }
             }
         }
