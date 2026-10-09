@@ -11,9 +11,10 @@ import org.junit.Test
 
 class MailActionHoldTest {
     private val scheduled = mutableListOf<Pair<Long, Runnable>>()
+    private var now = NOW
     private val testSubject = MailActionHold(
         delayMillis = DELAY_MILLIS,
-        currentTimeMillis = { NOW },
+        currentTimeMillis = { now },
         schedule = { delayMillis, action -> scheduled += delayMillis to action },
     )
 
@@ -33,7 +34,51 @@ class MailActionHoldTest {
         runScheduled()
 
         assertThat(performed).isEqualTo(1)
+        assertThat(testSubject.heldActions.value).isEmpty()
+    }
+
+    @Test
+    fun `mail should stay hidden after the wait until the action has taken it away`() {
+        // The action is queued behind whatever the app is doing; shown again in between, the mail flashed back
+        // into the list just as "Undo" went away.
+        testSubject.hold(MailActionHold.Kind.Delete, listOf(MESSAGE)) { }
+        runScheduled()
+
+        testSubject.forgetReleased { false }
+
+        assertThat(testSubject.isHeld(MESSAGE)).isTrue()
+    }
+
+    @Test
+    fun `mail should no longer be hidden once it is gone from where it was`() {
+        // So that mail moved back there later is shown.
+        testSubject.hold(MailActionHold.Kind.Move(folderId = 7), listOf(MESSAGE)) { }
+        runScheduled()
+
+        testSubject.forgetReleased { message -> message == MESSAGE }
+
         assertThat(testSubject.isHeld(MESSAGE)).isFalse()
+    }
+
+    @Test
+    fun `mail whose action never took effect should come back in the end`() {
+        testSubject.hold(MailActionHold.Kind.Archive, listOf(MESSAGE)) { }
+        runScheduled()
+        now += 120_000L
+
+        testSubject.forgetReleased { false }
+
+        assertThat(testSubject.isHeld(MESSAGE)).isFalse()
+    }
+
+    @Test
+    fun `releasing everything should keep the mail hidden until it is gone`() {
+        testSubject.hold(MailActionHold.Kind.Delete, listOf(MESSAGE)) { }
+
+        testSubject.releaseAll()
+
+        assertThat(testSubject.heldActions.value).isEmpty()
+        assertThat(testSubject.isHeld(MESSAGE)).isTrue()
     }
 
     @Test
@@ -47,6 +92,7 @@ class MailActionHoldTest {
         assertThat(result).isTrue()
         assertThat(performed).isEqualTo(0)
         assertThat(testSubject.heldActions.value).isEmpty()
+        assertThat(testSubject.isHeld(MESSAGE)).isFalse()
     }
 
     @Test

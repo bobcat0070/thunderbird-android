@@ -1,6 +1,7 @@
 package com.fsck.k9.ui.messagelist
 
 import app.k9mail.legacy.mailstore.MessageListRepository
+import app.k9mail.legacy.message.controller.MessageReference
 import com.fsck.k9.contacts.ContactLetterBitmapCreator
 import com.fsck.k9.controller.MailActionHold
 import com.fsck.k9.helper.MessageHelper
@@ -11,6 +12,7 @@ import com.fsck.k9.search.getLegacyAccounts
 import net.thunderbird.core.android.account.LegacyAccount
 import net.thunderbird.core.android.account.LegacyAccountManager
 import net.thunderbird.core.android.account.SortType
+import net.thunderbird.core.common.mail.Flag
 import net.thunderbird.core.featureflag.FeatureFlagProvider
 import net.thunderbird.core.featureflag.keys.GeneratedFeatureFlagKey
 import net.thunderbird.core.preference.display.visualSettings.message.list.MessageListPreferencesManager
@@ -52,7 +54,8 @@ class MessageListLoader(
     private fun getMessageListInfo(config: MessageListConfig, limit: Int?): MessageListInfo {
         val accounts = config.search.getLegacyAccounts(accountManager)
         // Mail waiting to be deleted or moved has already left, as far as the reader is concerned.
-        val heldMessages = mailActionHold.heldActions.value.flatMapTo(mutableSetOf()) { it.messages }
+        mailActionHold.forgetReleased(::isGoneFromItsFolder)
+        val heldMessages = mailActionHold.hiddenMessages()
         // Each account's first messages are enough to find the first of all of them.
         val messageListItems = accounts
             .flatMap { account ->
@@ -211,6 +214,25 @@ class MessageListLoader(
         }.thenByDescending { it.databaseId }
 
         return this.sortedWith(comparator)
+    }
+
+    /**
+     * Whether a message is no longer in the folder it was in: removed, or left behind as the placeholder a move or
+     * delete leaves until the server has caught up.
+     */
+    @Suppress("TooGenericExceptionCaught", "SwallowedException")
+    private fun isGoneFromItsFolder(message: MessageReference): Boolean {
+        return try {
+            val account = accountManager.getAccount(message.accountUuid) ?: return true
+            val localMessage = localStoreProvider.getInstanceByLegacyAccount(account)
+                .getFolder(message.folderId)
+                .getMessage(message.uid)
+
+            localMessage == null || localMessage.isSet(Flag.DELETED)
+        } catch (e: Exception) {
+            // Not known to be gone: it stays hidden, until the hold's limit if need be.
+            false
+        }
     }
 
     @Suppress("TooGenericExceptionCaught", "SwallowedException")
