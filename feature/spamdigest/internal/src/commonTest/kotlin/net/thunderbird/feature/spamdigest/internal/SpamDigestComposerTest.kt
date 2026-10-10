@@ -81,6 +81,55 @@ class SpamDigestComposerTest {
     }
 
     @Test
+    fun `a digest covering several days should name them all and list each day's mail under it`() {
+        // Made up for the digests that did not go out, so no day's spam goes unreported.
+        val secondDay = Instant.parse("2026-10-03T09:00:00Z")
+        val accounts = listOf(
+            AccountSpam(
+                account = work,
+                result = SpamFolderResult.Read(
+                    SpamFolderContents(
+                        messages = listOf(
+                            spamMessage("Later", "later@spam.example", "Second day", receivedAt = secondDay),
+                            spamMessage("Earlier", "earlier@spam.example", "First day"),
+                        ),
+                        isRefreshed = true,
+                    ),
+                ),
+            ),
+        )
+
+        val result = testSubject.compose(day, accounts, lastDay = LocalDate(2026, 10, 3))
+
+        assertThat(result.subject).isEqualTo("Spam digest for 2026-10-02 to 2026-10-03: 2")
+        val body = result.body
+        assertThat(body).contains("Spam on 2026-10-02 to 2026-10-03: 2 in 1")
+        val firstHeading = body.indexOf("-- 2026-10-02 --")
+        val firstMessage = body.indexOf("1. Earlier")
+        val secondHeading = body.indexOf("-- 2026-10-03 --")
+        val secondMessage = body.indexOf("2. Later")
+        assertThat(listOf(firstHeading, firstMessage, secondHeading, secondMessage).all { it >= 0 }).isEqualTo(true)
+        assertThat(firstHeading < firstMessage && firstMessage < secondHeading && secondHeading < secondMessage)
+            .isEqualTo(true)
+    }
+
+    @Test
+    fun `a one-day digest should not have day headings`() {
+        val accounts = listOf(
+            AccountSpam(
+                account = work,
+                result = SpamFolderResult.Read(
+                    SpamFolderContents(listOf(spamMessage("A", "a@spam.example", "One")), isRefreshed = true),
+                ),
+            ),
+        )
+
+        val result = testSubject.compose(day, accounts)
+
+        assertThat(result.body.contains("-- 2026-10-02 --")).isEqualTo(false)
+    }
+
+    @Test
     fun `compose should list mail from people the reader knows first, and only there`() {
         val known = spamMessage(
             senderName = "Jordan Colleague",
@@ -222,11 +271,12 @@ class SpamDigestComposerTest {
         senderAddress: String?,
         subject: String?,
         senderChecks: List<SenderCheck> = emptyList(),
+        receivedAt: Instant = Instant.parse("2026-10-02T12:00:00Z"),
     ) = SpamMessage(
         senderName = senderName,
         senderAddress = senderAddress,
         subject = subject,
-        receivedAt = Instant.parse("2026-10-02T12:00:00Z"),
+        receivedAt = receivedAt,
         senderChecks = senderChecks,
     )
 }

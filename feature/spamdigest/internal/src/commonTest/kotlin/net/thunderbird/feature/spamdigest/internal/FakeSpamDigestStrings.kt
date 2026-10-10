@@ -5,6 +5,8 @@ import net.thunderbird.feature.impersonation.Impersonation
 
 internal class FakeSpamDigestStrings : SpamDigestStrings {
     override fun formatDate(date: LocalDate): String = date.toString()
+
+    override fun formatDateRange(first: LocalDate, last: LocalDate): String = "$first to $last"
     override fun subject(date: String, messageCount: Int, knownSenderCount: Int): String =
         "Spam digest for $date: $messageCount" + if (knownSenderCount > 0) ", $knownSenderCount known" else ""
     override fun knownSendersHeading(messageCount: Int): String = "From people you know: $messageCount"

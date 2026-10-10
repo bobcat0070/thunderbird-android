@@ -1,6 +1,8 @@
 package net.thunderbird.feature.spamdigest.internal
 
 import kotlinx.datetime.LocalDate
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toLocalDateTime
 import net.thunderbird.feature.impersonation.Impersonation
 import net.thunderbird.feature.spamdigest.SenderCheck
 import net.thunderbird.feature.spamdigest.SpamDigestAccount
@@ -23,6 +25,11 @@ private const val WARNING_MARK = "⚠"
 @Suppress("TooManyFunctions")
 internal interface SpamDigestStrings {
     fun formatDate(date: LocalDate): String
+
+    /**
+     * The days from [first] to [last], for a digest that covers more than one.
+     */
+    fun formatDateRange(first: LocalDate, last: LocalDate): String
     fun subject(date: String, messageCount: Int, knownSenderCount: Int): String
     fun intro(date: String, messageCount: Int, accountCount: Int): String
     fun knownSendersHeading(messageCount: Int): String
@@ -74,16 +81,28 @@ internal class SpamDigestComposer(
     private val strings: SpamDigestStrings,
 ) {
     /**
+     * @param day the first day the digest reports on.
      * @param fields what to show for each message. When none of name, address and subject is among them the address
      *   is shown anyway, so that every entry still says who it is from.
+     * @param lastDay the last day the digest reports on. A digest covering more than one - one that did not go out
+     *   is made up by the next - lists each day's messages under that day.
+     * @param timeZone the time zone the days are in.
      */
+    @Suppress("LongParameterList")
     fun compose(
         day: LocalDate,
         accounts: List<AccountSpam>,
         fields: Set<SpamDigestField> = SpamDigestField.entries.toSet(),
+        lastDay: LocalDate = day,
+        timeZone: TimeZone = TimeZone.UTC,
     ): ComposedDigest {
         val shown = fields.withSomethingToIdentify()
-        val date = strings.formatDate(day)
+        val date = if (lastDay == day) strings.formatDate(day) else strings.formatDateRange(day, lastDay)
+        val dayOf: ((SpamMessage) -> LocalDate)? = if (lastDay == day) {
+            null
+        } else {
+            { message -> message.receivedAt.toLocalDateTime(timeZone).date }
+        }
         val messageCount = accounts.sumOf { it.messages().size }
         val fromKnownSenders = accounts.flatMap { accountSpam ->
             accountSpam.messages().filter { it.isFromKnownSender }.map { accountSpam.account to it }
@@ -95,14 +114,17 @@ internal class SpamDigestComposer(
             if (fromKnownSenders.isNotEmpty()) {
                 appendLine()
                 appendLine("== ${strings.knownSendersHeading(fromKnownSenders.size)} ==")
-                fromKnownSenders.forEachIndexed { index, (account, message) ->
+                appendByDay(fromKnownSenders, dayOf = dayOf?.let { byDay -> { (_, message) -> byDay(message) } }) {
+                        index,
+                        (account, message),
+                    ->
                     appendMessage(index, message, account, shown)
                 }
             }
 
             for (accountSpam in accounts) {
                 appendLine()
-                appendAccount(accountSpam, shown)
+                appendAccount(accountSpam, shown, dayOf)
             }
 
             if (SpamDigestField.SENDER_CHECKS in shown) {
@@ -117,17 +139,47 @@ internal class SpamDigestComposer(
         )
     }
 
-    private fun StringBuilder.appendAccount(accountSpam: AccountSpam, shown: Set<SpamDigestField>) {
+    private fun StringBuilder.appendAccount(
+        accountSpam: AccountSpam,
+        shown: Set<SpamDigestField>,
+        dayOf: ((SpamMessage) -> LocalDate)?,
+    ) {
         appendLine("== ${accountSpam.account.heading()} ==")
 
         when (val result = accountSpam.result) {
             SpamFolderResult.NoSpamFolder -> appendLine(strings.noSpamFolder())
             SpamFolderResult.Unreadable -> appendLine(strings.unreadable())
-            is SpamFolderResult.Read -> appendContents(result.contents, shown)
+            is SpamFolderResult.Read -> appendContents(result.contents, shown, dayOf)
         }
     }
 
-    private fun StringBuilder.appendContents(contents: SpamFolderContents, shown: Set<SpamDigestField>) {
+    /**
+     * Appends [items] numbered in order, under a heading for each day when [dayOf] is given - a digest covering
+     * more than one day - and as one list otherwise.
+     */
+    private fun <T> StringBuilder.appendByDay(
+        items: List<T>,
+        dayOf: ((T) -> LocalDate)?,
+        appendItem: StringBuilder.(index: Int, item: T) -> Unit,
+    ) {
+        if (dayOf == null) {
+            items.forEachIndexed { index, item -> appendItem(index, item) }
+            return
+        }
+
+        var index = 0
+        for ((day, itemsOfDay) in items.groupBy(dayOf).entries.sortedBy { it.key }) {
+            appendLine()
+            appendLine("-- ${strings.formatDate(day)} --")
+            for (item in itemsOfDay) appendItem(index++, item)
+        }
+    }
+
+    private fun StringBuilder.appendContents(
+        contents: SpamFolderContents,
+        shown: Set<SpamDigestField>,
+        dayOf: ((SpamMessage) -> LocalDate)?,
+    ) {
         if (!contents.isRefreshed) appendLine(strings.notRefreshed())
 
         val others = contents.messages.filterNot { it.isFromKnownSender }
@@ -138,7 +190,7 @@ internal class SpamDigestComposer(
 
             else -> {
                 appendLine(strings.accountMessageCount(others.size))
-                others.forEachIndexed { index, message -> appendMessage(index, message, account = null, shown) }
+                appendByDay(others, dayOf) { index, message -> appendMessage(index, message, account = null, shown) }
             }
         }
     }

@@ -100,6 +100,22 @@ class SendSpamDigestTest {
     }
 
     @Test
+    fun `should also report on days whose digest did not go out`() = runTest {
+        // The last digest covered Sep 30; the one for Oct 1 never went out.
+        digestLog.markSent(LocalDate(2026, 9, 30))
+
+        val outcome = testSubject()
+
+        assertThat(outcome).isEqualTo(SendSpamDigest.Outcome.SENT)
+        assertThat(spamFolderReader.requests.first()).isEqualTo(
+            Triple("work", Instant.parse("2026-10-01T00:00:00Z"), Instant.parse("2026-10-03T00:00:00Z")),
+        )
+        assertThat(mailer.sent).single().transform { it.subject }
+            .isEqualTo("Spam digest for 2026-10-01 to 2026-10-02: 0")
+        assertThat(digestLog.lastSentDay()).isEqualTo(LocalDate(2026, 10, 2))
+    }
+
+    @Test
     fun `should leave out excluded accounts`() = runTest {
         settingsRepository.current = settingsRepository.current.copy(excludedAccountIds = setOf("personal"))
 

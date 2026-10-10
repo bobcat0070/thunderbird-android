@@ -39,6 +39,13 @@ internal val appCommonFeatureSpamDigestModule = module {
     }
 
     single {
+        SpamDigestCatchUpListener(
+            spamDigestScheduler = get(),
+            logger = get(),
+        )
+    }
+
+    single {
         SpamArrivalMessagingListener(
             messageStoreManager = get(),
             spamSenderAssessor = get(),

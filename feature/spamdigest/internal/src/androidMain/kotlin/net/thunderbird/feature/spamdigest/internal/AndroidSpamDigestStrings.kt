@@ -1,6 +1,7 @@
 package net.thunderbird.feature.spamdigest.internal
 
 import android.content.Context
+import android.text.format.DateUtils
 import androidx.core.os.ConfigurationCompat
 import java.text.DateFormat
 import java.util.Date
@@ -9,6 +10,8 @@ import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.atStartOfDayIn
 import net.thunderbird.feature.impersonation.Impersonation
+
+private const val HALF_DAY_MILLIS = 12L * 60 * 60 * 1000
 
 internal class AndroidSpamDigestStrings(
     context: Context,
@@ -22,6 +25,17 @@ internal class AndroidSpamDigestStrings(
         val startOfDay = Date(date.atStartOfDayIn(timeZone).toEpochMilliseconds())
 
         return DateFormat.getDateInstance(DateFormat.FULL, locale).format(startOfDay)
+    }
+
+    override fun formatDateRange(first: LocalDate, last: LocalDate): String {
+        val timeZone = TimeZone.currentSystemDefault()
+        // Midday rather than midnight: a range ending exactly at midnight is read as ending the day before.
+        val firstMillis = first.atStartOfDayIn(timeZone).toEpochMilliseconds() + HALF_DAY_MILLIS
+        val lastMillis = last.atStartOfDayIn(timeZone).toEpochMilliseconds() + HALF_DAY_MILLIS
+        val flags = DateUtils.FORMAT_SHOW_DATE or DateUtils.FORMAT_SHOW_YEAR or DateUtils.FORMAT_SHOW_WEEKDAY or
+            DateUtils.FORMAT_ABBREV_WEEKDAY
+
+        return DateUtils.formatDateRange(context, firstMillis, lastMillis, flags)
     }
 
     override fun subject(date: String, messageCount: Int, knownSenderCount: Int): String {

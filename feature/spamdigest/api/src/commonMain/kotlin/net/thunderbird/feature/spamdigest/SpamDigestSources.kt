@@ -111,9 +111,17 @@ public interface SpamDigestScheduler {
     public fun reschedule()
 
     /**
-     * Schedules the next digest unless one is already scheduled. Safe to call on every app start.
+     * Schedules the next digest unless one is already scheduled, and sends one that is overdue. Safe to call on
+     * every app start.
      */
     public fun ensureScheduled()
+
+    /**
+     * Sends the digest now if one is overdue - its alarm never went off, or every try failed - so a missed digest
+     * goes out the next time the app is doing something anyway. Cheap when nothing is due; safe to call after every
+     * mail sync.
+     */
+    public fun catchUpIfDue()
 }
 
 /**

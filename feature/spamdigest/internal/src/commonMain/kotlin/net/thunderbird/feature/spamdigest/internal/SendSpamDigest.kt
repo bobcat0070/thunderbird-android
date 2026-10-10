@@ -3,6 +3,7 @@ package net.thunderbird.feature.spamdigest.internal
 import kotlin.coroutines.cancellation.CancellationException
 import kotlin.time.Clock
 import kotlinx.datetime.LocalDate
+import kotlinx.datetime.daysUntil
 import net.thunderbird.core.logging.Logger
 import net.thunderbird.feature.spamdigest.SpamDigestAccounts
 import net.thunderbird.feature.spamdigest.SpamDigestMailer
@@ -21,7 +22,8 @@ internal interface SpamDigestLog {
 }
 
 /**
- * Sends the digest of yesterday's spam, if one is due.
+ * Sends the digest of the spam that arrived since the last one, if one is due: yesterday's, normally, and also any
+ * earlier day whose digest did not go out.
  */
 internal class SendSpamDigest(
     private val settingsRepository: SpamDigestSettingsRepository,
@@ -41,7 +43,7 @@ internal class SendSpamDigest(
         /** The account the digest is sent from no longer exists. */
         SENDER_MISSING,
 
-        /** Yesterday's digest was sent already. */
+        /** Every day due has been reported on already. */
         ALREADY_SENT,
         SENT,
     }
@@ -59,25 +61,37 @@ internal class SendSpamDigest(
             return Outcome.SENDER_MISSING
         }
 
-        val day = previousDay(clock.now(), timeZoneProvider.current())
-        if (digestLog.lastSentDay() == day.date) return Outcome.ALREADY_SENT
+        val timeZone = timeZoneProvider.current()
+        val period = reportingPeriod(clock.now(), timeZone, settings.sendTime, digestLog.lastSentDay())
+        if (period == null) {
+            logger.info(LOG_TAG) { "Spam digest already sent for every day due" }
+            return Outcome.ALREADY_SENT
+        }
 
         val accountSpam = allAccounts
             .filter { settings.isAccountIncluded(it.id) }
-            .map { account -> AccountSpam(account, readSpamFolder(account.id, day)) }
+            .map { account -> AccountSpam(account, readSpamFolder(account.id, period)) }
 
-        val digest = composer.compose(day.date, accountSpam, settings.fields)
+        val digest = composer.compose(
+            day = period.firstDate,
+            accounts = accountSpam,
+            fields = settings.fields,
+            lastDay = period.lastDate,
+            timeZone = timeZone,
+        )
         mailer.sendToSelf(senderAccountId, digest.subject, digest.body)
-        digestLog.markSent(day.date)
+        digestLog.markSent(period.lastDate)
 
-        logger.info(LOG_TAG) { "Spam digest queued for ${accountSpam.size} accounts" }
+        logger.info(LOG_TAG) {
+            "Spam digest queued for ${accountSpam.size} accounts, covering ${period.dayCount()} days"
+        }
 
         return Outcome.SENT
     }
 
-    private suspend fun readSpamFolder(accountId: String, day: DigestDay): SpamFolderResult {
+    private suspend fun readSpamFolder(accountId: String, period: DigestPeriod): SpamFolderResult {
         return try {
-            spamFolderReader.read(accountId, day.start, day.end)
+            spamFolderReader.read(accountId, period.start, period.end)
                 ?.let { SpamFolderResult.Read(it) }
                 ?: SpamFolderResult.NoSpamFolder
         } catch (e: CancellationException) {
@@ -90,3 +104,5 @@ internal class SendSpamDigest(
         }
     }
 }
+
+private fun DigestPeriod.dayCount(): Int = firstDate.daysUntil(lastDate) + 1

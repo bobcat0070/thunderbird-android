@@ -25,8 +25,11 @@ class SpamDigestWorker internal constructor(
 ) : CoroutineWorker(context, parameters) {
 
     override suspend fun doWork(): Result {
+        logger.info(LOG_TAG) { "Spam digest run started, attempt ${runAttemptCount + 1}" }
+
         return try {
-            sendSpamDigest()
+            val outcome = sendSpamDigest()
+            logger.info(LOG_TAG) { "Spam digest run finished: $outcome" }
             Result.success()
         } catch (e: CancellationException) {
             throw e
