@@ -13,6 +13,7 @@ import java.util.Date
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 import kotlinx.coroutines.suspendCancellableCoroutine
+import net.thunderbird.app.common.account.getByUuid
 import net.thunderbird.core.android.account.Identity
 import net.thunderbird.core.android.account.LegacyAccountDtoManager
 import net.thunderbird.core.common.exception.MessagingException
@@ -30,7 +31,7 @@ internal class LegacySpamDigestMailer(
 ) : SpamDigestMailer {
 
     override suspend fun sendToSelf(accountId: String, subject: String, body: String) {
-        val account = requireNotNull(accountManager.getAccount(accountId)) { "Account not found" }
+        val account = requireNotNull(accountManager.getByUuid(accountId)) { "Account not found" }
 
         // The user's signature is for mail to other people, not a report the app writes to them.
         val identity = account.identities.first().copy(signatureUse = false)

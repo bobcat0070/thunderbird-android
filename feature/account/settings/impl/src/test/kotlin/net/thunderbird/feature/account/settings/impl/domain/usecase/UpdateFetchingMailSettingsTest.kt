@@ -95,7 +95,7 @@ internal class UpdateFetchingMailSettingsTest {
     private fun repoWith(account: LegacyAccount) = object : LegacyAccountRepository {
         var updated: LegacyAccount? = null
 
-        override fun getById(id: AccountId): Flow<LegacyAccount?> = flowOf(account)
+        override fun observeById(id: AccountId): Flow<LegacyAccount?> = flowOf(account)
 
         override suspend fun update(account: LegacyAccount) {
             updated = account
@@ -105,7 +105,7 @@ internal class UpdateFetchingMailSettingsTest {
     @Test
     fun `should return NotFound when account missing`() = runTest {
         val repo = object : LegacyAccountRepository {
-            override fun getById(id: AccountId): Flow<LegacyAccount?> = emptyFlow()
+            override fun observeById(id: AccountId): Flow<LegacyAccount?> = emptyFlow()
             override suspend fun update(account: LegacyAccount) {
                 NoOpUpdate
             }

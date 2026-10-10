@@ -9,6 +9,7 @@ import net.thunderbird.feature.mail.message.classification.api.MessageClass
 import org.junit.Test
 import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.mock
+import net.thunderbird.feature.account.AccountIdFactory
 
 class MessageListLiveDataTest {
 
@@ -41,10 +42,10 @@ class MessageListLiveDataTest {
         assertThat(result).isFalse()
     }
 
-    private fun reference(uniqueId: Long) = MessageReference(ACCOUNT_UUID, FOLDER_ID, "uid$uniqueId")
+    private fun reference(uniqueId: Long) = MessageReference(ACCOUNT_ID, FOLDER_ID, "uid$uniqueId")
 
     private fun item(uniqueId: Long) = MessageListItem(
-        account = mock<LegacyAccount> { on { uuid } doReturn ACCOUNT_UUID },
+        account = mock<LegacyAccount> { on { id } doReturn ACCOUNT_ID },
         subject = "Subject $uniqueId",
         threadCount = 0,
         messageDate = 0L,
@@ -70,7 +71,7 @@ class MessageListLiveDataTest {
     )
 
     private companion object {
-        const val ACCOUNT_UUID = "account"
+        val ACCOUNT_ID = AccountIdFactory.create()
         const val FOLDER_ID = 1L
     }
 }

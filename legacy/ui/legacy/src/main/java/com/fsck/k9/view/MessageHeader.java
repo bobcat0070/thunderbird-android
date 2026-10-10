@@ -579,7 +579,7 @@ public class MessageHeader extends LinearLayout implements OnClickListener, OnLo
 
     public void populate(final Message message, final LegacyAccountDto account, boolean showStar,
         boolean showAccountIndicator) {
-        accountUuid = account.getUuid();
+        accountUuid = account.getId().toString();
         if (showAccountIndicator) {
             accountNameView.setVisibility(View.VISIBLE);
             accountNameView.setText(account.getDisplayName());

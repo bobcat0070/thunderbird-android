@@ -10,6 +10,7 @@ import kotlin.uuid.ExperimentalUuidApi
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
 import net.thunderbird.core.android.account.Identity
@@ -74,7 +75,7 @@ class DefaultSpecialFolderUpdaterTest {
         subject.updateSpecialFoldersSync()
 
         // Assert
-        val updatedAccount = accountManager.getByIdSync(accountId)!!
+        val updatedAccount = accountManager.getById(accountId)!!
         assertThat(updatedAccount.inboxFolderId).isEqualTo(1L)
         assertThat(updatedAccount.draftsFolderId).isEqualTo(2L)
         assertThat(updatedAccount.sentFolderId).isEqualTo(3L)
@@ -111,7 +112,7 @@ class DefaultSpecialFolderUpdaterTest {
         testDispatcher.scheduler.advanceUntilIdle()
 
         // Assert
-        val updatedAccount = accountManager.getByIdSync(accountId)!!
+        val updatedAccount = accountManager.getById(accountId)!!
         assertThat(updatedAccount.inboxFolderId).isEqualTo(1L)
         assertThat(updatedAccount.draftsFolderId).isEqualTo(2L)
     }
@@ -132,7 +133,7 @@ class DefaultSpecialFolderUpdaterTest {
         subject.updateSpecialFoldersSync()
 
         // Assert
-        val updatedAccount = accountManager.getByIdSync(accountId)!!
+        val updatedAccount = accountManager.getById(accountId)!!
         assertThat(updatedAccount.draftsFolderId).isEqualTo(10L)
         assertThat(updatedAccount.importedDraftsFolder).isNull()
     }
@@ -154,7 +155,7 @@ class DefaultSpecialFolderUpdaterTest {
         subject.updateSpecialFoldersSync()
 
         // Assert
-        val updatedAccount = accountManager.getByIdSync(accountId)!!
+        val updatedAccount = accountManager.getById(accountId)!!
         assertThat(updatedAccount.draftsFolderId).isEqualTo(2L)
         assertThat(updatedAccount.draftsFolderSelection).isEqualTo(SpecialFolderSelection.AUTOMATIC)
     }
@@ -175,7 +176,7 @@ class DefaultSpecialFolderUpdaterTest {
         subject.updateSpecialFoldersSync()
 
         // Assert
-        val updatedAccount = accountManager.getByIdSync(accountId)!!
+        val updatedAccount = accountManager.getById(accountId)!!
         assertThat(updatedAccount.inboxFolderId).isEqualTo(1L)
         assertThat(updatedAccount.draftsFolderId).isNull()
     }
@@ -253,9 +254,7 @@ class DefaultSpecialFolderUpdaterTest {
         private val accounts = initialAccounts.toMutableList()
 
         override fun getAll(): Flow<List<LegacyAccount>> = throw UnsupportedOperationException()
-        override fun getById(id: AccountId): Flow<LegacyAccount?> = throw UnsupportedOperationException()
         override suspend fun update(account: LegacyAccount) = updateSync(account)
-        override fun getByIdSync(id: AccountId): LegacyAccount? = accounts.find { it.id == id }
         override fun updateSync(account: LegacyAccount) {
             accounts.removeIf { it.id == account.id }
             accounts.add(account)
@@ -263,8 +262,8 @@ class DefaultSpecialFolderUpdaterTest {
 
         override fun getAccounts(): List<LegacyAccount> = accounts
         override fun getAccountsFlow(): Flow<List<LegacyAccount>> = throw UnsupportedOperationException()
-        override fun getAccount(accountUuid: String): LegacyAccount? = accounts.find { it.uuid == accountUuid }
-        override fun getAccountFlow(accountUuid: String): Flow<LegacyAccount?> = throw UnsupportedOperationException()
+        override fun getById(accountId: AccountId): LegacyAccount? = accounts.find { it.id == accountId }
+        override fun observeById(accountId: AccountId): Flow<LegacyAccount?> = flowOf(getById(accountId))
         override fun moveAccount(account: LegacyAccount, newPosition: Int) = Unit
         override fun saveAccount(account: LegacyAccount) = updateSync(account)
     }

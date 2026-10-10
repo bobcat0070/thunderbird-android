@@ -41,14 +41,14 @@ internal class SpamArrivalMessagingListener(
                 ?: clock.now()
 
             val spamMessage = spamSenderAssessor.assess(
-                accountId = account.uuid,
+                accountId = account.id.toString(),
                 sender = message.from?.firstOrNull(),
                 subject = message.subject,
                 receivedAt = receivedAt,
                 authenticationResults = authenticationResults,
             )
 
-            spamArrivalListener.onSpamArrived(account.uuid, spamFolderId, message.uid, spamMessage)
+            spamArrivalListener.onSpamArrived(account.id.toString(), spamFolderId, message.uid, spamMessage)
         } catch (e: CancellationException) {
             throw e
         } catch (@Suppress("TooGenericExceptionCaught") e: Exception) {

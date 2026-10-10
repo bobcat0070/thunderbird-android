@@ -13,6 +13,7 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import net.thunderbird.core.ui.contract.mvi.BaseViewModel
+import net.thunderbird.feature.account.AccountIdFactory
 import net.thunderbird.feature.navigation.drawer.dropdown.domain.DomainContract.UseCase
 import net.thunderbird.feature.navigation.drawer.dropdown.domain.entity.DisplayAccount
 import net.thunderbird.feature.navigation.drawer.dropdown.domain.entity.DisplayFolder
@@ -179,8 +180,6 @@ internal class DrawerViewModel(
                 }
             }
 
-            Event.OnManageFoldersClick -> emitEffect(Effect.OpenManageFolders)
-
             Event.OnSettingsClick -> emitEffect(Effect.OpenSettings)
 
             Event.OnSyncAccount -> onSyncAccount()
@@ -291,7 +290,7 @@ internal class DrawerViewModel(
                 it.copy(isLoading = true)
             }
 
-            state.value.selectedAccountId?.let { syncAccount(it).collect() }
+            state.value.selectedAccountId?.let { syncAccount(AccountIdFactory.of(it)).collect() }
 
             updateState {
                 it.copy(isLoading = false)

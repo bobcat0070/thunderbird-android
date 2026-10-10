@@ -534,6 +534,7 @@
     <string name="archive_folder_label">Archive folder</string>
     <string name="spam_folder_label">Spam folder</string>
 
+    <string name="account_setup_visibility_and_syncing">Visibility &amp; syncing</string>
     <string name="account_setup_incoming_subscribed_folders_only_label">Show only subscribed folders</string>
     <string name="account_setup_auto_select_folder">Auto-select folder</string>
 
@@ -869,6 +870,7 @@
     <string name="navigation_drawer_preferences">Side Menu</string>
     <string name="messagelist_preferences">Message lists</string>
     <string name="messageview_preferences">Messages</string>
+    <string name="remote_feature_flag_preferences">Remote Feature Flags</string>
     <string name="settings_theme_label">Theme</string>
     <string name="settings_message_theme_label">Message view theme</string>
     <string name="settings_compose_theme_label">Composer theme</string>

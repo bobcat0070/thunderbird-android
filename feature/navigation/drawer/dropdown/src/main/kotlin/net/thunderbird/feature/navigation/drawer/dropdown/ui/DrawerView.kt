@@ -17,7 +17,6 @@ internal fun DrawerView(
     openAccount: (accountId: String) -> Unit,
     openFolder: (accountId: String, folderId: Long) -> Unit,
     openUnifiedFolder: (UnifiedFolderKind) -> Unit,
-    openManageFolders: () -> Unit,
     openSettings: () -> Unit,
     openAddAccount: () -> Unit,
     closeDrawer: () -> Unit,
@@ -33,8 +32,6 @@ internal fun DrawerView(
             )
 
             is Effect.OpenUnifiedFolder -> openUnifiedFolder(effect.kind)
-
-            is Effect.OpenManageFolders -> openManageFolders()
 
             is Effect.OpenSettings -> openSettings()
 

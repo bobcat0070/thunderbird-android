@@ -43,7 +43,7 @@ class AccountSettingsDataStore(
 
     override fun getStringSet(key: String, defValues: Set<String>?): Set<String>? {
         return when (key) {
-            PINNED_MOVE_FOLDERS -> pinnedFolderStore.pinnedFolderValues(account.uuid)
+            PINNED_MOVE_FOLDERS -> pinnedFolderStore.pinnedFolderValues(account.id.toString())
             SPAM_DIGEST_FIELDS -> spamDigestSettingsRepository.getSettings().fields.mapTo(mutableSetOf()) { it.name }
             else -> defValues
         }
@@ -53,7 +53,7 @@ class AccountSettingsDataStore(
         when (key) {
             PINNED_MOVE_FOLDERS -> {
                 val folderIds = values.orEmpty().mapNotNullTo(mutableSetOf()) { it.toLongOrNull() }
-                pinnedFolderStore.setPinnedFolderIds(account.uuid, folderIds)
+                pinnedFolderStore.setPinnedFolderIds(account.id.toString(), folderIds)
             }
 
             SPAM_DIGEST_FIELDS -> {
@@ -87,9 +87,9 @@ class AccountSettingsDataStore(
             "upload_sent_messages" -> account.isUploadSentMessages
             "ignore_chat_messages" -> account.isIgnoreChatMessages
             "subscribed_folders_only" -> account.isSubscribedFoldersOnly
-            SPAM_DIGEST_INCLUDE -> spamDigestSettingsRepository.getSettings().isAccountIncluded(account.uuid)
-            SPAM_DIGEST_SEND_FROM -> spamDigestSettingsRepository.getSettings().senderAccountId == account.uuid
-            SPAM_ALERT -> account.uuid in spamDigestSettingsRepository.getSettings().alertAccountIds
+            SPAM_DIGEST_INCLUDE -> spamDigestSettingsRepository.getSettings().isAccountIncluded(account.id.toString())
+            SPAM_DIGEST_SEND_FROM -> spamDigestSettingsRepository.getSettings().senderAccountId == account.id.toString()
+            SPAM_ALERT -> account.id.toString() in spamDigestSettingsRepository.getSettings().alertAccountIds
             else -> defValue
         }
     }
@@ -115,7 +115,7 @@ class AccountSettingsDataStore(
             "upload_sent_messages" -> account.isUploadSentMessages = value
             "ignore_chat_messages" -> account.isIgnoreChatMessages = value
             "subscribed_folders_only" -> updateSubscribedFoldersOnly(value)
-            SPAM_DIGEST_INCLUDE -> spamDigestSettingsRepository.setAccountIncluded(account.uuid, value)
+            SPAM_DIGEST_INCLUDE -> spamDigestSettingsRepository.setAccountIncluded(account.id.toString(), value)
             SPAM_DIGEST_SEND_FROM -> setSpamDigestSender(value)
             SPAM_ALERT -> setSpamAlert(value)
             else -> return
@@ -231,9 +231,9 @@ class AccountSettingsDataStore(
     private fun setSpamDigestSender(isSender: Boolean) {
         val currentSender = spamDigestSettingsRepository.getSettings().senderAccountId
         when {
-            isSender -> spamDigestSettingsRepository.setSenderAccount(account.uuid)
+            isSender -> spamDigestSettingsRepository.setSenderAccount(account.id.toString())
             // Switching it off here must not switch off a digest another account sends.
-            currentSender == account.uuid -> spamDigestSettingsRepository.setSenderAccount(null)
+            currentSender == account.id.toString() -> spamDigestSettingsRepository.setSenderAccount(null)
         }
     }
 
@@ -242,7 +242,7 @@ class AccountSettingsDataStore(
      * thread like saving the account is.
      */
     private fun setSpamAlert(enabled: Boolean) {
-        executorService.execute { spamDigestSettingsRepository.setAlertEnabled(account.uuid, enabled) }
+        executorService.execute { spamDigestSettingsRepository.setAlertEnabled(account.id.toString(), enabled) }
     }
 
     private fun setSpamDigestTime(value: String) {

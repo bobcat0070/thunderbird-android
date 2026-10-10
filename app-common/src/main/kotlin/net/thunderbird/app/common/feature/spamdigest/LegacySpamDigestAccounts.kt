@@ -10,7 +10,7 @@ internal class LegacySpamDigestAccounts(
     override fun accounts(): List<SpamDigestAccount> {
         return accountManager.getAccounts().map { account ->
             SpamDigestAccount(
-                id = account.uuid,
+                id = account.id.toString(),
                 name = account.displayName,
                 email = account.email,
             )

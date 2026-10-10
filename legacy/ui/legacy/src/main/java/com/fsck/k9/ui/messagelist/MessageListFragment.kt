@@ -257,7 +257,7 @@ class MessageListFragment :
     private var initialSearchViewQuery: String? = null
     private var initialSearchViewIconified = true
 
-    private lateinit var accountUuids: Array<String>
+    private lateinit var accountIds: Array<AccountId>
     private var accounts: List<LegacyAccount> = emptyList()
 
     private var account: LegacyAccount? = null
@@ -412,11 +412,11 @@ class MessageListFragment :
             isSingleAccountMode = true
             val singleAccount = searchAccounts[0]
             account = singleAccount
-            accountUuids = arrayOf(singleAccount.uuid)
+            accountIds = arrayOf(singleAccount.id)
         } else {
             isSingleAccountMode = false
             account = null
-            accountUuids = searchAccounts.map { it.uuid }.toTypedArray()
+            accountIds = searchAccounts.map { it.id }.toTypedArray()
         }
 
         isSingleFolderMode = false
@@ -1192,8 +1192,8 @@ class MessageListFragment :
     }
 
     private fun onDebugInvalidateAccessTokenServer() {
-        val uuid = account?.uuid
-        if (!BuildConfig.DEBUG || uuid == null) {
+        val accountId = account?.id
+        if (!BuildConfig.DEBUG || accountId == null) {
             Toast.makeText(
                 requireContext(),
                 R.string.debug_invalidate_access_token_unavailable,
@@ -1201,7 +1201,7 @@ class MessageListFragment :
             ).show()
             return
         }
-        when (val outcome = authDebugActions.invalidateAccessTokenServer(uuid)) {
+        when (val outcome = authDebugActions.invalidateAccessTokenServer(accountId)) {
             is Outcome.Success -> {
                 Toast.makeText(
                     requireContext(),
@@ -1243,8 +1243,8 @@ class MessageListFragment :
     }
 
     private fun onDebugInvalidateAccessTokenLocal() {
-        val uuid = account?.uuid
-        if (!BuildConfig.DEBUG || uuid == null) {
+        val accountId = account?.id
+        if (!BuildConfig.DEBUG || accountId == null) {
             Toast.makeText(
                 requireContext(),
                 R.string.debug_invalidate_access_token_unavailable,
@@ -1252,7 +1252,7 @@ class MessageListFragment :
             ).show()
             return
         }
-        when (val outcome = authDebugActions.invalidateAccessTokenLocal(uuid)) {
+        when (val outcome = authDebugActions.invalidateAccessTokenLocal(accountId)) {
             is Outcome.Success -> {
                 Toast.makeText(
                     requireContext(),
@@ -1280,12 +1280,12 @@ class MessageListFragment :
     }
 
     private fun onDebugForceAuthFailure() {
-        val uuid = account?.uuid
-        if (!BuildConfig.DEBUG || uuid == null) {
+        val accountId = account?.id
+        if (!BuildConfig.DEBUG || accountId == null) {
             Toast.makeText(requireContext(), R.string.debug_force_auth_failure_unavailable, Toast.LENGTH_SHORT).show()
             return
         }
-        when (val outcome = authDebugActions.forceAuthFailure(uuid)) {
+        when (val outcome = authDebugActions.forceAuthFailure(accountId)) {
             is Outcome.Success -> {
                 Toast.makeText(requireContext(), R.string.debug_force_auth_failure_done, Toast.LENGTH_SHORT).show()
             }
@@ -1443,7 +1443,7 @@ class MessageListFragment :
         displayFolderChoice(
             operation = FolderOperation.MOVE,
             sourceFolderId = folderId,
-            accountUuid = messages.first().accountUuid,
+            accountId = messages.first().accountId,
             lastSelectedFolderId = null,
             messages = messages,
         )
@@ -1465,7 +1465,7 @@ class MessageListFragment :
         displayFolderChoice(
             operation = FolderOperation.COPY,
             sourceFolderId = folderId,
-            accountUuid = messages.first().accountUuid,
+            accountId = messages.first().accountId,
             lastSelectedFolderId = null,
             messages = messages,
         )
@@ -1474,7 +1474,7 @@ class MessageListFragment :
     private fun displayFolderChoice(
         operation: FolderOperation,
         sourceFolderId: Long?,
-        accountUuid: String,
+        accountId: AccountId,
         lastSelectedFolderId: Long?,
         messages: List<MessageReference>,
     ) {
@@ -1482,7 +1482,7 @@ class MessageListFragment :
         activeMessages = messages
 
         val input = ChooseFolderResultContract.Input(
-            accountUuid = accountUuid,
+            accountId = accountId,
             currentFolderId = sourceFolderId,
             scrollToFolderId = lastSelectedFolderId,
         )
@@ -1514,7 +1514,7 @@ class MessageListFragment :
 
     private fun setLastSelectedFolder(messages: List<MessageReference>, folderId: Long) {
         val firstMessage = messages.firstOrNull() ?: return
-        val account = accountManager.getAccount(firstMessage.accountUuid) ?: return
+        val account = accountManager.getById(firstMessage.accountId) ?: return
         accountManager.saveAccount(
             account.copy(
                 lastSelectedFolderId = folderId,
@@ -1539,7 +1539,7 @@ class MessageListFragment :
     private fun groupMessagesByAccount(
         messages: List<MessageReference>,
     ): Map<LegacyAccount, List<MessageReference>> {
-        return messages.groupBy { accountManager.getAccount(it.accountUuid)!! }
+        return messages.groupBy { accountManager.getById(it.accountId)!! }
     }
 
     private fun onSpam(messages: List<MessageReference>) {
@@ -1563,7 +1563,7 @@ class MessageListFragment :
     private fun checkCopyOrMovePossible(messages: List<MessageReference>, operation: FolderOperation): Boolean {
         if (messages.isEmpty()) return false
 
-        val account = accountManager.getAccount(messages.first().accountUuid) ?: return false
+        val account = accountManager.getById(messages.first().accountId) ?: return false
         if (operation == FolderOperation.MOVE &&
             !messagingController.isMoveCapable(account.id) ||
             operation == FolderOperation.COPY &&
@@ -1607,7 +1607,7 @@ class MessageListFragment :
             .groupBy { it.folderId }
 
         for ((folderId, messagesInFolder) in folderMap) {
-            val account = accountManager.getAccount(messagesInFolder.first().accountUuid)
+            val account = accountManager.getById(messagesInFolder.first().accountId)
             if (account == null) {
                 logger.debug(logTag) {
                     "Account for message ${messagesInFolder.first()} not found, skipping copy/move operation"
@@ -1705,8 +1705,8 @@ class MessageListFragment :
         } else if (allAccounts) {
             messagingController.checkMail(null, true, true, false, activityListener)
         } else {
-            for (accountUuid in accountUuids) {
-                val account = accountManager.getAccount(accountUuid)
+            for (accountId in accountIds) {
+                val account = accountManager.getById(accountId)
                 account?.id?.let { messagingController.checkMail(it, true, true, false, activityListener) }
             }
         }
@@ -1986,10 +1986,10 @@ class MessageListFragment :
     }
 
     override fun filterInAppNotificationEvents(notification: InAppNotification): Boolean {
-        val accountUuid = notification.accountUuid
+        val accountId = notification.accountId
         return notification !is SentFolderNotFoundNotification &&
-            accountUuid != null &&
-            accountUuid in accountUuids
+            accountId != null &&
+            accountId in accountIds
     }
 
     override fun onNotificationActionClicked(action: NotificationAction) = onNotificationActionClick(action)
@@ -1999,13 +1999,13 @@ class MessageListFragment :
             is NotificationAction.UpdateIncomingServerSettings ->
                 FeatureLauncherActivity.launch(
                     context = requireContext(),
-                    target = FeatureLauncherTarget.AccountEditIncomingSettings(action.accountUuid),
+                    target = FeatureLauncherTarget.AccountEditIncomingSettings(action.accountId),
                 )
 
             is NotificationAction.UpdateOutgoingServerSettings ->
                 FeatureLauncherActivity.launch(
                     context = requireContext(),
-                    target = FeatureLauncherTarget.AccountEditOutgoingSettings(action.accountUuid),
+                    target = FeatureLauncherTarget.AccountEditOutgoingSettings(action.accountId),
                 )
 
             is NotificationAction.OpenNotificationCentre ->
@@ -2150,7 +2150,7 @@ class MessageListFragment :
         }
 
         private fun updateForMe(account: LegacyAccountDto?, folderId: Long): Boolean {
-            if (account == null || account.uuid !in accountUuids) return false
+            if (account == null || account.id !in accountIds) return false
 
             val folderIds = localSearch.folderIds
             return folderIds.isEmpty() || folderId in folderIds
@@ -2188,7 +2188,7 @@ class MessageListFragment :
             // we don't support cross account actions atm
             if (!isSingleAccountMode) {
                 val accounts = accountUuidsForSelected.mapNotNull { accountUuid ->
-                    accountManager.getAccount(accountUuid)
+                    accountManager.getById(accountUuid)
                 }
 
                 menu.findItem(R.id.move).isVisible = true
@@ -2206,8 +2206,8 @@ class MessageListFragment :
             return true
         }
 
-        private val accountUuidsForSelected: Set<String>
-            get() = stateSnapshot.messages.filter { it.selected }.mapToSet { it.account.id.toString() }
+        private val accountUuidsForSelected: Set<AccountId>
+            get() = stateSnapshot.messages.filter { it.selected }.mapToSet { it.account.id }
 
         override fun onDestroyActionMode(mode: ActionMode) {
             actionMode = null
@@ -2381,7 +2381,7 @@ class MessageListFragment :
 
     private val viewModel: MessageListContract.ViewModel by viewModel {
         decodeArguments()
-        val accounts = accountUuids.map { AccountIdFactory.of(it) }.toSet()
+        val accounts = accountIds.map { it }.toSet()
 
         var args = MessageListContract.ViewModel.Args(
             accountIds = accounts,

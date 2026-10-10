@@ -87,7 +87,7 @@ class DefaultRecipientSuggestions(
         val backendManager = backendManager()
 
         return accountManager().getAccounts().flatMap { account ->
-            val searcher = directorySearcherFor(backendManager, account.uuid) ?: return@flatMap emptyList()
+            val searcher = directorySearcherFor(backendManager, account.id.toString()) ?: return@flatMap emptyList()
 
             searcher.searchDirectory(query).flatMap { contact ->
                 contact.addresses.map { SuggestedRecipient(it, contact.displayName) }

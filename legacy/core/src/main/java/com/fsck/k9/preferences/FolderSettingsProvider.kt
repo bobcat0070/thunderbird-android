@@ -22,7 +22,7 @@ class FolderSettingsProvider(
                     }
                 },
             )
-            .map { it.toFolderSettings(account.uuid) }
+            .map { it.toFolderSettings(account.id.toString()) }
             .filterNot { it.containsOnlyDefaultValues() }
     }
 

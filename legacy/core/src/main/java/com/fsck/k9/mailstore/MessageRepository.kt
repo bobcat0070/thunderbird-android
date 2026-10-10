@@ -16,12 +16,12 @@ private const val LIST_UNSUBSCRIBE_POST_HEADER = "List-Unsubscribe-Post"
 
 class MessageRepository(private val messageStoreManager: MessageStoreManager) {
     fun getHeaders(messageReference: MessageReference): List<Header> {
-        val messageStore = messageStoreManager.getMessageStore(messageReference.accountUuid)
+        val messageStore = messageStoreManager.getMessageStore(messageReference.accountId)
         return messageStore.getHeaders(messageReference.folderId, messageReference.uid)
     }
 
     fun getMessageDetails(messageReference: MessageReference): MessageDetails {
-        val messageStore = messageStoreManager.getMessageStore(messageReference.accountUuid)
+        val messageStore = messageStoreManager.getMessageStore(messageReference.accountId)
         val headers = messageStore.getHeaders(messageReference.folderId, messageReference.uid, MESSAGE_DETAILS_HEADERS)
 
         val messageDate = headers.parseDate("date")
@@ -51,7 +51,7 @@ class MessageRepository(private val messageStoreManager: MessageStoreManager) {
      * and never a fetch.
      */
     fun getUnsubscribeUri(messageReference: MessageReference): UnsubscribeUri? {
-        val messageStore = messageStoreManager.getMessageStore(messageReference.accountUuid)
+        val messageStore = messageStoreManager.getMessageStore(messageReference.accountId)
         val headers = messageStore.getHeaders(
             messageReference.folderId,
             messageReference.uid,
@@ -66,7 +66,7 @@ class MessageRepository(private val messageStoreManager: MessageStoreManager) {
      *   [ListUnsubscribeHelper.getOneClickUnsubscribeUri].
      */
     fun getOneClickUnsubscribeUri(messageReference: MessageReference): Uri? {
-        val messageStore = messageStoreManager.getMessageStore(messageReference.accountUuid)
+        val messageStore = messageStoreManager.getMessageStore(messageReference.accountId)
         val headers = messageStore.getHeaders(
             messageReference.folderId,
             messageReference.uid,

@@ -12,17 +12,24 @@ import io.ktor.http.HttpStatusCode
 import io.ktor.http.contentLength
 import io.ktor.serialization.JsonConvertException
 import io.ktor.serialization.kotlinx.json.json
+import io.ktor.util.network.UnresolvedAddressException
 import io.ktor.utils.io.readAvailable
 import kotlin.coroutines.cancellation.CancellationException
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.mapNotNull
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.io.Buffer
@@ -57,60 +64,82 @@ class RemoteFeatureFlagCatalogDataSource(
     private val fetchTimeout: Duration = DEFAULT_FETCH_TIMEOUT,
 ) : FeatureFlagCatalogDataSource {
     private val catalog = MutableStateFlow<FeatureFlagCatalog?>(null)
+    private val loadMutex = Mutex()
 
-    override fun observe(): Flow<FeatureFlagCatalog> = catalog.mapNotNull { it }
-
-    override suspend fun load(): FeatureFlagCatalog? {
-        return catalog.value ?: try {
-            val config = configStore.config.first()
-            val remoteCatalogConfig = config.remoteCatalogConfig
-            if (!remoteCatalogConfig.enabled) {
-                throw RemoteCatalogException(code = Code.RemoteCatalogUserDisabled)
+    @OptIn(ExperimentalCoroutinesApi::class)
+    override fun observe(): Flow<FeatureFlagCatalog?> = configStore.config
+        .map { config -> config.remoteCatalogConfig.enabled }
+        .distinctUntilChanged()
+        .flatMapLatest { enabled ->
+            if (enabled) {
+                load()
             }
-
-            // App startup waits for this catalog, so a slow network must not hold it for long.
-            val result = withTimeoutOrNull(fetchTimeout) {
-                val cacheMetadata = httpClient.fetchCacheMetadata(url)
-                if (remoteCatalogConfig.cacheMetadata != cacheMetadata) {
-                    downloadAndCache(url, cacheMetadata)
-                } else {
-                    readFromCache()
-                }
-            }
-            if (result == null) {
-                logger.warn { "$LOG_PREFIX Remote catalog was not fetched within $fetchTimeout." }
-            }
-            catalog.update { result }
-            result
-        } catch (e: RemoteCatalogException) {
-            when (e.code) {
-                Code.RemoteCatalogUserDisabled -> logger.debug(throwable = e) {
-                    "$LOG_PREFIX Skipping remote catalog; user disabled."
-                }
-
-                Code.CantWriteCacheFile -> logger.debug(throwable = e) { "$LOG_PREFIX Failed to write cache file." }
-
-                Code.CantReadCacheFile -> logger.debug(throwable = e) { "$LOG_PREFIX Failed to read cache file." }
-            }
-            null
-        } catch (e: JsonConvertException) {
-            logger.error(throwable = e) { "$LOG_PREFIX Failed to convert JSON to FeatureFlagCatalog" }
-            null
-        } catch (e: SerializationException) {
-            logger.error(throwable = e) { "$LOG_PREFIX Failed to convert JSON to FeatureFlagCatalog" }
-            null
-        } catch (e: IOException) {
-            logger.error(throwable = e) { "$LOG_PREFIX Failed to fetch Feature Flag Remote Catalog" }
-            null
-        } catch (e: CancellationException) {
-            throw e
-        } catch (@Suppress("TooGenericExceptionCaught") e: Exception) {
-            // The remote catalog is optional and app startup waits for this call to return, so no failure may
-            // escape it. An offline device, for one, fails name resolution with an UnresolvedAddressException,
-            // which is not an IOException.
-            logger.error(throwable = e) { "$LOG_PREFIX Failed to fetch Feature Flag Remote Catalog" }
-            null
+            catalog
         }
+        .flowOn(ioDispatcher)
+
+    override suspend fun load(): FeatureFlagCatalog? = withContext(ioDispatcher) {
+        loadMutex.withLock {
+            catalog.value ?: try {
+                val config = configStore.config.first()
+                val remoteCatalogConfig = config.remoteCatalogConfig
+                val currentMetadata = remoteCatalogConfig.cacheMetadata
+                // App startup waits for this catalog, so a slow network must not hold it for long.
+                val result = withFetchTimeout {
+                    val cacheMetadata = httpClient.fetchCacheMetadata(
+                        url = url,
+                        currentMetadata = currentMetadata,
+                    )
+                    if (
+                        (currentMetadata == null && cacheMetadata == null) ||
+                        currentMetadata != cacheMetadata
+                    ) {
+                        downloadAndCache(url, cacheMetadata)
+                    } else {
+                        readFromCache()
+                    }
+                }
+                if (result == null) {
+                    logger.warn { "$LOG_PREFIX Remote catalog was not fetched within $fetchTimeout." }
+                }
+                catalog.update { result }
+                result
+            } catch (e: RemoteCatalogException) {
+                when (e.code) {
+                    Code.CantWriteCacheFile -> logger.debug(throwable = e) { "$LOG_PREFIX Failed to write cache file." }
+                    Code.CantReadCacheFile -> logger.debug(throwable = e) { "$LOG_PREFIX Failed to read cache file." }
+                }
+                null
+            } catch (e: JsonConvertException) {
+                logger.error(throwable = e) { "$LOG_PREFIX Failed to convert JSON to FeatureFlagCatalog" }
+                null
+            } catch (e: SerializationException) {
+                logger.error(throwable = e) { "$LOG_PREFIX Failed to convert JSON to FeatureFlagCatalog" }
+                null
+            } catch (e: UnresolvedAddressException) {
+                logger.error(throwable = e) {
+                    "$LOG_PREFIX Failed to fetch Feature Flag Remote Catalog; likely no internet connection."
+                }
+                null
+            } catch (e: IOException) {
+                logger.error(throwable = e) { "$LOG_PREFIX Failed to fetch Feature Flag Remote Catalog" }
+                null
+            } catch (e: CancellationException) {
+                throw e
+            } catch (@Suppress("TooGenericExceptionCaught") e: Exception) {
+                // The remote catalog is optional and app startup waits for this call to return, so no failure may
+                // escape it, whatever form it takes.
+                logger.error(throwable = e) { "$LOG_PREFIX Failed to fetch Feature Flag Remote Catalog" }
+                null
+            }
+        }
+    }
+
+    /**
+     * Runs [block] within [fetchTimeout], or `null` when it took longer. With no limit, no timer is started at all.
+     */
+    private suspend fun <T> withFetchTimeout(block: suspend () -> T): T? {
+        return if (fetchTimeout.isInfinite()) block() else withTimeoutOrNull(fetchTimeout) { block() }
     }
 
     /**
@@ -119,10 +148,13 @@ class RemoteFeatureFlagCatalogDataSource(
      *
      * @throws RemoteCatalogException when the response status is not a success.
      */
-    private suspend fun HttpClient.fetchCacheMetadata(url: String): RemoteCatalogCacheMetadata? {
+    private suspend fun HttpClient.fetchCacheMetadata(
+        url: String,
+        currentMetadata: RemoteCatalogCacheMetadata?,
+    ): RemoteCatalogCacheMetadata? = try {
         logger.verbose { "$LOG_PREFIX Fetching cache metadata" }
         val response = head(url)
-        return if (response.status == HttpStatusCode.OK) {
+        if (response.status == HttpStatusCode.OK) {
             logger.verbose { "$LOG_PREFIX Cache read with success. Response = $response" }
             RemoteCatalogCacheMetadata(
                 eTag = response.headers["ETag"],
@@ -135,6 +167,17 @@ class RemoteFeatureFlagCatalogDataSource(
             }
             null
         }
+    } catch (e: UnresolvedAddressException) {
+        logger.error(throwable = e) {
+            "$LOG_PREFIX Failed to request Remote Catalog metadata; likely no internet connection. " +
+                "Using current cached metadata if exists."
+        }
+        currentMetadata
+    } catch (e: IOException) {
+        logger.error(throwable = e) {
+            "$LOG_PREFIX Failed to request Remote Catalog metadata. Using current cached metadata if exists"
+        }
+        currentMetadata
     }
 
     private suspend fun downloadAndCache(url: String, cacheMetadata: RemoteCatalogCacheMetadata?): FeatureFlagCatalog =
@@ -194,6 +237,10 @@ class RemoteFeatureFlagCatalogDataSource(
 
     companion object {
         private const val LOG_PREFIX = "[feature-flag][remote-data-sourece]"
+
+        /**
+         * How long app startup may wait for the remote catalog before carrying on without it.
+         */
         private val DEFAULT_FETCH_TIMEOUT = 5.seconds
     }
 }

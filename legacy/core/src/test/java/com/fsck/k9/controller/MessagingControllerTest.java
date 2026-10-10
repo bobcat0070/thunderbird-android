@@ -48,6 +48,7 @@ import com.fsck.k9.notification.NotificationStrategy;
 import net.thunderbird.core.common.mail.Protocols;
 import net.thunderbird.core.logging.Logger;
 import net.thunderbird.components.core.outcome.Outcome;
+import net.thunderbird.feature.account.AccountId;
 import net.thunderbird.feature.mail.message.list.LocalDeleteOperationDecider;
 import net.thunderbird.feature.mail.folder.api.OutboxFolderManager;
 import net.thunderbird.feature.mail.folder.api.OutboxFolderManagerKt;
@@ -145,7 +146,7 @@ public class MessagingControllerTest extends K9RobolectricTest {
     private volatile boolean hasFetchedMessage = false;
 
     private Preferences preferences;
-    private String accountUuid;
+    private AccountId accountId;
     private FeatureFlagProvider featureFlagProvider;
 
     @Mock
@@ -321,7 +322,7 @@ public class MessagingControllerTest extends K9RobolectricTest {
     public void searchRemoteMessagesSynchronous_shouldNotifyStartedListingRemoteMessages() throws Exception {
         setupRemoteSearch();
 
-        controller.searchRemoteMessagesSynchronous(accountUuid, FOLDER_ID, "query", reqFlags, forbiddenFlags, listener);
+        controller.searchRemoteMessagesSynchronous(accountId, FOLDER_ID, "query", reqFlags, forbiddenFlags, listener);
 
         verify(listener).remoteSearchStarted(FOLDER_ID);
     }
@@ -330,7 +331,7 @@ public class MessagingControllerTest extends K9RobolectricTest {
     public void searchRemoteMessagesSynchronous_shouldQueryRemoteFolder() throws Exception {
         setupRemoteSearch();
 
-        controller.searchRemoteMessagesSynchronous(accountUuid, FOLDER_ID, "query", reqFlags, forbiddenFlags, listener);
+        controller.searchRemoteMessagesSynchronous(accountId, FOLDER_ID, "query", reqFlags, forbiddenFlags, listener);
 
         verify(backend).search(FOLDER_NAME, "query", reqFlags, forbiddenFlags, false);
     }
@@ -339,7 +340,7 @@ public class MessagingControllerTest extends K9RobolectricTest {
     public void searchRemoteMessagesSynchronous_shouldAskLocalFolderToDetermineNewMessages() throws Exception {
         setupRemoteSearch();
 
-        controller.searchRemoteMessagesSynchronous(accountUuid, FOLDER_ID, "query", reqFlags, forbiddenFlags, listener);
+        controller.searchRemoteMessagesSynchronous(accountId, FOLDER_ID, "query", reqFlags, forbiddenFlags, listener);
 
         verify(localFolder).extractNewMessages(remoteMessages);
     }
@@ -348,7 +349,7 @@ public class MessagingControllerTest extends K9RobolectricTest {
     public void searchRemoteMessagesSynchronous_shouldTryAndGetNewMessages() throws Exception {
         setupRemoteSearch();
 
-        controller.searchRemoteMessagesSynchronous(accountUuid, FOLDER_ID, "query", reqFlags, forbiddenFlags, listener);
+        controller.searchRemoteMessagesSynchronous(accountId, FOLDER_ID, "query", reqFlags, forbiddenFlags, listener);
 
         verify(localFolder).getMessage("newMessageUid1");
     }
@@ -357,7 +358,7 @@ public class MessagingControllerTest extends K9RobolectricTest {
     public void searchRemoteMessagesSynchronous_shouldNotTryAndGetOldMessages() throws Exception {
         setupRemoteSearch();
 
-        controller.searchRemoteMessagesSynchronous(accountUuid, FOLDER_ID, "query", reqFlags, forbiddenFlags, listener);
+        controller.searchRemoteMessagesSynchronous(accountId, FOLDER_ID, "query", reqFlags, forbiddenFlags, listener);
 
         verify(localFolder, never()).getMessage("oldMessageUid");
     }
@@ -366,7 +367,7 @@ public class MessagingControllerTest extends K9RobolectricTest {
     public void searchRemoteMessagesSynchronous_shouldFetchNewMessages() throws Exception {
         setupRemoteSearch();
 
-        controller.searchRemoteMessagesSynchronous(accountUuid, FOLDER_ID, "query", reqFlags, forbiddenFlags, listener);
+        controller.searchRemoteMessagesSynchronous(accountId, FOLDER_ID, "query", reqFlags, forbiddenFlags, listener);
 
         verify(backend).downloadMessageStructure(eq(FOLDER_NAME), eq("newMessageUid2"));
     }
@@ -375,7 +376,7 @@ public class MessagingControllerTest extends K9RobolectricTest {
     public void searchRemoteMessagesSynchronous_shouldNotFetchExistingMessages() throws Exception {
         setupRemoteSearch();
 
-        controller.searchRemoteMessagesSynchronous(accountUuid, FOLDER_ID, "query", reqFlags, forbiddenFlags, listener);
+        controller.searchRemoteMessagesSynchronous(accountId, FOLDER_ID, "query", reqFlags, forbiddenFlags, listener);
 
         verify(backend, never()).downloadMessageStructure(eq(FOLDER_NAME), eq("newMessageUid1"));
     }
@@ -386,7 +387,7 @@ public class MessagingControllerTest extends K9RobolectricTest {
         when(backend.search(anyString(), anyString(), nullable(Set.class), nullable(Set.class), eq(false)))
             .thenThrow(new MessagingException("Test"));
 
-        controller.searchRemoteMessagesSynchronous(accountUuid, FOLDER_ID, "query", reqFlags, forbiddenFlags, listener);
+        controller.searchRemoteMessagesSynchronous(accountId, FOLDER_ID, "query", reqFlags, forbiddenFlags, listener);
 
         verify(listener).remoteSearchFailed(null, "Test");
     }
@@ -397,7 +398,7 @@ public class MessagingControllerTest extends K9RobolectricTest {
         when(backend.search(anyString(), nullable(String.class), nullable(Set.class), nullable(Set.class), eq(false)))
             .thenThrow(new MessagingException("Test"));
 
-        controller.searchRemoteMessagesSynchronous(accountUuid, FOLDER_ID, "query", reqFlags, forbiddenFlags, listener);
+        controller.searchRemoteMessagesSynchronous(accountId, FOLDER_ID, "query", reqFlags, forbiddenFlags, listener);
 
         verify(listener).remoteSearchFinished(FOLDER_ID, 0, 50, Collections.<String>emptyList());
     }
@@ -560,7 +561,7 @@ public class MessagingControllerTest extends K9RobolectricTest {
     }
 
     private void configureBackendManager() throws MessagingException {
-        when(backendManager.getBackend(account.getUuid())).thenReturn(backend);
+        when(backendManager.getBackend(account.getId())).thenReturn(backend);
         // What a server that can only be searched folder by folder answers. Left unstubbed, Mockito would answer
         // with an empty map instead, which reads as "searched everything, found nothing".
         when(backend.searchAllFolders(nullable(String.class), nullable(Set.class), nullable(Set.class), anyBoolean()))
@@ -570,7 +571,7 @@ public class MessagingControllerTest extends K9RobolectricTest {
 
     private void configureAccount() {
         account = preferences.newAccount();
-        accountUuid = account.getUuid();
+        accountId = account.getId();
 
         account.setIncomingServerSettings(new ServerSettings(Protocols.IMAP, "host", 993,
             ConnectionSecurity.SSL_TLS_REQUIRED, AuthType.PLAIN, "username", "password", null));

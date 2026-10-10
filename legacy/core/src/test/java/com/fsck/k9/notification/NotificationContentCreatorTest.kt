@@ -11,6 +11,7 @@ import com.fsck.k9.mailstore.LocalMessage
 import net.thunderbird.core.android.account.LegacyAccountDto
 import net.thunderbird.core.android.testing.RobolectricTest
 import net.thunderbird.core.preference.display.visualSettings.message.list.DisplayMessageListSettings
+import net.thunderbird.feature.account.AccountIdFactory
 import net.thunderbird.feature.impersonation.Impersonation
 import org.junit.Test
 import org.mockito.kotlin.any
@@ -18,7 +19,6 @@ import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.stubbing
 
-private const val ACCOUNT_UUID = "1-2-3"
 private const val FOLDER_ID = 23L
 private const val UID = "42"
 private const val PREVIEW = "Message preview text"
@@ -29,6 +29,8 @@ private const val RECIPIENT_ADDRESS = "bob@example.com"
 private const val RECIPIENT_NAME = "Bob"
 
 class NotificationContentCreatorTest : RobolectricTest() {
+
+    private val accountId = AccountIdFactory.create()
     private val contactRepository = createFakeContentRepository()
     private val resourceProvider = TestNotificationResourceProvider()
     private val contentCreator = createNotificationContentCreator()
@@ -173,7 +175,7 @@ class NotificationContentCreatorTest : RobolectricTest() {
     private fun createFakeContentRepository(): ContactRepository = mock()
 
     private fun createMessageReference(): MessageReference {
-        return MessageReference(ACCOUNT_UUID, FOLDER_ID, UID)
+        return MessageReference(accountId, FOLDER_ID, UID)
     }
 
     private fun createFakeLocalMessage(messageReference: MessageReference): LocalMessage {

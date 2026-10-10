@@ -95,6 +95,8 @@ import net.thunderbird.core.common.mail.Flag;
 import net.thunderbird.core.featureflag.FeatureFlagProvider;
 import net.thunderbird.core.featureflag.keys.GeneratedFeatureFlagKey;
 import net.thunderbird.core.logging.Logger;
+import net.thunderbird.feature.account.AccountId;
+import net.thunderbird.feature.mail.folder.api.FolderDetails;
 import net.thunderbird.feature.mail.folder.api.OutboxFolderManager;
 import net.thunderbird.feature.mail.folder.api.OutboxFolderManagerKt;
 import net.thunderbird.feature.mail.message.list.LocalDeleteOperationDecider;
@@ -321,7 +323,7 @@ public class MessagingController implements MessagingControllerRegistry, Messagi
     }
 
     Backend getBackend(LegacyAccountDto account) {
-        return backendManager.getBackend(account.getUuid());
+        return backendManager.getBackend(account.getId());
     }
 
     LocalStore getLocalStoreOrThrow(LegacyAccountDto account) {
@@ -383,12 +385,12 @@ public class MessagingController implements MessagingControllerRegistry, Messagi
 
 
     void suppressMessages(LegacyAccountDto account, List<LocalMessage> messages) {
-        MessageListCache cache = MessageListCache.getCache(account.getUuid());
+        MessageListCache cache = MessageListCache.getCache(account.getId());
         cache.hideMessages(messages);
     }
 
     private void unsuppressMessages(LegacyAccountDto account, List<LocalMessage> messages) {
-        MessageListCache cache = MessageListCache.getCache(account.getUuid());
+        MessageListCache cache = MessageListCache.getCache(account.getId());
         cache.unhideMessages(messages);
     }
 
@@ -396,35 +398,35 @@ public class MessagingController implements MessagingControllerRegistry, Messagi
         long messageId = message.getDatabaseId();
         long folderId = message.getFolder().getDatabaseId();
 
-        MessageListCache cache = MessageListCache.getCache(message.getFolder().getAccountUuid());
+        MessageListCache cache = MessageListCache.getCache(message.getFolder().getAccountId());
         return cache.isMessageHidden(messageId, folderId);
     }
 
     private void setFlagInCache(final LegacyAccountDto account, final List<Long> messageIds,
         final Flag flag, final boolean newState) {
 
-        MessageListCache cache = MessageListCache.getCache(account.getUuid());
+        MessageListCache cache = MessageListCache.getCache(account.getId());
         cache.setFlagForMessages(messageIds, flag, newState);
     }
 
     private void removeFlagFromCache(final LegacyAccountDto account, final List<Long> messageIds,
         final Flag flag) {
 
-        MessageListCache cache = MessageListCache.getCache(account.getUuid());
+        MessageListCache cache = MessageListCache.getCache(account.getId());
         cache.removeFlagForMessages(messageIds, flag);
     }
 
     private void setFlagForThreadsInCache(final LegacyAccountDto account, final List<Long> threadRootIds,
         final Flag flag, final boolean newState) {
 
-        MessageListCache cache = MessageListCache.getCache(account.getUuid());
+        MessageListCache cache = MessageListCache.getCache(account.getId());
         cache.setValueForThreads(threadRootIds, flag, newState);
     }
 
     private void removeFlagForThreadsFromCache(final LegacyAccountDto account, final List<Long> messageIds,
         final Flag flag) {
 
-        MessageListCache cache = MessageListCache.getCache(account.getUuid());
+        MessageListCache cache = MessageListCache.getCache(account.getId());
         cache.removeFlagForThreads(messageIds, flag);
     }
 
@@ -476,20 +478,20 @@ public class MessagingController implements MessagingControllerRegistry, Messagi
         }
     }
 
-    public Future<?> searchRemoteMessages(String acctUuid, long folderId, String query, Set<Flag> requiredFlags,
+    public Future<?> searchRemoteMessages(AccountId accountId, long folderId, String query, Set<Flag> requiredFlags,
         Set<Flag> forbiddenFlags, MessagingListener listener) {
-        Log.i("searchRemoteMessages (acct = %s, folderId = %d, query = %s)", acctUuid, folderId, query);
+        Log.i("searchRemoteMessages (acct = %s, folderId = %d, query = %s)", accountId, folderId, query);
 
         return threadPool.submit(() ->
-            searchRemoteMessagesSynchronous(acctUuid, folderId, query, requiredFlags, forbiddenFlags, listener)
+            searchRemoteMessagesSynchronous(accountId, folderId, query, requiredFlags, forbiddenFlags, listener)
         );
     }
 
     @VisibleForTesting
-    void searchRemoteMessagesSynchronous(String acctUuid, long folderId, String query, Set<Flag> requiredFlags,
+    void searchRemoteMessagesSynchronous(AccountId accountId, long folderId, String query, Set<Flag> requiredFlags,
         Set<Flag> forbiddenFlags, MessagingListener listener) {
 
-        LegacyAccountDto account = preferences.getAccount(acctUuid);
+        LegacyAccountDto account = preferences.getById(accountId);
 
         if (listener != null) {
             listener.remoteSearchStarted(folderId);
@@ -507,7 +509,7 @@ public class MessagingController implements MessagingControllerRegistry, Messagi
                 if (listener != null) {
                     listener.remoteSearchFailed(null, e.getMessage());
                 }
-                Log.e(e, "Remote search failed for account %s, folder %d", acctUuid, folderId);
+                Log.e(e, "Remote search failed for account %s, folder %d", accountId, folderId);
             }
         } finally {
             if (listener != null) {
@@ -568,7 +570,7 @@ public class MessagingController implements MessagingControllerRegistry, Messagi
             }
         } catch (Exception e) {
             Log.e(e, "Searching all folders at once failed for account %s; searching folder by folder",
-                account.getUuid());
+                account.getId().toString());
             return false;
         }
         if (resultsByFolder == null) {
@@ -579,7 +581,7 @@ public class MessagingController implements MessagingControllerRegistry, Messagi
         try {
             localStore = localStoreProvider.getInstance(account);
         } catch (MessagingException e) {
-            Log.e(e, "Could not open the local store for account %s", account.getUuid());
+            Log.e(e, "Could not open the local store for account %s", account.getId().toString());
             return true;
         }
 
@@ -599,7 +601,7 @@ public class MessagingController implements MessagingControllerRegistry, Messagi
                 loadRemoteSearchResults(account, localFolder, folderResults.getValue(), senderAddress == null,
                     listener);
             } catch (Exception e) {
-                Log.e(e, "Could not save remote search results for account %s", account.getUuid());
+                Log.e(e, "Could not save remote search results for account %s", account.getId().toString());
             }
         }
 
@@ -732,7 +734,7 @@ public class MessagingController implements MessagingControllerRegistry, Messagi
                             senderAddress == null, listener);
                     } catch (Exception e) {
                         // Reported but not fatal: the folders that can be searched still are.
-                        Log.e(e, "Remote search failed for account %s, folder %d", account.getUuid(), folderId);
+                        Log.e(e, "Remote search failed for account %s, folder %d", account.getId().toString(), folderId);
                     }
                 }
             }
@@ -759,7 +761,7 @@ public class MessagingController implements MessagingControllerRegistry, Messagi
         List<LegacyAccountDto> accounts = new ArrayList<>();
 
         for (LegacyAccountDto account : preferences.getAccounts()) {
-            boolean wanted = accountUuids.isEmpty() || accountUuids.contains(account.getUuid());
+            boolean wanted = accountUuids.isEmpty() || accountUuids.contains(account.getId().toString());
             if (wanted && isRemoteSearchSupported(account)) {
                 accounts.add(account);
             }
@@ -980,6 +982,10 @@ public class MessagingController implements MessagingControllerRegistry, Messagi
         messageStore.setStatus(folderId, status);
     }
 
+    public MessageStore getMessageStore(LegacyAccountDto account) {
+        return messageStoreManager.getMessageStore(account);
+    }
+
     public void handleAuthenticationFailure(LegacyAccountDto account, boolean incoming) {
         if (account.shouldMigrateToOAuth()) {
             migrateAccountToOAuth(account);
@@ -1008,7 +1014,7 @@ public class MessagingController implements MessagingControllerRegistry, Messagi
         return NotificationFactoryCoroutineCompat.create(
             continuation ->
                 AuthenticationErrorNotification.Companion.invoke(
-                    account.getUuid(),
+                    account.getId(),
                     account.getDisplayName(),
                     account.getAccountNumber(),
                     incoming,
@@ -1530,7 +1536,7 @@ public class MessagingController implements MessagingControllerRegistry, Messagi
 
     private void cancelNotificationsForMessages(LegacyAccountDto account, long folderId, List<String> uids) {
         for (String uid : uids) {
-            MessageReference messageReference = new MessageReference(account.getUuid(), folderId, uid);
+            MessageReference messageReference = new MessageReference(account.getId(), folderId, uid);
             notificationController.removeNewMailNotification(account, messageReference);
         }
     }
@@ -1785,7 +1791,7 @@ public class MessagingController implements MessagingControllerRegistry, Messagi
         try {
             final long outboxFolderId = OutboxFolderManagerKt.getOutboxFolderIdSync(
                 outboxFolderManager,
-                account.getUuid(),
+                account.getId().toString(),
                 true
             );
 
@@ -1805,7 +1811,7 @@ public class MessagingController implements MessagingControllerRegistry, Messagi
             // Held for a moment when undo send is on, so it can still be taken back - which needs a Drafts folder
             // to put it back in. Sent once the hold runs out.
             boolean isHeld = account.hasDraftsFolder() &&
-                undoSendHold.hold(account.getUuid(), messageId, () -> sendPendingMessages(account, null));
+                undoSendHold.hold(account.getId().toString(), messageId, () -> sendPendingMessages(account, null));
             if (!isHeld) {
                 sendPendingMessages(account, listener);
             }
@@ -1836,14 +1842,14 @@ public class MessagingController implements MessagingControllerRegistry, Messagi
     @Nullable
     @WorkerThread
     public MessageReference undoSend(LegacyAccountDto account, long messageId) {
-        if (!undoSendHold.cancel(account.getUuid(), messageId)) {
+        if (!undoSendHold.cancel(account.getId().toString(), messageId)) {
             return null;
         }
 
         try {
             long outboxFolderId = OutboxFolderManagerKt.getOutboxFolderIdSync(
                 outboxFolderManager,
-                account.getUuid(),
+                account.getId().toString(),
                 false
             );
             LocalFolder outbox = localStoreProvider.getInstance(account).getFolder(outboxFolderId);
@@ -1875,7 +1881,7 @@ public class MessagingController implements MessagingControllerRegistry, Messagi
             awaitBackgroundCommands(DRAFT_UPLOAD_WAIT_SECONDS);
             String draftServerId = messageStore.getMessageServerId(draftId);
 
-            return draftServerId == null ? null : new MessageReference(account.getUuid(), draftsFolderId, draftServerId);
+            return draftServerId == null ? null : new MessageReference(account.getId(), draftsFolderId, draftServerId);
         } catch (Exception e) {
             Log.e(e, "Could not take back a sent message; sending it after all");
             sendPendingMessages(account, null);
@@ -1924,7 +1930,7 @@ public class MessagingController implements MessagingControllerRegistry, Messagi
         putBackground("sendPendingMessages", listener, new Runnable() {
             @Override
             public void run() {
-                if (OutboxFolderManagerKt.hasPendingMessagesSync(outboxFolderManager, account.getUuid())) {
+                if (OutboxFolderManagerKt.hasPendingMessagesSync(outboxFolderManager, account.getId().toString())) {
 
                     showSendingNotificationIfNecessary(account);
 
@@ -1953,7 +1959,7 @@ public class MessagingController implements MessagingControllerRegistry, Messagi
     private boolean messagesPendingSend(final LegacyAccountDto account) {
         final long outboxFolderId = OutboxFolderManagerKt.getOutboxFolderIdSync(
             outboxFolderManager,
-            account.getUuid(),
+            account.getId().toString(),
             true
         );
         if (outboxFolderId == -1L) {
@@ -1982,7 +1988,7 @@ public class MessagingController implements MessagingControllerRegistry, Messagi
             final OutboxStateRepository outboxStateRepository = localStore.getOutboxStateRepository();
             final long outboxFolderId = OutboxFolderManagerKt.getOutboxFolderIdSync(
                 outboxFolderManager,
-                account.getUuid(),
+                account.getId().toString(),
                 true
             );
             final LocalFolder localFolder = localStore.getFolder(outboxFolderId);
@@ -2019,7 +2025,7 @@ public class MessagingController implements MessagingControllerRegistry, Messagi
                     message.destroy();
                     continue;
                 }
-                if (undoSendHold.isHeld(account.getUuid(), message.getDatabaseId())) {
+                if (undoSendHold.isHeld(account.getId().toString(), message.getDatabaseId())) {
                     // Still within the moment the user has to take it back; it is sent once released.
                     continue;
                 }
@@ -2147,7 +2153,7 @@ public class MessagingController implements MessagingControllerRegistry, Messagi
 
         final long outboxFolderId = OutboxFolderManagerKt.getOutboxFolderIdSync(
             outboxFolderManager,
-            account.getUuid(),
+            account.getId().toString(),
             true
         );
         for (MessagingListener listener : getListeners()) {
@@ -2445,7 +2451,7 @@ public class MessagingController implements MessagingControllerRegistry, Messagi
         MessageStore messageStore = messageStoreManager.getMessageStore(account);
         String messageServerId = messageStore.getMessageServerId(messageId);
         if (messageServerId != null) {
-            MessageReference messageReference = new MessageReference(account.getUuid(), folderId, messageServerId);
+            MessageReference messageReference = new MessageReference(account.getId(), folderId, messageServerId);
             deleteMessages(Collections.singletonList(messageReference), skipTrashFolder);
         }
     }
@@ -2587,7 +2593,7 @@ public class MessagingController implements MessagingControllerRegistry, Messagi
 
             final long outboxFolderId = OutboxFolderManagerKt.getOutboxFolderIdSync(
                 outboxFolderManager,
-                account.getUuid(),
+                account.getId().toString(),
                 true
             );
 
@@ -3105,11 +3111,11 @@ public class MessagingController implements MessagingControllerRegistry, Messagi
     }
 
     void actOnMessagesGroupedByAccountAndFolder(List<MessageReference> messages, MessageActor actor) {
-        Map<String, Map<Long, List<MessageReference>>> accountMap = groupMessagesByAccountAndFolder(messages);
+        Map<AccountId, Map<Long, List<MessageReference>>> accountMap = groupMessagesByAccountAndFolder(messages);
 
-        for (Map.Entry<String, Map<Long, List<MessageReference>>> entry : accountMap.entrySet()) {
-            String accountUuid = entry.getKey();
-            LegacyAccountDto account = preferences.getAccount(accountUuid);
+        for (Map.Entry<AccountId, Map<Long, List<MessageReference>>> entry : accountMap.entrySet()) {
+            AccountId accountId = entry.getKey();
+            LegacyAccountDto account = preferences.getById(accountId);
 
             Map<Long, List<MessageReference>> folderMap = entry.getValue();
             for (Map.Entry<Long, List<MessageReference>> folderEntry : folderMap.entrySet()) {
@@ -3121,21 +3127,21 @@ public class MessagingController implements MessagingControllerRegistry, Messagi
     }
 
     @NonNull
-    private Map<String, Map<Long, List<MessageReference>>> groupMessagesByAccountAndFolder(
+    private Map<AccountId, Map<Long, List<MessageReference>>> groupMessagesByAccountAndFolder(
         List<MessageReference> messages) {
-        Map<String, Map<Long, List<MessageReference>>> accountMap = new HashMap<>();
+        Map<AccountId, Map<Long, List<MessageReference>>> accountMap = new HashMap<>();
 
         for (MessageReference message : messages) {
             if (message == null) {
                 continue;
             }
-            String accountUuid = message.getAccountUuid();
+            AccountId accountId = message.getAccountId();
             long folderId = message.getFolderId();
 
-            Map<Long, List<MessageReference>> folderMap = accountMap.get(accountUuid);
+            Map<Long, List<MessageReference>> folderMap = accountMap.get(accountId);
             if (folderMap == null) {
                 folderMap = new HashMap<>();
-                accountMap.put(accountUuid, folderMap);
+                accountMap.put(accountId, folderMap);
             }
             List<MessageReference> messageList = folderMap.get(folderId);
             if (messageList == null) {
@@ -3255,9 +3261,9 @@ public class MessagingController implements MessagingControllerRegistry, Messagi
                 messagingListener.synchronizeMailboxRemovedMessage(account, folderServerId, messageServerId);
             }
 
-            String accountUuid = account.getUuid();
+            AccountId accountId = account.getId();
             long folderId = getFolderId(account, folderServerId);
-            MessageReference messageReference = new MessageReference(accountUuid, folderId, messageServerId);
+            MessageReference messageReference = new MessageReference(accountId, folderId, messageServerId);
             notificationController.removeNewMailNotification(account, messageReference);
         }
 

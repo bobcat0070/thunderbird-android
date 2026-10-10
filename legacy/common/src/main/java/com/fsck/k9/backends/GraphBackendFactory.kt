@@ -53,7 +53,7 @@ class DefaultGraphBackendFactory(
     }
 
     override fun createBackend(accountId: AccountId): Backend {
-        val account = accountManager.getAccount(accountId.toString()) ?: error("Account not found: $accountId")
+        val account = accountManager.getById(accountId) ?: error("Account not found: $accountId")
         val backendStorage = backendStorageFactory.createBackendStorage(accountId)
         val authStateStorage = AccountAuthStateStorage(accountManager, accountId)
         val tokenProvider = RealOAuth2TokenProvider(context, authStateStorage)
@@ -65,7 +65,7 @@ class DefaultGraphBackendFactory(
             logger = logger,
             // The mailbox's own contacts feed the same completion index as the user's sent mail.
             contactStore = GraphContactIndexStore(
-                accountUuid = account.uuid,
+                accountUuid = accountId.toString(),
                 index = recipientIndex,
             ),
             pushSupport = GraphPushSupport(
@@ -76,7 +76,7 @@ class DefaultGraphBackendFactory(
                     schedulerId = accountId.toString(),
                     logger = logger,
                 ),
-                accountName = account.uuid,
+                accountName = accountId.toString(),
             ),
         )
     }

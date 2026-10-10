@@ -159,7 +159,7 @@ class MessageTopView(
         currentSenderAddress = getSenderEmailAddress(messageViewInfo.message)?.address
         val showPicturesSetting = account.showPictures
         val loadPictures =
-            shouldAutomaticallyLoadPictures(showPicturesSetting, messageViewInfo.message, account.uuid) ||
+            shouldAutomaticallyLoadPictures(showPicturesSetting, messageViewInfo.message, account.id.toString()) ||
             showPicturesButtonClicked
 
         val view = layoutInflater.inflate(

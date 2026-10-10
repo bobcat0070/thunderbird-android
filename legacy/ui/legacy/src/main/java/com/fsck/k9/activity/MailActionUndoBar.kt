@@ -13,7 +13,6 @@ import com.fsck.k9.controller.MailActionHold.Kind
 import com.fsck.k9.ui.R
 import com.google.android.material.snackbar.Snackbar
 import kotlinx.coroutines.launch
-import net.thunderbird.feature.account.AccountIdFactory
 
 /**
  * Offers "Undo" at the bottom of the screen for as long as mail just deleted or moved is waiting in the
@@ -84,10 +83,10 @@ internal class MailActionUndoBar(
 
     @Suppress("TooGenericExceptionCaught", "SwallowedException")
     private fun folderName(action: HeldAction, folderId: Long): String? {
-        val accountUuid = action.messages.firstOrNull()?.accountUuid ?: return null
+        val accountId = action.messages.firstOrNull()?.accountId ?: return null
 
         return try {
-            messageStoreManager.getMessageStore(AccountIdFactory.of(accountUuid)).getFolder(folderId) { it.name }
+            messageStoreManager.getMessageStore(accountId).getFolder(folderId) { it.name }
         } catch (e: Exception) {
             // The bar still says what happened, without naming where.
             null

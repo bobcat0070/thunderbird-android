@@ -18,7 +18,7 @@ class ManageFoldersActivity : BaseActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setLayout(R.layout.activity_manage_folders)
-        setTitle(R.string.folders_action)
+        setTitle(R.string.account_setup_visibility_and_syncing)
 
         val accountUuid = intent.getStringExtra(EXTRA_ACCOUNT) ?: error("Missing Intent extra '$EXTRA_ACCOUNT'")
 
@@ -52,7 +52,7 @@ class ManageFoldersActivity : BaseActivity() {
         @JvmStatic
         fun launch(activity: Activity, account: LegacyAccountDto) {
             val intent = Intent(activity, ManageFoldersActivity::class.java).apply {
-                putExtra(EXTRA_ACCOUNT, account.uuid)
+                putExtra(EXTRA_ACCOUNT, account.id.toString())
             }
             activity.startActivity(intent)
         }

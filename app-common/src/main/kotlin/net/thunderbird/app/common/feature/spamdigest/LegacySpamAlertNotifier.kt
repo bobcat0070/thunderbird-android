@@ -12,6 +12,7 @@ import com.fsck.k9.notification.NotificationChannelManager.ChannelType
 import com.fsck.k9.notification.NotificationHelper
 import com.fsck.k9.notification.NotificationResourceProvider
 import net.thunderbird.app.common.R
+import net.thunderbird.app.common.account.getByUuid
 import net.thunderbird.core.android.account.LegacyAccountDtoManager
 import net.thunderbird.core.logging.Logger
 import net.thunderbird.feature.spamdigest.SpamAlertNotifier
@@ -46,7 +47,7 @@ internal class LegacySpamAlertNotifier(
 ) : SpamAlertNotifier {
 
     override fun notify(accountId: String, folderId: Long, messageServerId: String, message: SpamMessage) {
-        val account = accountManager.getAccount(accountId) ?: return
+        val account = accountManager.getByUuid(accountId) ?: return
         // Checked here, beside the call that needs it, where lint can see it.
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
             ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) !=
@@ -61,7 +62,7 @@ internal class LegacySpamAlertNotifier(
         val text = context.getString(R.string.spam_alert_text, sender, subject)
 
         val pendingIntent = actionCreator.createViewMessagePendingIntent(
-            MessageReference(accountId, folderId, messageServerId),
+            MessageReference(account.id, folderId, messageServerId),
         )
 
         val publicVersion = notificationHelper.createNotificationBuilder(account, ChannelType.MISCELLANEOUS)

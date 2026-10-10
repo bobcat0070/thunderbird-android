@@ -102,7 +102,7 @@ internal class PinnedFolderMenu(
 
     @Suppress("TooGenericExceptionCaught", "SwallowedException")
     private fun <T> pinnedFolders(account: T): List<RemoteFolder> where T : Account, T : BaseAccount {
-        val pinnedIds = pinnedFolderStore.pinnedFolderIds(account.uuid)
+        val pinnedIds = pinnedFolderStore.pinnedFolderIds(account.id.toString())
         if (pinnedIds.isEmpty()) return emptyList()
 
         // Blocking, as the read it replaces was: the menu is built synchronously, and this is one indexed query

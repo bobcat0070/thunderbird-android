@@ -49,5 +49,5 @@ data class MessageListItem(
     val folderName: String? = null,
 ) {
     val messageReference: MessageReference
-        get() = MessageReference(account.uuid, folderId, messageUid)
+        get() = MessageReference(account.id, folderId, messageUid)
 }

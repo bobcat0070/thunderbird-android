@@ -3,6 +3,7 @@ package com.fsck.k9.mailstore
 import com.fsck.k9.Preferences
 import net.thunderbird.core.android.account.LegacyAccountDtoManager
 import net.thunderbird.core.common.mail.Protocols
+import net.thunderbird.feature.account.AccountIdFactory
 
 /**
  * How many recent messages the learned server name is judged over.
@@ -90,7 +91,10 @@ internal class DefaultAuthenticationServerTrust(
      * after the fiftieth.
      */
     private fun knownServerId(accountUuid: String): String? {
-        val server = accountManager.getAccount(accountUuid)?.incomingServerSettings ?: return null
+        val server = runCatching { AccountIdFactory.of(accountUuid) }.getOrNull()
+            ?.let(accountManager::getById)
+            ?.incomingServerSettings
+            ?: return null
         val host = server.host?.lowercase().orEmpty()
 
         return when {

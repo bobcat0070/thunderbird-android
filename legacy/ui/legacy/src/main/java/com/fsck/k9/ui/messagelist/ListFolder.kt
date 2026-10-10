@@ -21,16 +21,16 @@ internal data class ListFolder(val name: String, val type: FolderType)
 internal fun List<MessageListItem>.withFolderNames(
     folder: (account: LegacyAccount, folderId: Long) -> ListFolder?,
 ): List<MessageListItem> {
-    val folders = distinctBy { it.account.uuid to it.folderId }
+    val folders = distinctBy { it.account.id.toString() to it.folderId }
     if (folders.size < 2) return this
 
     val listFolders = folders.associate { item ->
-        (item.account.uuid to item.folderId) to folder(item.account, item.folderId)
+        (item.account.id.toString() to item.folderId) to folder(item.account, item.folderId)
     }
     val isFromMixedFolders = listFolders.values.filterNotNull().distinctBy { it.kind }.size > 1
 
     return if (isFromMixedFolders) {
-        map { item -> item.copy(folderName = listFolders[item.account.uuid to item.folderId]?.name) }
+        map { item -> item.copy(folderName = listFolders[item.account.id.toString() to item.folderId]?.name) }
     } else {
         this
     }

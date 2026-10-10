@@ -25,6 +25,7 @@ dependencies {
     implementation(projects.backend.graph)
     implementation(projects.mail.protocols.pop3)
     implementation(projects.mail.protocols.smtp)
+    implementation(projects.feature.account.api)
     implementation(projects.feature.mail.folder.api)
 
     implementation(projects.feature.autodiscovery.service)

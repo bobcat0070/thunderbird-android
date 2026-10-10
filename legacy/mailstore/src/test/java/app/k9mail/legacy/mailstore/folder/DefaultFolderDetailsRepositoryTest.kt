@@ -6,13 +6,19 @@ import app.k9mail.legacy.mailstore.ListenableMessageStore
 import app.k9mail.legacy.mailstore.MessageStoreFactory
 import app.k9mail.legacy.mailstore.MessageStoreManager
 import app.k9mail.legacy.mailstore.MoreMessages
+import app.k9mail.legacy.mailstore.domain.GetFolderIdsForTypeUseCase
+import app.k9mail.legacy.mailstore.domain.SetPushForFolderUseCase
 import assertk.assertThat
 import assertk.assertions.isEqualTo
 import assertk.assertions.isInstanceOf
+import assertk.assertions.isNotEmpty
 import assertk.assertions.isNull
 import com.fsck.k9.mail.AuthType
 import com.fsck.k9.mail.ConnectionSecurity
+import com.fsck.k9.mail.FolderType as K9FolderType
 import com.fsck.k9.mail.ServerSettings
+import junit.framework.TestCase.assertFalse
+import junit.framework.TestCase.assertTrue
 import kotlin.test.Test
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -56,13 +62,13 @@ private const val REGULAR_FOLDER_ID = 42L
 class DefaultFolderDetailsRepositoryTest {
     private val accountId = AccountIdFactory.of(ACCOUNT_ID_RAW)
     private val account = createLegacyAccount(accountId)
-    private val accountDto = LegacyAccountDto(ACCOUNT_ID_RAW)
+    private val accountDto = LegacyAccountDto(accountId)
     private val messageStore = mock<ListenableMessageStore>()
     private val accountManager = FakeLegacyAccountManager(accounts = listOf(account))
     private val messageStoreManager = MessageStoreManager(
         accountManager = FakeLegacyAccountDtoManager(accounts = listOf(accountDto)),
         messageStoreFactory = FakeMessageStoreFactory(
-            messageStoresByUuid = mapOf(accountDto.uuid to messageStore),
+            messageStoresByUuid = mapOf(accountDto.id to messageStore),
         ),
     )
     private val outboxFolderManager = FakeOutboxFolderManager(outboxFolderId = OUTBOX_FOLDER_ID)
@@ -285,10 +291,114 @@ class DefaultFolderDetailsRepositoryTest {
             assertThat((result as Outcome.Failure).error).isInstanceOf(FolderError.FailedPrecondition::class)
         }
 
+    @Test
+    fun `SetPushForFolderUseCase should call setPushEnabled`() = runTest {
+        // Setup fakes
+        var folderAccessor = FakeFolderDetailsAccessor(
+            id = INBOX_FOLDER_ID,
+            isPushEnabled = false,
+        )
+        whenever(messageStore.setPushEnabled(folderId = INBOX_FOLDER_ID, enable = true)).then {
+            folderAccessor = FakeFolderDetailsAccessor(
+                id = INBOX_FOLDER_ID,
+                isPushEnabled = true,
+            )
+        }
+
+        // Get initial values
+        stubGetFolder(INBOX_FOLDER_ID, folderAccessor)
+        var inboxFolderDetails = (testSubject.findById(accountId, INBOX_FOLDER_ID) as Outcome.Success).data
+
+        // Check that push has not been enabled yet
+        assertFalse(
+            "Is push enabled: ${inboxFolderDetails?.isPushEnabled} was supposed to be false " +
+                "before calling SetPushForFolderUseCase.",
+            inboxFolderDetails?.isPushEnabled == true,
+        )
+
+        // Call the same use case used in the account creation function to enable push
+        SetPushForFolderUseCase(
+            messageStoreManager,
+        ).invoke(
+            accountUuid = accountId,
+            folderId = inboxFolderDetails?.folder?.id ?: 0L,
+            enabled = true,
+        )
+
+        // Get updated folder details
+        stubGetFolder(INBOX_FOLDER_ID, folderAccessor)
+        inboxFolderDetails = (testSubject.findById(accountId, INBOX_FOLDER_ID) as Outcome.Success).data
+
+        // Check folder's push settings changed
+        assertTrue(
+            "Is push enabled: ${inboxFolderDetails?.isPushEnabled} was supposed to be true " +
+                "after calling SetPushForFolderUseCase.",
+            inboxFolderDetails?.isPushEnabled == true,
+        )
+    }
+
+    @Test
+    fun `GetFolderIdsForTypeUseCase should return relevant message ids`() = runTest {
+        // Setup
+        val accessor = FakeFolderDetailsAccessor(
+            id = REGULAR_FOLDER_ID,
+            name = "Regular",
+            type = K9FolderType.REGULAR,
+            isInTopGroup = true,
+            isIntegrate = true,
+            isSyncEnabled = true,
+            isVisible = true,
+            isNotificationsEnabled = false,
+            isPushEnabled = true,
+        )
+        stubGetFolders(accessor)
+        val testSubject = GetFolderIdsForTypeUseCase(messageStoreManager)
+
+        // Test
+        val folderList = testSubject.invoke(
+            accountUuid = accountId,
+            folderType = K9FolderType.REGULAR
+        )
+        assertThat(folderList).isNotEmpty()
+        assertThat(folderList.first()).isEqualTo(REGULAR_FOLDER_ID)
+    }
+
+    @Test
+    fun `GetFolderIdsForTypeUseCase should return no message ids if type does not match`() = runTest {
+        // Setup
+        val accessor = FakeFolderDetailsAccessor(
+            id = INBOX_FOLDER_ID,
+            name = "Inbox",
+            type = K9FolderType.INBOX,
+            isInTopGroup = true,
+            isIntegrate = true,
+            isSyncEnabled = true,
+            isVisible = true,
+            isNotificationsEnabled = false,
+            isPushEnabled = true,
+        )
+        stubGetFolders(accessor)
+        val testSubject = GetFolderIdsForTypeUseCase(messageStoreManager)
+
+        // Test
+        val folderList = testSubject.invoke(
+            accountUuid = accountId,
+            folderType = K9FolderType.REGULAR
+        )
+        assertThat(folderList).isNotEmpty()
+        assertThat(folderList.first()).isNull()
+    }
+
     private fun stubGetFolder(folderId: Long, accessor: FolderDetailsAccessor) {
         whenever(messageStore.getFolder<FolderDetails?>(eq(folderId), any())).thenAnswer { invocation ->
             val mapper = invocation.getArgument<FolderMapper<FolderDetails?>>(1)
             mapper.map(accessor)
+        }
+    }
+    private fun stubGetFolders(accessor: FolderDetailsAccessor) {
+        whenever(messageStore.getFolders<FolderDetails>(eq(true), any())).thenAnswer { invocation ->
+            val mapper = invocation.getArgument<FolderMapper<FolderDetails?>>(1)
+            listOf(mapper.map(accessor))
         }
     }
 }
@@ -350,7 +460,7 @@ private class FakeFolderDetailsAccessor(
     override val id: Long,
     override val name: String = "Folder",
     override val serverId: String? = "serverId",
-    override val type: com.fsck.k9.mail.FolderType = com.fsck.k9.mail.FolderType.REGULAR,
+    override val type: K9FolderType = K9FolderType.REGULAR,
     override val isLocalOnly: Boolean = false,
     override val isInTopGroup: Boolean = false,
     override val isIntegrate: Boolean = false,
@@ -371,14 +481,12 @@ private class FakeLegacyAccountManager(
     private val accounts: List<LegacyAccount> = emptyList(),
 ) : LegacyAccountManager {
     override fun getAll(): Flow<List<LegacyAccount>> = flowOf(accounts)
-    override fun getById(id: AccountId): Flow<LegacyAccount?> = flowOf(accounts.find { it.id == id })
     override suspend fun update(account: LegacyAccount) = error("Not implemented")
-    override fun getByIdSync(id: AccountId): LegacyAccount? = accounts.find { it.id == id }
     override fun updateSync(account: LegacyAccount) = error("Not implemented")
     override fun getAccounts(): List<LegacyAccount> = accounts
     override fun getAccountsFlow(): Flow<List<LegacyAccount>> = flowOf(accounts)
-    override fun getAccount(accountUuid: String): LegacyAccount? = accounts.find { it.uuid == accountUuid }
-    override fun getAccountFlow(accountUuid: String): Flow<LegacyAccount?> = flowOf(getAccount(accountUuid))
+    override fun getById(accountId: AccountId): LegacyAccount? = accounts.find { it.id == accountId }
+    override fun observeById(accountId: AccountId): Flow<LegacyAccount?> = flowOf(getById(accountId))
     override fun moveAccount(account: LegacyAccount, newPosition: Int) = error("Not implemented")
     override fun saveAccount(account: LegacyAccount) = error("Not implemented")
 }
@@ -386,12 +494,12 @@ private class FakeLegacyAccountManager(
 private class FakeLegacyAccountDtoManager(
     accounts: List<LegacyAccountDto> = emptyList(),
 ) : LegacyAccountDtoManager {
-    private val accountsByUuid = accounts.associateBy { it.uuid }
+    private val accountsByUuid = accounts.associateBy { it.id }
 
     override fun getAccounts(): List<LegacyAccountDto> = accountsByUuid.values.toList()
     override fun getAccountsFlow(): Flow<List<LegacyAccountDto>> = flowOf(getAccounts())
-    override fun getAccount(accountUuid: String): LegacyAccountDto? = accountsByUuid[accountUuid]
-    override fun getAccountFlow(accountUuid: String): Flow<LegacyAccountDto?> = flowOf(getAccount(accountUuid))
+    override fun getById(accountId: AccountId): LegacyAccountDto? = accountsByUuid[accountId]
+    override fun observeById(accountId: AccountId): Flow<LegacyAccountDto?> = flowOf(getById(accountId))
     override fun addAccountRemovedListener(listener: AccountRemovedListener) = Unit
     override fun moveAccount(account: LegacyAccountDto, newPosition: Int) = Unit
     override fun addOnAccountsChangeListener(accountsChangeListener: AccountsChangeListener) = Unit
@@ -400,9 +508,9 @@ private class FakeLegacyAccountDtoManager(
 }
 
 private class FakeMessageStoreFactory(
-    private val messageStoresByUuid: Map<String, ListenableMessageStore>,
+    private val messageStoresByUuid: Map<AccountId, ListenableMessageStore>,
 ) : MessageStoreFactory {
-    override fun create(account: LegacyAccountDto): ListenableMessageStore = messageStoresByUuid.getValue(account.uuid)
+    override fun create(account: LegacyAccountDto): ListenableMessageStore = messageStoresByUuid.getValue(account.id)
 }
 
 private class FakeOutboxFolderManager(

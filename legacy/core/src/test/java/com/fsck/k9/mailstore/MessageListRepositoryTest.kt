@@ -14,6 +14,7 @@ import assertk.assertions.isEqualTo
 import com.fsck.k9.mail.Address
 import java.util.UUID
 import net.thunderbird.core.common.mail.Flag
+import net.thunderbird.feature.account.AccountIdFactory
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -42,11 +43,12 @@ private val SELECTION_ARGS = arrayOf("irrelevant")
 private const val SORT_ORDER = "irrelevant"
 
 class MessageListRepositoryTest {
-    private val accountUuid = UUID.randomUUID().toString()
+    private val accountId = AccountIdFactory.create()
+    private val accountIdOther = AccountIdFactory.create()
 
     private val messageStore = mock<ListenableMessageStore>()
     private val messageStoreManager = mock<MessageStoreManager> {
-        on { getMessageStore(accountUuid) } doReturn messageStore
+        on { getMessageStore(accountId) } doReturn messageStore
     }
 
     private val messageListRepository: MessageListRepository = DefaultMessageListRepository(messageStoreManager)
@@ -73,15 +75,15 @@ class MessageListRepositoryTest {
         val listener = MessageListChangedListener {
             messageListChanged++
         }
-        messageListRepository.addListener(accountUuid, listener)
+        messageListRepository.addListener(accountId, listener)
 
-        messageListRepository.notifyMessageListChanged(accountUuid)
+        messageListRepository.notifyMessageListChanged(accountId)
 
         assertThat(messageListChanged).isEqualTo(1)
 
         messageListRepository.removeListener(listener)
 
-        messageListRepository.notifyMessageListChanged(accountUuid)
+        messageListRepository.notifyMessageListChanged(accountId)
 
         assertThat(messageListChanged).isEqualTo(1)
     }
@@ -92,16 +94,16 @@ class MessageListRepositoryTest {
         val listener = MessageListChangedListener {
             messageListChanged++
         }
-        messageListRepository.addListener(accountUuid, listener)
+        messageListRepository.addListener(accountId, listener)
 
-        messageListRepository.notifyMessageListChanged("otherAccountUuid")
+        messageListRepository.notifyMessageListChanged(accountIdOther)
 
         assertThat(messageListChanged).isEqualTo(0)
     }
 
     @Test
     fun `notifyMessageListChanged() without any listeners should not throw`() {
-        messageListRepository.notifyMessageListChanged(accountUuid)
+        messageListRepository.notifyMessageListChanged(accountId)
     }
 
     @Test
@@ -117,13 +119,13 @@ class MessageListRepositoryTest {
                 isForwarded = true,
             ),
         )
-        MessageListCache.getCache(accountUuid).apply {
+        MessageListCache.getCache(accountId).apply {
             setFlagForMessages(listOf(MESSAGE_ID), Flag.SEEN, true)
             setValueForThreads(listOf(THREAD_ROOT), Flag.FLAGGED, false)
         }
 
         val result = messageListRepository.getMessages(
-            accountUuid,
+            accountId,
             SELECTION,
             SELECTION_ARGS,
             SORT_ORDER,
@@ -162,7 +164,7 @@ class MessageListRepositoryTest {
         hideMessage(MESSAGE_ID, FOLDER_ID)
 
         val result = messageListRepository.getMessages(
-            accountUuid,
+            accountId,
             SELECTION,
             SELECTION_ARGS,
             SORT_ORDER,
@@ -183,7 +185,7 @@ class MessageListRepositoryTest {
         hideMessage(MESSAGE_ID, FOLDER_ID_2)
 
         val result = messageListRepository.getMessages(
-            accountUuid,
+            accountId,
             SELECTION,
             SELECTION_ARGS,
             SORT_ORDER,
@@ -208,13 +210,13 @@ class MessageListRepositoryTest {
                 isForwarded = true,
             ),
         )
-        MessageListCache.getCache(accountUuid).apply {
+        MessageListCache.getCache(accountId).apply {
             setFlagForMessages(listOf(MESSAGE_ID), Flag.SEEN, true)
             setValueForThreads(listOf(THREAD_ROOT), Flag.FLAGGED, false)
         }
 
         val result = messageListRepository.getThreadedMessages(
-            accountUuid,
+            accountId,
             SELECTION,
             SELECTION_ARGS,
             SORT_ORDER,
@@ -253,7 +255,7 @@ class MessageListRepositoryTest {
         hideMessage(MESSAGE_ID, FOLDER_ID)
 
         val result = messageListRepository.getThreadedMessages(
-            accountUuid,
+            accountId,
             SELECTION,
             SELECTION_ARGS,
             SORT_ORDER,
@@ -274,7 +276,7 @@ class MessageListRepositoryTest {
         hideMessage(MESSAGE_ID, FOLDER_ID_2)
 
         val result = messageListRepository.getThreadedMessages(
-            accountUuid,
+            accountId,
             SELECTION,
             SELECTION_ARGS,
             SORT_ORDER,
@@ -309,13 +311,13 @@ class MessageListRepositoryTest {
                 isForwarded = false,
             ),
         )
-        MessageListCache.getCache(accountUuid).apply {
+        MessageListCache.getCache(accountId).apply {
             setFlagForMessages(listOf(MESSAGE_ID), Flag.SEEN, true)
             setValueForThreads(listOf(THREAD_ROOT), Flag.FLAGGED, false)
         }
 
         val result = messageListRepository.getThread(
-            accountUuid,
+            accountId,
             THREAD_ROOT,
             SORT_ORDER,
         ) { message ->
@@ -362,7 +364,7 @@ class MessageListRepositoryTest {
         )
         hideMessage(MESSAGE_ID, FOLDER_ID)
 
-        val result = messageListRepository.getThread(accountUuid, THREAD_ROOT, SORT_ORDER) { message -> message.id }
+        val result = messageListRepository.getThread(accountId, THREAD_ROOT, SORT_ORDER) { message -> message.id }
 
         assertThat(result).containsExactly(MESSAGE_ID_2, MESSAGE_ID_3)
     }
@@ -377,7 +379,7 @@ class MessageListRepositoryTest {
         )
         hideMessage(MESSAGE_ID, FOLDER_ID_2)
 
-        val result = messageListRepository.getThread(accountUuid, THREAD_ROOT, SORT_ORDER) { message -> message.id }
+        val result = messageListRepository.getThread(accountId, THREAD_ROOT, SORT_ORDER) { message -> message.id }
 
         assertThat(result).containsExactly(MESSAGE_ID, MESSAGE_ID_2, MESSAGE_ID_3)
     }
@@ -447,7 +449,7 @@ class MessageListRepositoryTest {
 
     @Suppress("SameParameterValue")
     private fun hideMessage(messageId: Long, folderId: Long) {
-        val cache = MessageListCache.getCache(accountUuid)
+        val cache = MessageListCache.getCache(accountId)
 
         val localFolder = mock<LocalFolder> {
             on { databaseId } doReturn folderId

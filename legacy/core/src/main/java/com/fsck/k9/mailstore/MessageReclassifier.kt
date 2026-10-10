@@ -56,7 +56,7 @@ class MessageReclassifier(
                 // Recorded as done regardless below: an account whose database cannot be read now will not
                 // become readable on the next launch either, and retrying the whole pass every time the app
                 // starts would be a permanent cost for a permanent failure.
-                Log.e(error, "Could not re-classify stored messages for account %s", account.uuid)
+                Log.e(error, "Could not re-classify stored messages for account %s", account.id)
                 0
             }
         }
@@ -80,7 +80,7 @@ class MessageReclassifier(
     fun reclassifyEverything(): Int {
         val updated = accountManager.getAccounts().sumOf { account ->
             runCatching { reclassifyAll(messageStoreManager.getMessageStore(account)) }.getOrElse { error ->
-                Log.e(error, "Could not re-classify stored messages for account %s", account.uuid)
+                Log.e(error, "Could not re-classify stored messages for account %s", account.id)
                 0
             }
         }

@@ -25,6 +25,7 @@ import com.fsck.k9.mail.message.MessageHeaderParser;
 import com.fsck.k9.mailstore.LockableDatabase.DbCallback;
 import app.k9mail.legacy.message.extractors.PreviewResult.PreviewType;
 import net.thunderbird.core.android.account.LegacyAccountDto;
+import net.thunderbird.feature.account.AccountId;
 import net.thunderbird.legacy.logging.Log;
 import net.thunderbird.core.preference.GeneralSettingsManager;
 import net.thunderbird.feature.mail.message.classification.api.MessageClass;
@@ -425,9 +426,9 @@ public class LocalMessage extends MimeMessage {
 
     public MessageReference makeMessageReference() {
         if (messageReference == null) {
-            String accountUuid = getFolder().getAccountUuid();
+            AccountId accountId = getFolder().getAccountId();
             long folderId = getFolder().getDatabaseId();
-            messageReference = new MessageReference(accountUuid, folderId, mUid);
+            messageReference = new MessageReference(accountId, folderId, mUid);
         }
         return messageReference;
     }
@@ -485,7 +486,7 @@ public class LocalMessage extends MimeMessage {
         LocalMessage other = (LocalMessage) o;
         return Objects.equals(mUid, other.mUid) &&
                 Objects.equals(mFolder, other.mFolder) &&
-                Objects.equals(getAccountUuid(), other.getAccountUuid());
+                Objects.equals(getAccountId(), other.getAccountId());
     }
 
     @Override
@@ -493,14 +494,15 @@ public class LocalMessage extends MimeMessage {
         final int MULTIPLIER = 31;
 
         int result = 1;
-        String accountUuid = getAccountUuid();
-        result = MULTIPLIER * result + (accountUuid != null ? accountUuid.hashCode() : 0);
+        final AccountId accountId = getAccountId();
+        result = MULTIPLIER * result + (accountId != null ? accountId.hashCode() : 0);
         result = MULTIPLIER * result + (mFolder != null ? mFolder.hashCode() : 0);
         result = MULTIPLIER * result + mUid.hashCode();
         return result;
     }
 
-    private String getAccountUuid() {
-        return getAccount().getUuid();
+    @Override
+    public AccountId getAccountId() {
+        return getAccount().getId();
     }
 }

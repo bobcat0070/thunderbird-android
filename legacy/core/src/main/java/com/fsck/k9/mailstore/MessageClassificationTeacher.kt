@@ -90,7 +90,7 @@ class MessageClassificationTeacher(
             }.getOrElse { error ->
                 // One unreadable account database must not lose the correction for the others; the rule is
                 // already stored, so new mail is classified correctly regardless.
-                Log.e(error, "Could not re-classify stored messages for account %s", account.uuid)
+                Log.e(error, "Could not re-classify stored messages for account %s", account.id)
                 0
             }
         }

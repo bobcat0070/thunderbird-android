@@ -39,7 +39,7 @@ fun LocalMessageSearch.getAccounts(accountManager: LegacyAccountDtoManager): Lis
         accounts
     } else {
         val searchAccountUuids = accountUuids.toSet()
-        accounts.filter { it.uuid in searchAccountUuids }
+        accounts.filter { it.id.toString()  in searchAccountUuids }
     }
 }
 
@@ -50,12 +50,12 @@ fun LocalMessageSearch.getLegacyAccounts(accountManager: LegacyAccountManager): 
         accounts
     } else {
         val searchAccountUuids = accountUuids.toSet()
-        accounts.filter { it.uuid in searchAccountUuids }
+        accounts.filter { it.id.toString()  in searchAccountUuids }
     }
 }
 
 fun LocalMessageSearch.getLegacyAccountUuids(accountManager: LegacyAccountManager): List<String> {
-    return getLegacyAccounts(accountManager).map { it.uuid }
+    return getLegacyAccounts(accountManager).map { it.id.toString() }
 }
 
 /**

@@ -14,6 +14,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import net.thunderbird.account.fake.FakeAccountData.ACCOUNT_ID_RAW
 import net.thunderbird.core.android.account.LegacyAccountDto
+import net.thunderbird.feature.account.AccountIdFactory
 import net.thunderbird.feature.navigation.drawer.api.NavigationDrawerExternalContract.PinnedFolder
 import net.thunderbird.feature.navigation.drawer.dropdown.domain.entity.DisplayFolder
 import net.thunderbird.feature.navigation.drawer.dropdown.domain.entity.MailDisplayFolder
@@ -222,7 +223,8 @@ internal class GetDisplayFoldersForAccountTest {
         accountManager = FakeLegacyAccountDtoManager(accounts = accounts),
     )
 
-    private fun account(uuid: String, name: String) = LegacyAccountDto(uuid).apply { this.name = name }
+    private fun account(uuid: String, name: String) =
+        LegacyAccountDto(AccountIdFactory.of(uuid)).apply { this.name = name }
 
     /**
      * Fails for one account, the way the real repository does for an account that does not exist.

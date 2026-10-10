@@ -65,7 +65,7 @@ private fun MessageStoreManager.messagesOutside(
             messageMapper = { message ->
                 message.fromAddresses.firstOrNull()?.takeIf { !it.address.isNullOrBlank() }?.let { from ->
                     StoredMessage(
-                        reference = MessageReference(account.uuid, message.folderId, message.messageServerId),
+                        reference = MessageReference(account.id, message.folderId, message.messageServerId),
                         address = from.address.lowercase(),
                         name = from.personal?.takeIf { it.isNotBlank() },
                         date = message.messageDate,
@@ -192,7 +192,7 @@ internal class LegacyNewsletterActions(
             is MailtoUnsubscribeUri -> Intent(context, MessageCompose::class.java).apply {
                 action = Intent.ACTION_VIEW
                 data = unsubscribeUri.uri
-                putExtra(MessageCompose.EXTRA_ACCOUNT, messageReference.accountUuid)
+                putExtra(MessageCompose.EXTRA_ACCOUNT, messageReference.accountId.toString())
             }
 
             is HttpsUnsubscribeUri -> Intent(Intent.ACTION_VIEW, unsubscribeUri.uri)

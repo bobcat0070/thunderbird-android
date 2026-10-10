@@ -8,6 +8,7 @@ import com.fsck.k9.mailstore.authenticationResultsHeaderName
 import kotlin.time.Instant
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import net.thunderbird.app.common.account.getByUuid
 import net.thunderbird.core.android.account.LegacyAccountDto
 import net.thunderbird.core.android.account.LegacyAccountDtoManager
 import net.thunderbird.feature.spamdigest.SpamFolderContents
@@ -27,7 +28,7 @@ internal class LegacySpamFolderReader(
 
     override suspend fun read(accountId: String, from: Instant, until: Instant): SpamFolderContents? =
         withContext(Dispatchers.IO) {
-            val account = accountManager.getAccount(accountId) ?: return@withContext null
+            val account = accountManager.getByUuid(accountId) ?: return@withContext null
             val folderId = account.spamFolderId ?: return@withContext null
             val messageStore = messageStoreManager.getMessageStore(account)
 

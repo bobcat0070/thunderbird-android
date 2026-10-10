@@ -6,6 +6,7 @@ import assertk.assertions.containsExactly
 import assertk.assertions.hasSize
 import assertk.assertions.isEqualTo
 import net.thunderbird.core.preference.widget.WidgetSettings
+import net.thunderbird.feature.account.AccountIdFactory
 import net.thunderbird.feature.mail.message.classification.api.MessageClass
 import org.junit.Test
 
@@ -122,7 +123,7 @@ class WidgetCategoryFilterTest {
         threadCount = 0,
         threadRoot = 0,
         accountColor = 0,
-        messageReference = MessageReference("account", 1L, "uid$uniqueId"),
+        messageReference = MessageReference(TEST_ACCOUNT_ID, 1L, "uid$uniqueId"),
         uniqueId = uniqueId,
         classification = classification,
         sortSubject = null,
@@ -132,3 +133,5 @@ class WidgetCategoryFilterTest {
         sortDatabaseId = uniqueId,
     )
 }
+
+private val TEST_ACCOUNT_ID = AccountIdFactory.create()

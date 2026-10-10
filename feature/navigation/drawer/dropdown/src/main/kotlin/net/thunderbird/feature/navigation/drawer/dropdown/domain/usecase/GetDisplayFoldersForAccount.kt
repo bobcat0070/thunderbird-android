@@ -69,7 +69,7 @@ internal class GetDisplayFoldersForAccount(
             ->
             pins to accounts
         }.flatMapLatest { (pins, accounts) ->
-            val accountsById = accounts.associateBy { it.uuid }
+            val accountsById = accounts.associateBy { it.id.toString() }
             val livePins = pins.filter { it.accountUuid in accountsById }
             if (livePins.isEmpty()) return@flatMapLatest flowOf(emptyList())
 

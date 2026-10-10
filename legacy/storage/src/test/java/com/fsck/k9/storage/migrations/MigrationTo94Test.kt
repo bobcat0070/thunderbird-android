@@ -9,11 +9,12 @@ import net.thunderbird.core.android.account.LegacyAccountDto
 import org.junit.After
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import net.thunderbird.feature.account.AccountIdFactory
 
 @RunWith(RobolectricTestRunner::class)
 class MigrationTo94Test {
     private val database = createDatabaseVersion93()
-    private val account = LegacyAccountDto(uuid = "00000000-0000-4000-8000-000000000001")
+    private val account = LegacyAccountDto(id = AccountIdFactory.of("00000000-0000-4000-8000-000000000001"))
     private val migration = MigrationTo94(database, createMigrationsHelper(account))
 
     @After

@@ -65,7 +65,7 @@ class CategoryGroupingStoreTest : K9RobolectricTest() {
     @Test
     fun `a folder's choice should be exported with its settings`() = runTest {
         val account = preferences.newAccount()
-        testSubject.setFolderGrouping(account.uuid, "Sent", CategoryGrouping.GROUPED)
+        testSubject.setFolderGrouping(account.id.toString(), "Sent", CategoryGrouping.GROUPED)
         val provider = FolderSettingsProvider(
             remoteFolderDetailsRepository = FakeRemoteFolderDetailsRepository(folder(1L, "Sent"), folder(2L, "Work")),
             categoryGroupingStore = testSubject,

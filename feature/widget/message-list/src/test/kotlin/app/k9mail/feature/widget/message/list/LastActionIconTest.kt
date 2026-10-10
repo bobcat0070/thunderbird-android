@@ -5,6 +5,7 @@ import app.k9mail.legacy.message.controller.MessageReference
 import assertk.assertThat
 import assertk.assertions.isEqualTo
 import assertk.assertions.isNull
+import net.thunderbird.feature.account.AccountIdFactory
 import net.thunderbird.feature.mail.message.classification.api.MessageClass
 import org.junit.Test
 
@@ -45,7 +46,7 @@ class LastActionIconTest {
         threadCount = 0,
         threadRoot = 0,
         accountColor = 0,
-        messageReference = MessageReference("account", 1L, "uid"),
+        messageReference = MessageReference(AccountIdFactory.create(), 1L, "uid"),
         uniqueId = 1L,
         classification = MessageClass.HUMAN,
         sortSubject = null,

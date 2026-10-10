@@ -8,6 +8,7 @@ import assertk.assertions.isEqualTo
 import assertk.assertions.isFalse
 import assertk.assertions.isTrue
 import org.junit.Test
+import net.thunderbird.feature.account.AccountIdFactory
 
 class MailActionHoldTest {
     private val scheduled = mutableListOf<Pair<Long, Runnable>>()
@@ -140,7 +141,8 @@ class MailActionHoldTest {
     private companion object {
         const val DELAY_MILLIS = 3_000L
         const val NOW = 1_000_000L
-        val MESSAGE = MessageReference("account", 1L, "uid1")
-        val OTHER_MESSAGE = MessageReference("account", 2L, "uid2")
+        val ACCOUNT_ID = AccountIdFactory.create()
+        val MESSAGE = MessageReference(ACCOUNT_ID, 1L, "uid1")
+        val OTHER_MESSAGE = MessageReference(ACCOUNT_ID, 2L, "uid2")
     }
 }

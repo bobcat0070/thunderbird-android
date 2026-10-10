@@ -3,6 +3,7 @@ package com.fsck.k9.mailstore.recipients
 import app.k9mail.legacy.mailstore.MessageListRepository
 import net.thunderbird.core.android.account.LegacyAccountDtoManager
 import net.thunderbird.core.logging.Logger
+import net.thunderbird.feature.account.AccountId
 
 private const val TAG = "SentMailRecipientScanner"
 
@@ -77,7 +78,7 @@ class SentMailRecipientScanner(
             // One unreadable account must not stop the others: the cost is that its history is missing from
             // completion until the next scan, never that everybody else's is.
             try {
-                messages += scanAccount(account.uuid, sentFolderId)
+                messages += scanAccount(account.id, sentFolderId)
             } catch (e: Exception) {
                 logger?.debug(TAG, e) { "Could not scan sent mail for recipients" }
             }
@@ -93,11 +94,12 @@ class SentMailRecipientScanner(
      * to be in the store when the app was last opened. Stored rows only ever gain higher ids, so the highest id
      * seen is a watermark that survives restarts.
      */
-    private fun scanAccount(accountUuid: String, folderId: Long): Int {
+    private fun scanAccount(accountId: AccountId, folderId: Long): Int {
+        val accountUuid = accountId.toString()
         val lastScannedId = index.syncState(accountUuid, SCAN_WATERMARK_KEY)?.toLongOrNull() ?: 0L
 
         val sent = messageListRepository.getMessages(
-            accountUuid = accountUuid,
+            accountId = accountId,
             // Qualified: the message list query joins tables that have an id column of their own.
             selection = "messages.folder_id = ? AND messages.id > ?",
             selectionArgs = arrayOf(folderId.toString(), lastScannedId.toString()),

@@ -86,6 +86,6 @@ class AuthenticationServerTrustTest : K9RobolectricTest() {
         )
         preferences.saveAccount(account)
 
-        return account.uuid
+        return account.id.toString()
     }
 }

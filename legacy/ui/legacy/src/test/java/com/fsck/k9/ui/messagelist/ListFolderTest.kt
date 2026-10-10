@@ -9,6 +9,7 @@ import net.thunderbird.feature.mail.message.classification.api.MessageClass
 import org.junit.Test
 import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.mock
+import net.thunderbird.feature.account.AccountIdFactory
 
 class ListFolderTest {
 
@@ -84,7 +85,8 @@ class ListFolderTest {
         assertThat(lookups).isEqualTo(2)
     }
 
-    private fun account(uuid: String) = mock<LegacyAccount> { on { this.uuid } doReturn uuid }
+    @Suppress("UnusedParameter") // Named for the reader; each account gets an id of its own.
+    private fun account(name: String) = mock<LegacyAccount> { on { id } doReturn AccountIdFactory.create() }
 
     private fun item(uniqueId: Long, folderId: Long, account: LegacyAccount = ACCOUNT) = MessageListItem(
         account = account,
@@ -119,6 +121,6 @@ class ListFolderTest {
             INBOX_ID to ListFolder("Inbox", FolderType.INBOX),
             MISC_ID to ListFolder("Misc", FolderType.REGULAR),
         )
-        val ACCOUNT: LegacyAccount = mock { on { uuid } doReturn "account" }
+        val ACCOUNT: LegacyAccount = mock { on { id } doReturn AccountIdFactory.create() }
     }
 }
