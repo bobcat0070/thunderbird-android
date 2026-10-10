@@ -8,7 +8,7 @@ commits and CI fixes are left out.
 Kept up to date as work lands: every change that adds or changes a user-visible feature updates this file in the same
 push. See "Fork features log" in [AGENTS.md](AGENTS.md).
 
-Last updated: 2026-10-09 · upstream merged up to v26.0
+Last updated: 2026-10-10 · upstream merged up to v26.0
 
 ## Contents
 
@@ -46,6 +46,7 @@ Microsoft 365 accounts work through Microsoft Graph instead of IMAP/SMTP, which 
 
 |    Date    |                                                                                                                  Feature                                                                                                                  |                                                                           Commits                                                                           |
 |------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| 2026-10-10 | A digest that does not go out is caught up: the next one, or the next app start or mail check, covers every day since the last digest sent (up to a week), with each day's spam under its own heading.                                    | [`fc93404`](https://github.com/bobcat0070/thunderbird-android/commit/fc93404)                                                                               |
 | 2026-10-04 | **Daily spam digest.** One account emails itself a plain-text list of the previous day's spam from every included account: sender name, address with SPF/DKIM/DMARC alignment, and subject. Set up in each account's settings under Spam. | [`694fb9e`](https://github.com/bobcat0070/thunderbird-android/commit/694fb9e)                                                                               |
 | 2026-10-04 | Digest sent at the chosen time by an alarm (with a prompt to allow exact alarms), restored after a reboot, and sent late rather than skipped if the phone was off.                                                                        | [`da19595`](https://github.com/bobcat0070/thunderbird-android/commit/da19595) [`d05afd6`](https://github.com/bobcat0070/thunderbird-android/commit/d05afd6) |
 | 2026-10-04 | Choose what the digest shows: sender name, address, sender checks, subject.                                                                                                                                                               | [`34fb30e`](https://github.com/bobcat0070/thunderbird-android/commit/34fb30e)                                                                               |
