@@ -5,7 +5,9 @@ import assertk.assertThat
 import assertk.assertions.isFalse
 import assertk.assertions.isTrue
 import net.thunderbird.core.android.account.LegacyAccount
+import net.thunderbird.core.android.account.SortType
 import net.thunderbird.feature.mail.message.classification.api.MessageClass
+import net.thunderbird.feature.search.legacy.LocalMessageSearch
 import org.junit.Test
 import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.mock
@@ -42,6 +44,64 @@ class MessageListLiveDataTest {
         assertThat(result).isFalse()
     }
 
+    @Test
+    fun `a list should be the same when only the message being read changed`() {
+        // Going back to the list from a message: the newest messages stood in for the list on screen, cut it short,
+        // and the reader lost their place in it.
+        val testSubject = config(activeMessage = null)
+
+        val result = testSubject.isSameListAs(
+            config(
+                activeMessage = reference(2),
+                sortOverrides = mapOf(reference(2) to MessageSortOverride(isRead = false, isStarred = false)),
+            ),
+        )
+
+        assertThat(result).isTrue()
+    }
+
+    @Test
+    fun `a list should not be the same when it is sorted differently`() {
+        val testSubject = config(sortType = SortType.SORT_DATE)
+
+        val result = testSubject.isSameListAs(config(sortType = SortType.SORT_SUBJECT))
+
+        assertThat(result).isFalse()
+    }
+
+    @Test
+    fun `a list should not be the same as another search`() {
+        val testSubject = config()
+
+        val result = testSubject.isSameListAs(config(search = LocalMessageSearch()))
+
+        assertThat(result).isFalse()
+    }
+
+    @Test
+    fun `a list should not be the same as no list`() {
+        val testSubject = config()
+
+        val result = testSubject.isSameListAs(null)
+
+        assertThat(result).isFalse()
+    }
+
+    private fun config(
+        search: LocalMessageSearch = SEARCH,
+        sortType: SortType = SortType.SORT_DATE,
+        activeMessage: MessageReference? = null,
+        sortOverrides: Map<MessageReference, MessageSortOverride> = emptyMap(),
+    ) = MessageListConfig(
+        search = search,
+        showingThreadedList = false,
+        sortType = sortType,
+        sortAscending = false,
+        sortDateAscending = false,
+        activeMessage = activeMessage,
+        sortOverrides = sortOverrides,
+    )
+
     private fun reference(uniqueId: Long) = MessageReference(ACCOUNT_ID, FOLDER_ID, "uid$uniqueId")
 
     private fun item(uniqueId: Long) = MessageListItem(
@@ -73,5 +133,6 @@ class MessageListLiveDataTest {
     private companion object {
         val ACCOUNT_ID = AccountIdFactory.create()
         const val FOLDER_ID = 1L
+        val SEARCH = LocalMessageSearch()
     }
 }

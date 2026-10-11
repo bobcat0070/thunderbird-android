@@ -14,6 +14,16 @@ data class MessageListConfig(
     val sortOverrides: Map<MessageReference, MessageSortOverride>,
 )
 
+/**
+ * Whether this lists the same messages as [other]: only the message being read differs, with the read and starred
+ * states remembered while it was read. Opening a message, and going back to the list from it, changes nothing else.
+ */
+internal fun MessageListConfig.isSameListAs(other: MessageListConfig?): Boolean {
+    return other != null &&
+        copy(activeMessage = null, sortOverrides = emptyMap()) ==
+        other.copy(activeMessage = null, sortOverrides = emptyMap())
+}
+
 data class MessageSortOverride(
     val isRead: Boolean,
     val isStarred: Boolean,

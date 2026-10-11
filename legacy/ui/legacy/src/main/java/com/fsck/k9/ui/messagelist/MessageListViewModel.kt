@@ -27,9 +27,13 @@ class MessageListViewModel(
         logger.debug(TAG) { "loadMessageList() called with: config = $config, forceUpdate = $forceUpdate" }
         if (!forceUpdate && currentMessageListLiveData?.config == config) return
 
+        // The list on screen stays until the new one has loaded. When it is the same list - a message was opened or
+        // closed - the newest messages must not stand in for it: they cut the list short under the reader, and it
+        // lost its place.
+        val isSameList = currentMessageListLiveData?.config?.isSameListAs(config) == true
         removeCurrentMessageListLiveData()
 
-        val liveData = messageListLiveDataFactory.create(viewModelScope, config)
+        val liveData = messageListLiveDataFactory.create(viewModelScope, config, showNewestFirst = !isSameList)
         currentMessageListLiveData = liveData
 
         messageListLiveData.addSource(liveData) { items ->

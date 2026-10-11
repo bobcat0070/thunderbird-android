@@ -11,7 +11,14 @@ class MessageListLiveDataFactory(
     private val messageListRepository: MessageListRepository,
     private val mailActionHold: MailActionHold,
 ) {
-    fun create(coroutineScope: CoroutineScope, config: MessageListConfig): MessageListLiveData {
+    /**
+     * @param showNewestFirst whether the newest messages may be shown before the whole list has loaded.
+     */
+    fun create(
+        coroutineScope: CoroutineScope,
+        config: MessageListConfig,
+        showNewestFirst: Boolean,
+    ): MessageListLiveData {
         return MessageListLiveData(
             messageListLoader,
             accountManager,
@@ -19,6 +26,7 @@ class MessageListLiveDataFactory(
             mailActionHold,
             coroutineScope,
             config,
+            showNewestFirst,
         )
     }
 }

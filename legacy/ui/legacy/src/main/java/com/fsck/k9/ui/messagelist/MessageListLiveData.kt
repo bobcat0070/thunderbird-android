@@ -23,6 +23,7 @@ class MessageListLiveData(
     private val mailActionHold: MailActionHold,
     private val coroutineScope: CoroutineScope,
     val config: MessageListConfig,
+    private val showNewestFirst: Boolean,
 ) : LiveData<MessageListInfo>() {
 
     /**
@@ -60,7 +61,7 @@ class MessageListLiveData(
             mailActionHold.heldActions.drop(1).collect { loadMessageListAsync() }
         }
 
-        if (value == null) {
+        if (value == null && showNewestFirst) {
             showNewestMessagesThenAll()
         } else {
             loadMessageListAsync()
