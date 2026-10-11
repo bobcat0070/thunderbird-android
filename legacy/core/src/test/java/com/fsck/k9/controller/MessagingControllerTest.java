@@ -430,7 +430,7 @@ public class MessagingControllerTest extends K9RobolectricTest {
     @Test
     public void sendPendingMessagesSynchronous_shouldNotSendAMessageStillHeldForUndo() throws MessagingException {
         setupAccountWithMessageToSend();
-        undoSendHold.hold(account.getUuid(), 42L, () -> { });
+        undoSendHold.hold(account.getId().toString(), 42L, () -> { });
 
         controller.sendPendingMessagesSynchronous(account);
 
@@ -445,7 +445,7 @@ public class MessagingControllerTest extends K9RobolectricTest {
         long draftId = 99L;
         String[] draftServerId = { "K9LOCAL:draft" };
         account.setDraftsFolderId(draftsFolderId);
-        OutboxFolderManagerKt.getOutboxFolderIdSync(outboxFolderManager, account.getUuid(), true);
+        OutboxFolderManagerKt.getOutboxFolderIdSync(outboxFolderManager, account.getId().toString(), true);
         ListenableMessageStore messageStore = mock(ListenableMessageStore.class);
         when(messageStoreManager.getMessageStore(account)).thenReturn(messageStore);
         when(messageStore.getMessageServerId(42L)).thenReturn("localMessageToSend1");
@@ -457,11 +457,11 @@ public class MessagingControllerTest extends K9RobolectricTest {
             draftServerId[0] = "uploaded-draft";
             return emptyList();
         });
-        undoSendHold.hold(account.getUuid(), 42L, () -> { });
+        undoSendHold.hold(account.getId().toString(), 42L, () -> { });
 
         MessageReference draft = controller.undoSend(account, 42L);
 
-        assertEquals(new MessageReference(account.getUuid(), draftsFolderId, "uploaded-draft"), draft);
+        assertEquals(new MessageReference(account.getId(), draftsFolderId, "uploaded-draft"), draft);
     }
 
     @Test
