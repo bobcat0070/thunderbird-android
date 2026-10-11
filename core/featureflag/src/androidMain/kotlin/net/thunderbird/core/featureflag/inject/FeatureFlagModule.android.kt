@@ -26,8 +26,9 @@ actual val platformFeatureFlagModule: Module = module {
         val context = androidContext()
         RemoteFeatureFlagCatalogDataSource(
             url = BuildConfig.FEATURE_FLAG_REMOTE_URL,
-            cacheFileUri =
-            "file://${context.filesDir.path}/${BuildConfig.FEATURE_FLAG_REMOTE_CACHE_FILENAME}".toKmpUri(),
+            cacheFileUri = {
+                "file://${context.filesDir.path}/${BuildConfig.FEATURE_FLAG_REMOTE_CACHE_FILENAME}".toKmpUri()
+            },
             logger = get(),
             configStore = get(),
             fileSystemManager = get(),

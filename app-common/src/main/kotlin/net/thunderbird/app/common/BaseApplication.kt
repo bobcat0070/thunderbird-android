@@ -16,6 +16,8 @@ import com.fsck.k9.mailstore.MessageReclassifier
 import com.fsck.k9.notification.NotificationChannelManager
 import com.fsck.k9.ui.base.AppLanguageManager
 import com.fsck.k9.ui.base.extensions.currentLocale
+import com.fsck.k9.ui.messageview.RemoteImageSenderStore
+import com.fsck.k9.ui.settings.account.PinnedFolderStore
 import java.util.Locale
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -35,8 +37,10 @@ import net.thunderbird.core.common.exception.ExceptionHandler
 import net.thunderbird.core.logging.Logger
 import net.thunderbird.core.logging.file.FileLogSink
 import net.thunderbird.core.ui.theme.manager.ThemeManager
+import net.thunderbird.feature.navigation.drawer.api.NavigationDrawerExternalContract.PinnedFolderRepository
 import net.thunderbird.feature.spamdigest.SpamDigestScheduler
 import net.thunderbird.legacy.logging.Log
+import org.koin.android.ext.android.get
 import org.koin.android.ext.android.inject
 import org.koin.core.module.Module
 import org.koin.core.qualifier.named
@@ -94,6 +98,14 @@ abstract class BaseApplication : Application(), WorkManagerConfiguration.Provide
         ProcessLifecycleOwner.get().lifecycle.addObserver(LoggerLifecycleObserver(syncDebugFileLogSink))
 
         reclassifyStoredMessages()
+
+        // Opens the small stores screens read from first thing, so their files are read in the background now rather
+        // than on the main thread when a screen first needs them: each first read held the screen for a moment.
+        appCoroutineScope.launch(Dispatchers.IO) {
+            get<RemoteImageSenderStore>()
+            get<PinnedFolderStore>()
+            get<PinnedFolderRepository>()
+        }
 
         // Puts the spam digest back on the schedule if nothing is waiting to send it, as after the app's data was
         // restored onto a new device. Each digest schedules the next, so this does nothing on an ordinary launch.

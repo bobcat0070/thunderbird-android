@@ -163,6 +163,45 @@ class RemoteFeatureFlagCatalogDataSourceTest {
         }
 
     @Test
+    fun `load should close the cached catalog after reading it`() =
+        runTest(UnconfinedTestDispatcher()) {
+            // Arrange
+            val configStore = FakeFeatureFlagConfigStore(remoteCatalogEnabled = true)
+            val fileSystemManager = FakeFileSystemManager()
+            createTestSubject(
+                configStore = configStore,
+                engine = FakeRemoteCatalogEngine(),
+                fileSystemManager = fileSystemManager,
+            ).load()
+            val testSubject = createTestSubject(
+                configStore = configStore,
+                engine = FakeRemoteCatalogEngine(),
+                fileSystemManager = fileSystemManager,
+            )
+
+            // Act
+            testSubject.load()
+
+            // Assert
+            assertThat(fileSystemManager.openedSources).isEqualTo(1)
+            assertThat(fileSystemManager.openSources).isEqualTo(0)
+        }
+
+    @Test
+    fun `creating the data source should neither find the cache file nor set up the HTTP client`() {
+        // It is created on the main thread while the app starts, and both read from disk.
+        RemoteFeatureFlagCatalogDataSource(
+            url = CATALOG_URL,
+            cacheFileUri = { error("The cache file was asked for") },
+            logger = TestLogger(),
+            configStore = FakeFeatureFlagConfigStore(remoteCatalogEnabled = true),
+            fileSystemManager = FakeFileSystemManager(),
+            json = Json,
+            createHttpClient = { error("The HTTP client was set up") },
+        )
+    }
+
+    @Test
     fun `load should read the cached catalog when the cache metadata request fails`() =
         runTest(UnconfinedTestDispatcher()) {
             // Arrange
@@ -322,14 +361,16 @@ class RemoteFeatureFlagCatalogDataSourceTest {
         }
         return RemoteFeatureFlagCatalogDataSource(
             url = CATALOG_URL,
-            cacheFileUri = Uri.parse(CACHE_FILE_URI),
+            cacheFileUri = { Uri.parse(CACHE_FILE_URI) },
             logger = TestLogger(),
             configStore = configStore,
             fileSystemManager = fileSystemManager,
             json = json,
-            httpClient = HttpClient(httpEngine) {
-                install(ContentNegotiation) {
-                    json(json)
+            createHttpClient = {
+                HttpClient(httpEngine) {
+                    install(ContentNegotiation) {
+                        json(json)
+                    }
                 }
             },
             ioDispatcher = ioDispatcher,
@@ -414,9 +455,27 @@ private class FakeFeatureFlagConfigStore(
 private class FakeFileSystemManager : FileSystemManager {
     private val files = mutableMapOf<Uri, Buffer>()
 
+    /** How many files were opened for reading. */
+    var openedSources: Int = 0
+        private set
+
+    /** How many files opened for reading were not closed again. */
+    var openSources: Int = 0
+        private set
+
     override fun openSink(uri: Uri, mode: WriteMode): RawSink = Buffer().also { files[uri] = it }
 
-    override fun openSource(uri: Uri): RawSource? = files[uri]?.copy()
+    override fun openSource(uri: Uri): RawSource? {
+        val file = files[uri]?.copy() ?: return null
+        openedSources++
+        openSources++
+        return object : RawSource by file {
+            override fun close() {
+                openSources--
+                file.close()
+            }
+        }
+    }
 
     override fun delete(uri: Uri) {
         files.remove(uri)

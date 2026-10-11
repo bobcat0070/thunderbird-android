@@ -47,22 +47,33 @@ import net.thunderbird.core.featureflag.model.FeatureFlagCatalog
 import net.thunderbird.core.file.FileSystemManager
 import net.thunderbird.core.logging.Logger
 
+/**
+ * @param cacheFileUri where to cache the catalog; asked for on the first load, not before.
+ * @param createHttpClient creates the client the catalog is fetched with, on the first load.
+ *
+ * Both are deferred because this data source is created on the main thread while the app starts, and finding the
+ * cache file and setting up an HTTP client both read from disk.
+ */
 @OptIn(ExperimentalSerializationApi::class)
 class RemoteFeatureFlagCatalogDataSource(
     private val url: String,
-    private val cacheFileUri: Uri,
+    cacheFileUri: () -> Uri,
     private val logger: Logger,
     private val configStore: FeatureFlagConfigStore,
     private val fileSystemManager: FileSystemManager,
     private val json: Json,
-    private val httpClient: HttpClient = HttpClient(engineFactory = createHttpClientEngine()) {
-        install(ContentNegotiation) {
-            json(json)
+    createHttpClient: () -> HttpClient = {
+        HttpClient(engineFactory = createHttpClientEngine()) {
+            install(ContentNegotiation) {
+                json(json)
+            }
         }
     },
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
     private val fetchTimeout: Duration = DEFAULT_FETCH_TIMEOUT,
 ) : FeatureFlagCatalogDataSource {
+    private val cacheFileUri by lazy(cacheFileUri)
+    private val httpClient by lazy(createHttpClient)
     private val catalog = MutableStateFlow<FeatureFlagCatalog?>(null)
     private val loadMutex = Mutex()
 
@@ -232,7 +243,7 @@ class RemoteFeatureFlagCatalogDataSource(
             logger.warn { "$LOG_PREFIX Can't read cached remote feature flag catalog." }
             throw RemoteCatalogException(code = Code.CantReadCacheFile)
         }
-        json.decodeFromSource<FeatureFlagCatalog>(source.buffered())
+        source.buffered().use { json.decodeFromSource<FeatureFlagCatalog>(it) }
     }
 
     companion object {

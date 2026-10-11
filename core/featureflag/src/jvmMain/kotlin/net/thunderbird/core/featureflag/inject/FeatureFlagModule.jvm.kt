@@ -25,7 +25,7 @@ actual val platformFeatureFlagModule: Module = module {
         }
         RemoteFeatureFlagCatalogDataSource(
             url = BuildConfig.FEATURE_FLAG_REMOTE_URL,
-            cacheFileUri = File(cacheDir, BuildConfig.FEATURE_FLAG_REMOTE_CACHE_FILENAME).toUri(),
+            cacheFileUri = { File(cacheDir, BuildConfig.FEATURE_FLAG_REMOTE_CACHE_FILENAME).toUri() },
             logger = get(),
             configStore = get(),
             fileSystemManager = get(),
