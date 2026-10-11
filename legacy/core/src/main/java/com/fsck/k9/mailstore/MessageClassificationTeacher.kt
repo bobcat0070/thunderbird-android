@@ -44,7 +44,8 @@ class MessageClassificationTeacher(
         )
 
         val updated = applyToStoredMessages(scope, pattern, messageClass)
-        Log.d("Taught %s = %s, re-classified %d stored messages", pattern, messageClass, updated)
+        // The pattern is a sender's address or domain, so only what it was taught is logged.
+        Log.d("Taught a rule for %s, re-classified %d stored messages", messageClass, updated)
 
         return updated
     }

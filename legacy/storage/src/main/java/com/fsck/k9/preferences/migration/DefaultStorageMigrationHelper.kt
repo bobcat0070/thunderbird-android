@@ -6,13 +6,19 @@ import app.k9mail.core.android.common.database.getStringOrThrow
 import app.k9mail.core.android.common.database.map
 import net.thunderbird.legacy.logging.Log
 
+/**
+ * Reads and writes settings while they are migrated.
+ *
+ * Only keys are logged, never values: the settings hold server passwords and OAuth tokens, and a debug log can be
+ * exported and shared.
+ */
 class DefaultStorageMigrationHelper : StorageMigrationHelper {
     override fun readAllValues(db: SQLiteDatabase): Map<String, String> {
         return db.query(TABLE_NAME, arrayOf(KEY_COLUMN, VALUE_COLUMN), null, null, null, null, null).use {
             it.map { cursor ->
                 val key = cursor.getStringOrThrow(KEY_COLUMN)
                 val value = cursor.getStringOrThrow(VALUE_COLUMN)
-                Log.d("Loading key '%s', value = '%s'", key, value)
+                Log.d("Loading key '%s'", key)
 
                 key to value
             }
@@ -31,7 +37,7 @@ class DefaultStorageMigrationHelper : StorageMigrationHelper {
         ).use { cursor ->
             if (cursor.moveToNext()) {
                 cursor.getStringOrThrow(VALUE_COLUMN).also { value ->
-                    Log.d("Loading key '%s', value = '%s'", key, value)
+                    Log.d("Loading key '%s'", key)
                 }
             } else {
                 null
@@ -53,7 +59,7 @@ class DefaultStorageMigrationHelper : StorageMigrationHelper {
         val result = db.update(TABLE_NAME, values, "$KEY_COLUMN = ?", arrayOf(key))
 
         if (result == -1) {
-            Log.e("Error writing key '%s', value = '%s'", key, value)
+            Log.e("Error writing key '%s'", key)
         }
     }
 
@@ -70,7 +76,7 @@ class DefaultStorageMigrationHelper : StorageMigrationHelper {
         val result = db.insert(TABLE_NAME, null, values)
 
         if (result == -1L) {
-            Log.e("Error writing key '%s', value = '%s'", key, value)
+            Log.e("Error writing key '%s'", key)
         }
     }
 

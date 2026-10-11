@@ -34,7 +34,8 @@ class CachingUrlFetcher(
             download(url)?.also { cache.put(CACHE_PREFIX + url, it) }
         } catch (e: Exception) {
             // Not cached as a miss: an outage says nothing about what lives at this URL.
-            logger?.debug(TAG, e) { "Could not fetch $url" }
+            // Not the URL: it names the sender, outright or as a hash of their address.
+            logger?.debug(TAG, e) { "Could not fetch a sender picture" }
             null
         }
     }

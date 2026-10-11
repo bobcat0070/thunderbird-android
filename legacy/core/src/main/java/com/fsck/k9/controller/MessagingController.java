@@ -480,7 +480,7 @@ public class MessagingController implements MessagingControllerRegistry, Messagi
 
     public Future<?> searchRemoteMessages(AccountId accountId, long folderId, String query, Set<Flag> requiredFlags,
         Set<Flag> forbiddenFlags, MessagingListener listener) {
-        Log.i("searchRemoteMessages (acct = %s, folderId = %d, query = %s)", accountId, folderId, query);
+        Log.i("searchRemoteMessages (acct = %s, folderId = %d)", accountId, folderId);
 
         return threadPool.submit(() ->
             searchRemoteMessagesSynchronous(accountId, folderId, query, requiredFlags, forbiddenFlags, listener)
@@ -673,7 +673,7 @@ public class MessagingController implements MessagingControllerRegistry, Messagi
      */
     public Future<?> searchRemoteMessagesEverywhere(List<String> accountUuids, String query, Set<Flag> requiredFlags,
         Set<Flag> forbiddenFlags, MessagingListener listener) {
-        Log.i("searchRemoteMessagesEverywhere (accounts = %d, query = %s)", accountUuids.size(), query);
+        Log.i("searchRemoteMessagesEverywhere (accounts = %d)", accountUuids.size());
 
         return threadPool.submit(() ->
             searchRemoteMessagesEverywhereSynchronous(accountUuids, query, requiredFlags, forbiddenFlags, listener)
