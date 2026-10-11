@@ -190,6 +190,24 @@ internal fun skeleton(name: String): String {
     }
 }
 
+/**
+ * The letter one character reads as, the same as its [skeleton] would be: [skeleton] works on whole names, and run
+ * one character at a time it made reading who the reader knows the slowest part of opening a large list.
+ */
+internal fun confusableLetter(character: Char): Char {
+    val lowercase = character.lowercaseChar()
+    val folded = CONFUSABLES[lowercase] ?: lowercase
+
+    return when (folded) {
+        // A skeleton drops hyphens, which leaves the character as it was.
+        '-' -> character
+
+        'l' -> 'i'
+
+        else -> folded
+    }
+}
+
 private enum class Script { LATIN, CYRILLIC, GREEK, ARMENIAN, OTHER }
 
 @Suppress("MagicNumber")

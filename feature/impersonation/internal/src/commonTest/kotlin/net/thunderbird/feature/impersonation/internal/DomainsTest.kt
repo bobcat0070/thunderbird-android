@@ -22,6 +22,15 @@ class DomainsTest {
     }
 
     @Test
+    fun `confusableLetter should read every character as its skeleton does`() {
+        val differing = ('\u0000'..'\uFFFF').filter { character ->
+            confusableLetter(character) != (skeleton(character.toString()).firstOrNull() ?: character)
+        }
+
+        assertThat(differing).isEqualTo(emptyList())
+    }
+
+    @Test
     fun `registrableDomain should drop subdomains and keep country code second levels`() {
         assertThat(registrableDomain("mail.Example.com.")).isEqualTo("example.com")
         assertThat(registrableDomain("news.bbc.co.uk")).isEqualTo("bbc.co.uk")

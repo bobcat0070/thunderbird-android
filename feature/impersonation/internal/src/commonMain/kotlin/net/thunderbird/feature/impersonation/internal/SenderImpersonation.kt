@@ -156,8 +156,8 @@ internal fun nameKey(name: String): String? {
     val words = NON_NAME_CHARACTERS.replace(name, " ").trim().split(WHITESPACE).filter { it.isNotEmpty() }
     if (words.size < MINIMUM_NAME_WORDS || words.any { it.lowercase() in ROLE_WORDS }) return null
 
-    val key = words.joinToString(" ") { word -> word.lowercase().map { confusableLetter(it) }.joinToString("") }
+    val key = words.joinToString(" ") { word ->
+        buildString { word.lowercase().forEach { append(confusableLetter(it)) } }
+    }
     return key.takeIf { key.count(Char::isLetter) >= MINIMUM_NAME_LETTERS }
 }
-
-private fun confusableLetter(character: Char): Char = skeleton(character.toString()).firstOrNull() ?: character
