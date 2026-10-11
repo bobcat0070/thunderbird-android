@@ -29,6 +29,27 @@ class CachingImpersonationCheckerTest {
     }
 
     @Test
+    fun `should give the same answer for a sender checked again`() {
+        knownSenders = KnownSenders(emptyMap(), emptySet(), setOf("paypal.com"))
+        val first = testSubject.check("PayPal", "service@paypa1.com")
+
+        val second = testSubject.check("PayPal", "service@paypa1.com")
+
+        assertThat(first).isNotNull()
+        assertThat(second).isEqualTo(first)
+    }
+
+    @Test
+    fun `should not give one sender the answer remembered for another`() {
+        knownSenders = KnownSenders(emptyMap(), emptySet(), setOf("paypal.com"))
+        testSubject.check("PayPal", "service@paypa1.com")
+
+        val result = testSubject.check("PayPal", "service@paypal.com")
+
+        assertThat(result).isNull()
+    }
+
+    @Test
     fun `should read again once the reading is half an hour old`() {
         assertThat(testSubject.check("PayPal", "service@paypa1.com")).isNull()
         knownSenders = KnownSenders(emptyMap(), emptySet(), setOf("paypal.com"))
