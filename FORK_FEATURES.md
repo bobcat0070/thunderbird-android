@@ -8,7 +8,7 @@ commits and CI fixes are left out.
 Kept up to date as work lands: every change that adds or changes a user-visible feature updates this file in the same
 push. See "Fork features log" in [AGENTS.md](AGENTS.md).
 
-Last updated: 2026-10-10 · upstream merged up to its main branch of 2026-10-08 (`e3fb7f3`, after v26.0)
+Last updated: 2026-10-11 · upstream merged up to its main branch of 2026-10-08 (`e3fb7f3`, after v26.0)
 
 ## Contents
 
@@ -143,10 +143,11 @@ Mail is classified as personal, notification or newsletter.
 
 ## Settings
 
-|    Date    |                                                                        Feature                                                                         |                                                                           Commits                                                                           |
-|------------|--------------------------------------------------------------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| 2026-10-05 | Changing Local folder size (Settings → account → Fetching mail) takes effect: folders fetch up to the new size, where before only the setting changed. | [`6daeae3`](https://github.com/bobcat0070/thunderbird-android/commit/6daeae3)                                                                               |
-| 2026-09-25 | The settings this fork added are included in settings export and import.                                                                               | [`01c9414`](https://github.com/bobcat0070/thunderbird-android/commit/01c9414) [`82fc033`](https://github.com/bobcat0070/thunderbird-android/commit/82fc033) |
+|    Date    |                                                                                                 Feature                                                                                                  |                                                                           Commits                                                                           |
+|------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| 2026-10-11 | Debug logs no longer record server passwords or OAuth tokens while settings are upgraded, search terms, the senders of learned spam rules, or sender picture URLs, so a shared log does not expose them. | [`ed3f52a`](https://github.com/bobcat0070/thunderbird-android/commit/ed3f52a)                                                                               |
+| 2026-10-05 | Changing Local folder size (Settings → account → Fetching mail) takes effect: folders fetch up to the new size, where before only the setting changed.                                                   | [`6daeae3`](https://github.com/bobcat0070/thunderbird-android/commit/6daeae3)                                                                               |
+| 2026-09-25 | The settings this fork added are included in settings export and import.                                                                                                                                 | [`01c9414`](https://github.com/bobcat0070/thunderbird-android/commit/01c9414) [`82fc033`](https://github.com/bobcat0070/thunderbird-android/commit/82fc033) |
 
 ## Builds and releases
 
