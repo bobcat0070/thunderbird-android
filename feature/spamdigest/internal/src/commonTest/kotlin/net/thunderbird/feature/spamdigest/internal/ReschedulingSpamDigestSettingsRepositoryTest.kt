@@ -77,6 +77,8 @@ class ReschedulingSpamDigestSettingsRepositoryTest {
         override fun ensureScheduled() = Unit
 
         override fun catchUpIfDue() = Unit
+
+        override fun sendNow() = Unit
     }
 
     private class FakeSettingsStore : SpamDigestSettingsStore, SpamAlertLog by FakeSpamAlertLog() {

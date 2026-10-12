@@ -16,10 +16,12 @@ import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.OutOfQuotaPolicy
 import androidx.work.WorkInfo
 import androidx.work.WorkManager
+import androidx.work.workDataOf
 import java.util.concurrent.TimeUnit
 import kotlin.time.Clock
 import kotlin.time.Instant
 import net.thunderbird.core.logging.Logger
+import net.thunderbird.feature.spamdigest.SpamDigestRunEvent
 import net.thunderbird.feature.spamdigest.SpamDigestScheduler
 import net.thunderbird.feature.spamdigest.SpamDigestTime
 
@@ -52,6 +54,7 @@ internal class AlarmSpamDigestScheduler(
     private val clock: Clock,
     private val timeZoneProvider: TimeZoneProvider,
     private val logger: Logger,
+    private val runLog: SpamDigestRunLog,
 ) : SpamDigestScheduler {
 
     private val alarmManager: AlarmManager = requireNotNull(context.getSystemService())
@@ -69,8 +72,13 @@ internal class AlarmSpamDigestScheduler(
         val settings = settingsStore.getSettings()
         if (!settings.isEnabled || !isOverdue(settings.sendTime)) return
 
-        logger.info(LOG_TAG) { "A spam digest is overdue; sending it now" }
-        runNow()
+        catchUp()
+    }
+
+    override fun sendNow() {
+        logger.info(LOG_TAG) { "A spam digest was asked for" }
+        runLog.record(SpamDigestRunEvent.Kind.REQUESTED)
+        startRun(force = true)
     }
 
     /**
@@ -79,8 +87,17 @@ internal class AlarmSpamDigestScheduler(
      */
     fun onAlarm() {
         logger.info(LOG_TAG) { "Spam digest alarm went off" }
-        runNow()
+        runLog.record(SpamDigestRunEvent.Kind.ALARM)
+        startRun(force = false)
         schedule(catchUp = false)
+    }
+
+    private fun catchUp() {
+        // Recorded only when a run is started, not each time a mail check finds the digest still waiting to run.
+        if (startRun(force = false)) {
+            logger.info(LOG_TAG) { "A spam digest is overdue; sending it now" }
+            runLog.record(SpamDigestRunEvent.Kind.CATCH_UP)
+        }
     }
 
     private fun isOverdue(sendTime: SpamDigestTime): Boolean {
@@ -99,8 +116,7 @@ internal class AlarmSpamDigestScheduler(
         setBootReceiverEnabled(true)
 
         if (catchUp && isOverdue(settings.sendTime)) {
-            logger.info(LOG_TAG) { "A spam digest is overdue; sending it now" }
-            runNow()
+            catchUp()
         }
 
         val runAt = nextRunAt(clock.now(), timeZoneProvider.current(), settings.sendTime)
@@ -122,7 +138,16 @@ internal class AlarmSpamDigestScheduler(
         }
     }
 
-    private fun runNow() {
+    /**
+     * Starts a digest run, unless one already under way or waiting will do; see [shouldStartRun].
+     *
+     * @param force whether the run sends a digest even when every day due has been reported on.
+     * @return whether a run was started.
+     */
+    private fun startRun(force: Boolean): Boolean {
+        val pending = workManager.getWorkInfosForUniqueWork(UNIQUE_WORK_NAME).get().map { it.toPendingRun() }
+        if (!shouldStartRun(pending, force)) return false
+
         val constraints = Constraints.Builder()
             .setRequiredNetworkType(NetworkType.CONNECTED)
             .build()
@@ -131,15 +156,20 @@ internal class AlarmSpamDigestScheduler(
             .setExpedited(OutOfQuotaPolicy.RUN_AS_NON_EXPEDITED_WORK_REQUEST)
             .setConstraints(constraints)
             .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, INITIAL_BACKOFF_MINUTES, TimeUnit.MINUTES)
+            .setInputData(workDataOf(KEY_FORCE to force))
             .build()
 
-        // A run already under way is left to finish. One still waiting - held back by Android, perhaps since an
-        // earlier day - is replaced, so it cannot keep this one from running; each run reports on every day due
-        // anyway, and the record of sent days stops a day being reported twice.
-        val isRunning = workManager.getWorkInfosForUniqueWork(UNIQUE_WORK_NAME).get()
-            .any { it.state == WorkInfo.State.RUNNING }
-        val policy = if (isRunning) ExistingWorkPolicy.KEEP else ExistingWorkPolicy.REPLACE
-        workManager.enqueueUniqueWork(UNIQUE_WORK_NAME, policy, request)
+        workManager.enqueueUniqueWork(UNIQUE_WORK_NAME, ExistingWorkPolicy.REPLACE, request)
+        return true
+    }
+
+    private fun WorkInfo.toPendingRun(): PendingRun = when (state) {
+        WorkInfo.State.RUNNING -> PendingRun.RUNNING
+
+        WorkInfo.State.ENQUEUED, WorkInfo.State.BLOCKED ->
+            if (runAttemptCount == 0) PendingRun.WAITING else PendingRun.RETRYING
+
+        WorkInfo.State.SUCCEEDED, WorkInfo.State.FAILED, WorkInfo.State.CANCELLED -> PendingRun.FINISHED
     }
 
     private fun alarmIntent(): PendingIntent {

@@ -122,6 +122,68 @@ public interface SpamDigestScheduler {
      * mail sync.
      */
     public fun catchUpIfDue()
+
+    /**
+     * Sends a digest now, whatever the schedule, for the reader asking for one: every day since the last one sent,
+     * or the last day due again when it has been sent already. Blocks briefly, so it belongs off the main thread.
+     */
+    public fun sendNow()
+}
+
+/**
+ * Something that happened to the digest, kept so the reader can see why one did not arrive.
+ *
+ * Nothing in it names a person or a message: the details are days, attempt numbers and the kind of error.
+ *
+ * @param detail more about the event: the days a sent digest covered, the try a run was on, or the kind of error a
+ *   failed one ran into.
+ */
+public data class SpamDigestRunEvent(
+    val at: Instant,
+    val kind: Kind,
+    val detail: String? = null,
+) {
+    public enum class Kind {
+        /** The alarm for the chosen time went off. */
+        ALARM,
+
+        /** A digest was found overdue, and a run was started for it. */
+        CATCH_UP,
+
+        /** The reader asked for a digest now. */
+        REQUESTED,
+
+        /** A run started. */
+        STARTED,
+
+        /** The digest was queued for sending. */
+        SENT,
+
+        /** Every day due had been reported on already. */
+        ALREADY_SENT,
+
+        /** The digest is turned off. */
+        OFF,
+
+        /** The account the digest is sent from no longer exists. */
+        SENDER_MISSING,
+
+        /** A run failed; it is tried again later. */
+        FAILED,
+
+        /** A run failed too often and was given up on until the next alarm. */
+        GAVE_UP,
+    }
+}
+
+/**
+ * The digest's recent runs, for the settings screen.
+ */
+public fun interface SpamDigestHistory {
+    /**
+     * @return the most recent events, newest first.
+     */
+    public fun recentEvents(): List<SpamDigestRunEvent>
 }
 
 /**

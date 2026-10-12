@@ -3,6 +3,7 @@ package com.fsck.k9.ui.settings
 import com.fsck.k9.helper.NamedThreadFactory
 import com.fsck.k9.ui.settings.account.AccountSettingsDataStoreFactory
 import com.fsck.k9.ui.settings.account.PinnedFolderStore
+import com.fsck.k9.ui.settings.account.SpamDigestRunPreferences
 import com.fsck.k9.ui.settings.account.AccountSettingsViewModel
 import com.fsck.k9.ui.settings.account.getSystemVibrator
 import com.fsck.k9.ui.settings.export.SettingsExportViewModel
@@ -49,6 +50,7 @@ val settingsUiModule = module {
         )
     }
     single { PinnedFolderStore(context = get()) }
+    factory { SpamDigestRunPreferences(scheduler = get(), history = get()) }
     factory { getSystemVibrator(context = get()) }
 
     viewModel {

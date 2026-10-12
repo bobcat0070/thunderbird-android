@@ -20,6 +20,8 @@ import net.thunderbird.core.testing.TestClock
 import net.thunderbird.feature.spamdigest.SpamDigestAccount
 import net.thunderbird.feature.spamdigest.SpamDigestField
 import net.thunderbird.feature.spamdigest.SpamDigestMailer
+import net.thunderbird.feature.spamdigest.SpamDigestRunEvent
+import net.thunderbird.feature.spamdigest.SpamDigestRunEvent.Kind
 import net.thunderbird.feature.spamdigest.SpamDigestSettings
 import net.thunderbird.feature.spamdigest.SpamDigestSettingsRepository
 import net.thunderbird.feature.spamdigest.SpamDigestTime
@@ -41,6 +43,7 @@ class SendSpamDigestTest {
     private val digestLog = FakeDigestLog()
     private val spamFolderReader = FakeSpamFolderReader()
     private val mailer = FakeMailer()
+    private val runLog = FakeRunLog()
     private val clock = TestClock(Instant.parse("2026-10-03T07:00:00Z"))
 
     private val testSubject = SendSpamDigest(
@@ -53,6 +56,7 @@ class SendSpamDigestTest {
         clock = clock,
         timeZoneProvider = { TimeZone.UTC },
         logger = TestLogger(),
+        runLog = runLog,
     )
 
     @Test
@@ -146,6 +150,40 @@ class SendSpamDigestTest {
     }
 
     @Test
+    fun `should record what each run did, so a missing digest can be explained`() = runTest {
+        testSubject()
+        testSubject()
+        settingsRepository.current = settingsRepository.current.copy(senderAccountId = "removed")
+        testSubject()
+
+        assertThat(runLog.kinds).isEqualTo(listOf(Kind.SENT, Kind.ALREADY_SENT, Kind.SENDER_MISSING))
+        assertThat(runLog.details.first()).isEqualTo("2026-10-02")
+    }
+
+    @Test
+    fun `should send the last day again when asked for a digest that was sent already`() = runTest {
+        // The reader asked for one: a digest that was recorded as sent but never arrived must be sendable.
+        digestLog.markSent(LocalDate(2026, 10, 2))
+
+        val outcome = testSubject(force = true)
+
+        assertThat(outcome).isEqualTo(SendSpamDigest.Outcome.SENT)
+        assertThat(mailer.sent).single().transform { it.subject }.isEqualTo("Spam digest for 2026-10-02: 0")
+        assertThat(digestLog.lastSentDay()).isEqualTo(LocalDate(2026, 10, 2))
+    }
+
+    @Test
+    fun `should cover every missed day when asked for a digest that is overdue`() = runTest {
+        digestLog.markSent(LocalDate(2026, 9, 30))
+
+        testSubject(force = true)
+
+        assertThat(mailer.sent).single().transform { it.subject }
+            .isEqualTo("Spam digest for 2026-10-01 to 2026-10-02: 0")
+        assertThat(runLog.details.single()).isEqualTo("2026-10-01 – 2026-10-02")
+    }
+
+    @Test
     fun `should not record the day as sent when sending fails`() = runTest {
         mailer.failure = IllegalStateException("offline")
 
@@ -223,4 +261,17 @@ private class FakeMailer : SpamDigestMailer {
         failure?.let { throw it }
         sent += SentDigest(accountId, subject, body)
     }
+}
+
+private class FakeRunLog : SpamDigestRunLog {
+    private val events = mutableListOf<SpamDigestRunEvent>()
+
+    val kinds: List<Kind> get() = events.map { it.kind }
+    val details: List<String?> get() = events.map { it.detail }
+
+    override fun record(kind: Kind, detail: String?) {
+        events += SpamDigestRunEvent(Instant.parse("2026-10-03T07:00:00Z"), kind, detail)
+    }
+
+    override fun recentEvents(): List<SpamDigestRunEvent> = events.reversed()
 }

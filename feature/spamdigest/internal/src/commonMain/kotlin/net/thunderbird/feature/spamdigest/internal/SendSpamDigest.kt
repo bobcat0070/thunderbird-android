@@ -7,6 +7,7 @@ import kotlinx.datetime.daysUntil
 import net.thunderbird.core.logging.Logger
 import net.thunderbird.feature.spamdigest.SpamDigestAccounts
 import net.thunderbird.feature.spamdigest.SpamDigestMailer
+import net.thunderbird.feature.spamdigest.SpamDigestRunEvent
 import net.thunderbird.feature.spamdigest.SpamDigestSettingsRepository
 import net.thunderbird.feature.spamdigest.SpamFolderReader
 
@@ -35,6 +36,7 @@ internal class SendSpamDigest(
     private val clock: Clock,
     private val timeZoneProvider: TimeZoneProvider,
     private val logger: Logger,
+    private val runLog: SpamDigestRunLog,
 ) {
     enum class Outcome {
         /** The digest is turned off. */
@@ -49,22 +51,33 @@ internal class SendSpamDigest(
     }
 
     /**
+     * @param force whether to send a digest even when every day due has been reported on: the reader asked for
+     *   one, so the last day due is reported on again.
      * @throws Exception when the digest could not be handed over for sending, so the run can be retried.
      */
-    suspend operator fun invoke(): Outcome {
+    @Suppress("ReturnCount")
+    suspend operator fun invoke(force: Boolean = false): Outcome {
         val settings = settingsRepository.getSettings()
-        val senderAccountId = settings.senderAccountId ?: return Outcome.OFF
+        val senderAccountId = settings.senderAccountId
+        if (senderAccountId == null) {
+            runLog.record(SpamDigestRunEvent.Kind.OFF)
+            return Outcome.OFF
+        }
 
         val allAccounts = accounts.accounts()
         if (allAccounts.none { it.id == senderAccountId }) {
             logger.warn(LOG_TAG) { "The account the spam digest is sent from no longer exists" }
+            runLog.record(SpamDigestRunEvent.Kind.SENDER_MISSING)
             return Outcome.SENDER_MISSING
         }
 
         val timeZone = timeZoneProvider.current()
-        val period = reportingPeriod(clock.now(), timeZone, settings.sendTime, digestLog.lastSentDay())
+        val now = clock.now()
+        val period = reportingPeriod(now, timeZone, settings.sendTime, digestLog.lastSentDay())
+            ?: if (force) reportingPeriod(now, timeZone, settings.sendTime, lastSentDay = null) else null
         if (period == null) {
             logger.info(LOG_TAG) { "Spam digest already sent for every day due" }
+            runLog.record(SpamDigestRunEvent.Kind.ALREADY_SENT, digestLog.lastSentDay()?.toString())
             return Outcome.ALREADY_SENT
         }
 
@@ -81,6 +94,7 @@ internal class SendSpamDigest(
         )
         mailer.sendToSelf(senderAccountId, digest.subject, digest.body)
         digestLog.markSent(period.lastDate)
+        runLog.record(SpamDigestRunEvent.Kind.SENT, period.days())
 
         logger.info(LOG_TAG) {
             "Spam digest queued for ${accountSpam.size} accounts, covering ${period.dayCount()} days"
@@ -106,3 +120,5 @@ internal class SendSpamDigest(
 }
 
 private fun DigestPeriod.dayCount(): Int = firstDate.daysUntil(lastDate) + 1
+
+private fun DigestPeriod.days(): String = if (isSingleDay) "$firstDate" else "$firstDate – $lastDate"

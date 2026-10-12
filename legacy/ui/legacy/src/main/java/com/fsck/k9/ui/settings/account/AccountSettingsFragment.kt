@@ -74,6 +74,7 @@ class AccountSettingsFragment : PreferenceFragmentCompat(), ConfirmationDialogFr
     private val folderNameFormatter: FolderNameFormatter by inject { parametersOf(requireContext()) }
     private val vibrator: Vibrator by inject()
     private val appNameProvider: AppNameProvider by inject()
+    private val spamDigestRunPreferences: SpamDigestRunPreferences by inject()
 
     private lateinit var dataStore: AccountSettingsDataStore
 
@@ -124,6 +125,7 @@ class AccountSettingsFragment : PreferenceFragmentCompat(), ConfirmationDialogFr
         initializeFolderSettings(account)
         initializeNotifications(account)
         initializeSpamDigestExactAlarm()
+        spamDigestRunPreferences.initialize(this)
     }
 
     @Deprecated("Deprecated in Java")
@@ -161,6 +163,7 @@ class AccountSettingsFragment : PreferenceFragmentCompat(), ConfirmationDialogFr
         super.onResume()
         // We might be returning from the system screen that allows exact alarms.
         updateSpamDigestExactAlarmVisibility()
+        spamDigestRunPreferences.showHistory(this)
         // we might be returning from OpenPgpAppSelectDialog, make sure settings are up to date
         val account = getAccount()
         initializeCryptoSettings(account)

@@ -665,6 +665,25 @@
     <string name="notification_possible_impersonation">Possible impersonation</string>
     <string name="account_settings_spam_digest_exact_alarm_label">Allow exact alarms</string>
     <string name="account_settings_spam_digest_exact_alarm_summary">Without them Android may send the digest up to an hour late. Tap to allow.</string>
+    <string name="account_settings_spam_digest_send_now_label">Send digest now</string>
+    <string name="account_settings_spam_digest_send_now_summary">Sends the days not reported on yet, or yesterday\'s again</string>
+    <string name="account_settings_spam_digest_send_now_requested">Digest requested. It goes out once the spam folders have been checked.</string>
+    <string name="account_settings_spam_digest_history_label">Recent digest runs</string>
+    <string name="account_settings_spam_digest_history_empty">Nothing yet. Tap to refresh.</string>
+    <!-- One line of the digest's recent runs: when, and what happened. -->
+    <string name="account_settings_spam_digest_history_event"><xliff:g id="time">%1$s</xliff:g>: <xliff:g id="event">%2$s</xliff:g></string>
+    <string name="account_settings_spam_digest_history_alarm">alarm went off</string>
+    <string name="account_settings_spam_digest_history_catch_up">overdue digest started</string>
+    <string name="account_settings_spam_digest_history_requested">digest requested</string>
+    <string name="account_settings_spam_digest_history_started">run started, try <xliff:g id="attempt">%s</xliff:g></string>
+    <string name="account_settings_spam_digest_history_sent">sent, covering <xliff:g id="days">%s</xliff:g></string>
+    <string name="account_settings_spam_digest_history_already_sent">nothing to send, already sent up to <xliff:g id="day">%s</xliff:g></string>
+    <string name="account_settings_spam_digest_history_nothing_due">nothing to send</string>
+    <string name="account_settings_spam_digest_history_off">the digest is off</string>
+    <string name="account_settings_spam_digest_history_sender_missing">the account it is sent from no longer exists</string>
+    <string name="account_settings_spam_digest_history_failed">failed (<xliff:g id="error">%s</xliff:g>), will try again</string>
+    <string name="account_settings_spam_digest_history_gave_up">failed (<xliff:g id="error">%s</xliff:g>), given up until the next alarm</string>
+    <string name="account_settings_spam_digest_history_unknown_error">unknown error</string>
     <string name="account_settings_spam_digest_fields_label">Show in digest</string>
     <string name="account_settings_spam_digest_fields_summary">What the digest lists for each message</string>
     <string name="account_settings_spam_digest_field_sender_name">Sender name</string>

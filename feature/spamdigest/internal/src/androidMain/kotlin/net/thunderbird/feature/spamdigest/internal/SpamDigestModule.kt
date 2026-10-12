@@ -4,6 +4,7 @@ import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 import kotlinx.datetime.TimeZone
 import net.thunderbird.feature.spamdigest.SpamArrivalListener
+import net.thunderbird.feature.spamdigest.SpamDigestHistory
 import net.thunderbird.feature.spamdigest.SpamDigestScheduler
 import net.thunderbird.feature.spamdigest.SpamDigestSettingsRepository
 import org.koin.android.ext.koin.androidContext
@@ -22,7 +23,7 @@ import org.koin.dsl.module
 val featureSpamDigestModule: Module = module {
     single<SpamDigestSettingsStore> {
         SharedPreferencesSpamDigestSettingsStore(context = androidContext(), clock = get())
-    } binds arrayOf(SpamDigestLog::class, SpamAlertLog::class)
+    } binds arrayOf(SpamDigestLog::class, SpamAlertLog::class, SpamDigestRunLog::class, SpamDigestHistory::class)
 
     single<SpamDigestSettingsRepository> {
         ReschedulingSpamDigestSettingsRepository(store = get(), scheduler = get(), spamFolderBackgroundSync = get())
@@ -38,6 +39,7 @@ val featureSpamDigestModule: Module = module {
             clock = get(),
             timeZoneProvider = get(),
             logger = get(),
+            runLog = get(),
         )
     } bind SpamDigestScheduler::class
 
@@ -52,6 +54,7 @@ val featureSpamDigestModule: Module = module {
             clock = get(),
             timeZoneProvider = get(),
             logger = get(),
+            runLog = get(),
         )
     }
 
@@ -67,6 +70,7 @@ val featureSpamDigestModule: Module = module {
             sendSpamDigest = get(),
             workNotification = get(),
             logger = get(),
+            runLog = get(),
             context = androidContext(),
             parameters = parameters,
         )

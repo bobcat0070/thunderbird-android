@@ -8,6 +8,7 @@ import kotlin.time.Duration.Companion.days
 import kotlin.time.Instant
 import kotlinx.datetime.LocalDate
 import net.thunderbird.feature.spamdigest.SpamDigestField
+import net.thunderbird.feature.spamdigest.SpamDigestRunEvent
 import net.thunderbird.feature.spamdigest.SpamDigestSettings
 import net.thunderbird.feature.spamdigest.SpamDigestTime
 
@@ -23,6 +24,7 @@ private const val KEY_ALERTED = "alerted"
 private const val KEY_SYNC_TURNED_ON_BY_ALERT = "syncTurnedOnByAlert"
 private const val KEY_SCHEDULED_FOR = "scheduledFor"
 private const val KEY_FIELDS = "fields"
+private const val KEY_RUN_EVENTS = "runEvents"
 private const val ALERTED_SEPARATOR = ' '
 
 /**
@@ -37,7 +39,7 @@ private val ALERTED_RETENTION = 7.days
 internal class SharedPreferencesSpamDigestSettingsStore(
     context: Context,
     private val clock: Clock,
-) : SpamDigestSettingsStore {
+) : SpamDigestSettingsStore, SpamDigestRunLog {
 
     private val preferences: SharedPreferences =
         context.applicationContext.getSharedPreferences(PREFERENCES_NAME, Context.MODE_PRIVATE)
@@ -164,6 +166,16 @@ internal class SharedPreferencesSpamDigestSettingsStore(
     override fun markSent(day: LocalDate) {
         preferences.edit { putString(KEY_LAST_SENT_DAY, day.toString()) }
     }
+
+    override fun record(kind: SpamDigestRunEvent.Kind, detail: String?) {
+        synchronized(lock) {
+            val events = addRunEvent(recentEvents(), SpamDigestRunEvent(clock.now(), kind, detail))
+            preferences.edit { putString(KEY_RUN_EVENTS, encodeRunEvents(events)) }
+        }
+    }
+
+    override fun recentEvents(): List<SpamDigestRunEvent> =
+        decodeRunEvents(preferences.getString(KEY_RUN_EVENTS, null))
 
     private fun readSendTime(): SpamDigestTime {
         val hour = preferences.getInt(KEY_SEND_HOUR, SpamDigestTime.DEFAULT.hour)

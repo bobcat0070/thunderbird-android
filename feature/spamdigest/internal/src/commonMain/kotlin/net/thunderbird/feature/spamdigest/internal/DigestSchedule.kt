@@ -106,3 +106,34 @@ internal fun nextRunAt(now: Instant, timeZone: TimeZone, time: SpamDigestTime): 
 
     return LocalDateTime(today.plus(1, DateTimeUnit.DAY), localTime).toInstant(timeZone)
 }
+
+/**
+ * Where an earlier digest run stands.
+ */
+internal enum class PendingRun {
+    RUNNING,
+
+    /** Waiting to start, and not yet tried: Android has not let it run yet. */
+    WAITING,
+
+    /** Waiting to be tried again after failing. */
+    RETRYING,
+    FINISHED,
+}
+
+/**
+ * Whether to start a digest run, replacing any earlier one still waiting.
+ *
+ * A run under way is always left to finish. A run waiting to start is kept too: it works out the days to report on
+ * when it runs, so it covers anything that became due since. Replacing it instead - as every mail check did while a
+ * digest was overdue - could cancel it each time before Android let it run. A run waiting to retry is replaced, so a
+ * digest is not held back for the rest of a backoff.
+ *
+ * @param force whether the reader asked for a digest, which replaces a run still waiting.
+ */
+internal fun shouldStartRun(pending: List<PendingRun>, force: Boolean): Boolean = when {
+    PendingRun.RUNNING in pending -> false
+    force -> true
+    PendingRun.WAITING in pending -> false
+    else -> true
+}
