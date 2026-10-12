@@ -38,7 +38,9 @@ internal class LegacySpamDigestMailer(
         val self = Address(identity.email ?: account.email, identity.name)
 
         val message = buildMessage(identity, self, subject, body)
-        messagingController.sendMessage(account, message, subject, null)
+        // The variant that throws: a digest that never reached the Outbox must fail its run, so it is tried again
+        // and its day is not recorded as sent.
+        messagingController.sendMessageOrThrow(account, message, subject, null)
     }
 
     private suspend fun buildMessage(identity: Identity, recipient: Address, subject: String, body: String) =

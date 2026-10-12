@@ -1789,34 +1789,50 @@ public class MessagingController implements MessagingControllerRegistry, Messagi
     public void sendMessage(LegacyAccountDto account, Message message, String plaintextSubject,
         MessagingListener listener) {
         try {
-            final long outboxFolderId = OutboxFolderManagerKt.getOutboxFolderIdSync(
-                outboxFolderManager,
-                account.getId().toString(),
-                true
-            );
-
-            message.setFlag(Flag.SEEN, true);
-
-            MessageStore messageStore = messageStoreManager.getMessageStore(account);
-            SaveMessageData messageData = saveMessageDataCreator.createSaveMessageData(
-                message, MessageDownloadState.FULL, plaintextSubject);
-            long messageId = messageStore.saveLocalMessage(outboxFolderId, messageData, null);
-
-            LocalStore localStore = localStoreProvider.getInstance(account);
-            OutboxStateRepository outboxStateRepository = localStore.getOutboxStateRepository();
-            outboxStateRepository.initializeOutboxState(messageId);
-
-            recordRecipients(message);
-
-            // Held for a moment when undo send is on, so it can still be taken back - which needs a Drafts folder
-            // to put it back in. Sent once the hold runs out.
-            boolean isHeld = account.hasDraftsFolder() &&
-                undoSendHold.hold(account.getId().toString(), messageId, () -> sendPendingMessages(account, null));
-            if (!isHeld) {
-                sendPendingMessages(account, listener);
-            }
+            sendMessageOrThrow(account, message, plaintextSubject, listener);
         } catch (Exception e) {
             Log.e(e, "Error sending message");
+        }
+    }
+
+    /**
+     * Like {@link #sendMessage}, but a message that could not be put in the Outbox is reported to the caller rather
+     * than only logged - for a sender no one is watching, like the spam digest, which has to know to try again.
+     *
+     * Once the message is in the Outbox nothing more is thrown, so trying again cannot queue it twice.
+     */
+    public void sendMessageOrThrow(LegacyAccountDto account, Message message, String plaintextSubject,
+        MessagingListener listener) throws MessagingException {
+        final long outboxFolderId = OutboxFolderManagerKt.getOutboxFolderIdSync(
+            outboxFolderManager,
+            account.getId().toString(),
+            true
+        );
+
+        message.setFlag(Flag.SEEN, true);
+
+        MessageStore messageStore = messageStoreManager.getMessageStore(account);
+        SaveMessageData messageData = saveMessageDataCreator.createSaveMessageData(
+            message, MessageDownloadState.FULL, plaintextSubject);
+        long messageId = messageStore.saveLocalMessage(outboxFolderId, messageData, null);
+
+        LocalStore localStore = localStoreProvider.getInstance(account);
+        OutboxStateRepository outboxStateRepository = localStore.getOutboxStateRepository();
+        outboxStateRepository.initializeOutboxState(messageId);
+
+        try {
+            recordRecipients(message);
+        } catch (RuntimeException e) {
+            // Only address completion loses out; the message itself is queued and goes on to be sent.
+            Log.e(e, "Could not record the recipients of a sent message");
+        }
+
+        // Held for a moment when undo send is on, so it can still be taken back - which needs a Drafts folder
+        // to put it back in. Sent once the hold runs out.
+        boolean isHeld = account.hasDraftsFolder() &&
+            undoSendHold.hold(account.getId().toString(), messageId, () -> sendPendingMessages(account, null));
+        if (!isHeld) {
+            sendPendingMessages(account, listener);
         }
     }
 
