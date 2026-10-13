@@ -57,6 +57,12 @@ internal data class AccountSpam(
     val result: SpamFolderResult,
 )
 
+/**
+ * The messages found in the account's spam folder; none when it could not be read.
+ */
+internal fun AccountSpam.messages(): List<SpamMessage> =
+    (result as? SpamFolderResult.Read)?.contents?.messages.orEmpty()
+
 internal sealed interface SpamFolderResult {
     data object NoSpamFolder : SpamFolderResult
     data object Unreadable : SpamFolderResult
@@ -255,9 +261,6 @@ internal class SpamDigestComposer(
         val identifying = setOf(SpamDigestField.SENDER_NAME, SpamDigestField.SENDER_ADDRESS, SpamDigestField.SUBJECT)
         return if (any { it in identifying }) this else this + SpamDigestField.SENDER_ADDRESS
     }
-
-    private fun AccountSpam.messages(): List<SpamMessage> =
-        (result as? SpamFolderResult.Read)?.contents?.messages.orEmpty()
 }
 
 /**

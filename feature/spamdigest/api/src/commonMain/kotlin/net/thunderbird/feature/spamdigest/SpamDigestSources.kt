@@ -133,10 +133,10 @@ public interface SpamDigestScheduler {
 /**
  * Something that happened to the digest, kept so the reader can see why one did not arrive.
  *
- * Nothing in it names a person or a message: the details are days, attempt numbers and the kind of error.
+ * Nothing in it names a person or a message: the details are counts, days, times and the kind of error.
  *
- * @param detail more about the event: the days a sent digest covered, the try a run was on, or the kind of error a
- *   failed one ran into.
+ * @param detail more about the event, as described for each [Kind]. Several values are separated by
+ *   [DETAIL_SEPARATOR].
  */
 public data class SpamDigestRunEvent(
     val at: Instant,
@@ -153,10 +153,19 @@ public data class SpamDigestRunEvent(
         /** The reader asked for a digest now. */
         REQUESTED,
 
-        /** A run started. */
+        /** A run started. Detail: the try it is on. */
         STARTED,
 
-        /** The account's server took the digest. */
+        /**
+         * The spam folders were read. Detail: messages found, accounts read, accounts whose folder could not be
+         * checked with the server first, accounts whose folder could not be read, accounts without a spam folder.
+         */
+        READ,
+
+        /** The digest is being handed to the server. Detail: the messages it lists, and the days it covers. */
+        SENDING,
+
+        /** The account's server took the digest. Detail: the days it covers, and the seconds the server took. */
         SENT,
 
         /** Every day due had been reported on already. */
@@ -173,6 +182,25 @@ public data class SpamDigestRunEvent(
 
         /** A run failed too often and was given up on until the next alarm. */
         GAVE_UP,
+
+        /** Android stopped a run before it finished; it is run again later. Detail: the reason Android gave. */
+        STOPPED,
+
+        /**
+         * A digest was due, but a run already waiting to start was left to send it: Android has not let it run
+         * yet. Recorded once, not at every mail check that finds it still waiting.
+         */
+        WAITING,
+
+        /** The next alarm was set. Detail: when, in milliseconds since 1970, and whether it is exact. */
+        SCHEDULED,
+    }
+
+    public companion object {
+        public const val DETAIL_SEPARATOR: String = "/"
+
+        /** The [SCHEDULED] detail of an exact alarm; any other is one Android may deliver late. */
+        public const val EXACT_ALARM: String = "exact"
     }
 }
 

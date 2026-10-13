@@ -669,7 +669,7 @@
     <string name="account_settings_spam_digest_send_now_summary">Sends the days not reported on yet, or yesterday\'s again</string>
     <string name="account_settings_spam_digest_send_now_requested">Digest requested. It goes out once the spam folders have been checked.</string>
     <string name="account_settings_spam_digest_history_label">Recent digest runs</string>
-    <string name="account_settings_spam_digest_history_empty">Nothing yet. Tap to refresh.</string>
+    <string name="account_settings_spam_digest_history_empty">Nothing yet</string>
     <!-- One line of the digest's recent runs: when, and what happened. -->
     <string name="account_settings_spam_digest_history_event"><xliff:g id="time">%1$s</xliff:g>: <xliff:g id="event">%2$s</xliff:g></string>
     <string name="account_settings_spam_digest_history_alarm">alarm went off</string>
@@ -684,6 +684,26 @@
     <string name="account_settings_spam_digest_history_failed">failed (<xliff:g id="error">%s</xliff:g>), will try again</string>
     <string name="account_settings_spam_digest_history_gave_up">failed (<xliff:g id="error">%s</xliff:g>), given up until the next alarm</string>
     <string name="account_settings_spam_digest_history_unknown_error">unknown error</string>
+    <!-- What reading the spam folders found, e.g. "spam folders read: 9 messages from 2 accounts". -->
+    <string name="account_settings_spam_digest_history_read">spam folders read: <xliff:g id="messages">%1$s</xliff:g> from <xliff:g id="accounts">%2$s</xliff:g></string>
+    <string name="account_settings_spam_digest_history_read_not_refreshed">, <xliff:g id="count">%d</xliff:g> not checked with the server</string>
+    <string name="account_settings_spam_digest_history_read_unreadable">, <xliff:g id="count">%d</xliff:g> could not be read</string>
+    <string name="account_settings_spam_digest_history_read_no_spam_folder">, <xliff:g id="count">%d</xliff:g> without a spam folder</string>
+    <plurals name="account_settings_spam_digest_history_messages">
+        <item quantity="one"><xliff:g id="count">%d</xliff:g> message</item>
+        <item quantity="other"><xliff:g id="count">%d</xliff:g> messages</item>
+    </plurals>
+    <plurals name="account_settings_spam_digest_history_accounts">
+        <item quantity="one"><xliff:g id="count">%d</xliff:g> account</item>
+        <item quantity="other"><xliff:g id="count">%d</xliff:g> accounts</item>
+    </plurals>
+    <string name="account_settings_spam_digest_history_sending">sending <xliff:g id="messages">%1$s</xliff:g> to the server, covering <xliff:g id="days">%2$s</xliff:g></string>
+    <string name="account_settings_spam_digest_history_sent_in">sent, covering <xliff:g id="days">%1$s</xliff:g>; the server took <xliff:g id="seconds">%2$s</xliff:g> s</string>
+    <string name="account_settings_spam_digest_history_stopped">stopped by Android (<xliff:g id="reason">%s</xliff:g>), will run again</string>
+    <string name="account_settings_spam_digest_history_waiting">digest due, waiting for Android to start the run</string>
+    <string name="account_settings_spam_digest_history_scheduled_exact">next alarm set for <xliff:g id="time">%s</xliff:g></string>
+    <string name="account_settings_spam_digest_history_scheduled_inexact">next alarm set for <xliff:g id="time">%s</xliff:g>, not exact: may be up to an hour late</string>
+    <string name="account_settings_spam_digest_history_scheduled_unknown">next alarm set</string>
     <string name="account_settings_spam_digest_fields_label">Show in digest</string>
     <string name="account_settings_spam_digest_fields_summary">What the digest lists for each message</string>
     <string name="account_settings_spam_digest_field_sender_name">Sender name</string>

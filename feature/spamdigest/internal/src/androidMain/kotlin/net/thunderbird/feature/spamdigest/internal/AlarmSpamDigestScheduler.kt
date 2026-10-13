@@ -88,7 +88,7 @@ internal class AlarmSpamDigestScheduler(
     fun onAlarm() {
         logger.info(LOG_TAG) { "Spam digest alarm went off" }
         runLog.record(SpamDigestRunEvent.Kind.ALARM)
-        startRun(force = false)
+        if (!startRun(force = false)) runLog.recordUnlessLast(SpamDigestRunEvent.Kind.WAITING)
         schedule(catchUp = false)
     }
 
@@ -97,6 +97,8 @@ internal class AlarmSpamDigestScheduler(
         if (startRun(force = false)) {
             logger.info(LOG_TAG) { "A spam digest is overdue; sending it now" }
             runLog.record(SpamDigestRunEvent.Kind.CATCH_UP)
+        } else {
+            runLog.recordUnlessLast(SpamDigestRunEvent.Kind.WAITING)
         }
     }
 
@@ -120,13 +122,22 @@ internal class AlarmSpamDigestScheduler(
         }
 
         val runAt = nextRunAt(clock.now(), timeZoneProvider.current(), settings.sendTime)
-        setAlarm(runAt)
+        val isExact = setAlarm(runAt)
+        // Only a change: the alarm is set again on every app start.
+        if (runAt != settingsStore.scheduledFor()) {
+            val exactness = if (isExact) SpamDigestRunEvent.EXACT_ALARM else "inexact"
+            runLog.record(SpamDigestRunEvent.Kind.SCHEDULED, runDetail(runAt.toEpochMilliseconds(), exactness))
+        }
         settingsStore.setScheduledFor(runAt)
     }
 
-    private fun setAlarm(runAt: Instant) {
+    /**
+     * @return whether the alarm is exact; Android may deliver one that is not up to an hour late.
+     */
+    private fun setAlarm(runAt: Instant): Boolean {
         val triggerAt = runAt.toEpochMilliseconds()
-        if (AlarmManagerCompat.canScheduleExactAlarms(alarmManager)) {
+        val isExact = AlarmManagerCompat.canScheduleExactAlarms(alarmManager)
+        if (isExact) {
             AlarmManagerCompat.setExactAndAllowWhileIdle(
                 alarmManager,
                 AlarmManager.RTC_WAKEUP,
@@ -136,6 +147,8 @@ internal class AlarmSpamDigestScheduler(
         } else {
             AlarmManagerCompat.setAndAllowWhileIdle(alarmManager, AlarmManager.RTC_WAKEUP, triggerAt, alarmIntent())
         }
+
+        return isExact
     }
 
     /**

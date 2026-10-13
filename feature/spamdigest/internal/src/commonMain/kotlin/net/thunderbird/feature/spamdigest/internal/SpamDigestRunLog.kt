@@ -5,9 +5,9 @@ import net.thunderbird.feature.spamdigest.SpamDigestHistory
 import net.thunderbird.feature.spamdigest.SpamDigestRunEvent
 
 /**
- * How many events are kept: a few days of a digest that keeps failing, and weeks of one that works.
+ * How many events are kept: a few days of a digest that keeps failing, and a week of one that works.
  */
-internal const val MAX_RUN_EVENTS = 20
+internal const val MAX_RUN_EVENTS = 40
 
 private const val FIELD_SEPARATOR = '|'
 private const val EVENT_SEPARATOR = '\n'
@@ -24,7 +24,20 @@ internal interface SpamDigestRunLog : SpamDigestHistory {
      * @param detail must not name a person or a message; see [SpamDigestRunEvent].
      */
     fun record(kind: SpamDigestRunEvent.Kind, detail: String? = null)
+
+    /**
+     * Records [kind] unless it is already the newest event, for something that would otherwise be recorded at every
+     * mail check until it changes.
+     */
+    fun recordUnlessLast(kind: SpamDigestRunEvent.Kind) {
+        if (recentEvents().firstOrNull()?.kind != kind) record(kind)
+    }
 }
+
+/**
+ * Joins the values of an event's detail; see [SpamDigestRunEvent.DETAIL_SEPARATOR].
+ */
+internal fun runDetail(vararg values: Any): String = values.joinToString(SpamDigestRunEvent.DETAIL_SEPARATOR)
 
 /**
  * [events] with [event] added in front, keeping the newest [MAX_RUN_EVENTS].

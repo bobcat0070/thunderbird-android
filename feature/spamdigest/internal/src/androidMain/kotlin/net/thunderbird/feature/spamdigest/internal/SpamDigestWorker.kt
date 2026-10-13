@@ -3,6 +3,7 @@ package net.thunderbird.feature.spamdigest.internal
 import android.content.Context
 import androidx.work.CoroutineWorker
 import androidx.work.ForegroundInfo
+import androidx.work.WorkInfo
 import androidx.work.WorkerParameters
 import kotlin.coroutines.cancellation.CancellationException
 import net.thunderbird.core.logging.Logger
@@ -41,6 +42,7 @@ class SpamDigestWorker internal constructor(
             logger.info(LOG_TAG) { "Spam digest run finished: $outcome" }
             Result.success()
         } catch (e: CancellationException) {
+            if (isStopped) runLog.record(SpamDigestRunEvent.Kind.STOPPED, stopReasonName())
             throw e
         } catch (@Suppress("TooGenericExceptionCaught") e: Exception) {
             // Only the kind of error: its message can carry an address.
@@ -56,6 +58,22 @@ class SpamDigestWorker internal constructor(
                 Result.success()
             }
         }
+    }
+
+    @Suppress("CyclomaticComplexMethod")
+    private fun stopReasonName(): String = when (val reason = stopReason) {
+        WorkInfo.STOP_REASON_CANCELLED_BY_APP -> "cancelled by the app"
+        WorkInfo.STOP_REASON_PREEMPT -> "preempted"
+        WorkInfo.STOP_REASON_TIMEOUT -> "ran out of time"
+        WorkInfo.STOP_REASON_DEVICE_STATE -> "device state"
+        WorkInfo.STOP_REASON_CONSTRAINT_CONNECTIVITY -> "network lost"
+        WorkInfo.STOP_REASON_CONSTRAINT_DEVICE_IDLE -> "device idle"
+        WorkInfo.STOP_REASON_QUOTA -> "out of quota"
+        WorkInfo.STOP_REASON_BACKGROUND_RESTRICTION -> "background restriction"
+        WorkInfo.STOP_REASON_APP_STANDBY -> "app standby"
+        WorkInfo.STOP_REASON_USER -> "stopped by the user"
+        WorkInfo.STOP_REASON_SYSTEM_PROCESSING -> "system processing"
+        else -> reason.toString()
     }
 
     /**

@@ -156,8 +156,26 @@ class SendSpamDigestTest {
         settingsRepository.current = settingsRepository.current.copy(senderAccountId = "removed")
         testSubject()
 
-        assertThat(runLog.kinds).isEqualTo(listOf(Kind.SENT, Kind.ALREADY_SENT, Kind.SENDER_MISSING))
-        assertThat(runLog.details.first()).isEqualTo("2026-10-02")
+        assertThat(runLog.kinds).isEqualTo(
+            listOf(Kind.READ, Kind.SENDING, Kind.SENT, Kind.ALREADY_SENT, Kind.SENDER_MISSING),
+        )
+        assertThat(runLog.detailOf(Kind.SENDING)).isEqualTo("0/2026-10-02")
+        assertThat(runLog.detailOf(Kind.SENT)).isEqualTo("2026-10-02/0")
+    }
+
+    @Test
+    fun `should record how many messages were found and which folders could not be read`() = runTest {
+        spamFolderReader.contents["work"] = SpamFolderContents(
+            listOf(spamMessage("One"), spamMessage("Two")),
+            isRefreshed = false,
+        )
+        spamFolderReader.failingAccountIds += "personal"
+
+        testSubject()
+
+        // Messages, accounts, not checked with the server, unreadable, without a spam folder.
+        assertThat(runLog.detailOf(Kind.READ)).isEqualTo("2/2/1/1/0")
+        assertThat(runLog.detailOf(Kind.SENDING)).isEqualTo("2/2026-10-02")
     }
 
     @Test
@@ -180,7 +198,7 @@ class SendSpamDigestTest {
 
         assertThat(mailer.sent).single().transform { it.subject }
             .isEqualTo("Spam digest for 2026-10-01 to 2026-10-02: 0")
-        assertThat(runLog.details.single()).isEqualTo("2026-10-01 – 2026-10-02")
+        assertThat(runLog.detailOf(Kind.SENT)).isEqualTo("2026-10-01 – 2026-10-02/0")
     }
 
     @Test
@@ -267,7 +285,7 @@ private class FakeRunLog : SpamDigestRunLog {
     private val events = mutableListOf<SpamDigestRunEvent>()
 
     val kinds: List<Kind> get() = events.map { it.kind }
-    val details: List<String?> get() = events.map { it.detail }
+    fun detailOf(kind: Kind): String? = events.single { it.kind == kind }.detail
 
     override fun record(kind: Kind, detail: String?) {
         events += SpamDigestRunEvent(Instant.parse("2026-10-03T07:00:00Z"), kind, detail)

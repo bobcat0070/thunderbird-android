@@ -7,6 +7,9 @@ import androidx.lifecycle.lifecycleScope
 import androidx.preference.Preference
 import androidx.preference.PreferenceFragmentCompat
 import com.fsck.k9.ui.R
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import java.text.DateFormat
+import java.util.Date
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -19,7 +22,7 @@ private const val PREFERENCE_SEND_NOW = "spam_digest_send_now"
 private const val PREFERENCE_HISTORY = "spam_digest_history"
 
 /**
- * How many of the recent runs the screen lists: enough to see the last few days.
+ * How many of the recent events the screen lists; tapping the list shows all of them.
  */
 private const val SHOWN_EVENTS = 10
 
@@ -40,7 +43,7 @@ internal class SpamDigestRunPreferences(
             true
         }
         fragment.findPreference<Preference>(PREFERENCE_HISTORY)?.setOnPreferenceClickListener {
-            showHistory(fragment)
+            showAllEvents(fragment)
             true
         }
         showHistory(fragment)
@@ -54,12 +57,28 @@ internal class SpamDigestRunPreferences(
         val context = fragment.requireContext()
 
         fragment.lifecycleScope.launch {
-            val events = withContext(Dispatchers.IO) { history.recentEvents().take(SHOWN_EVENTS) }
+            val events = withContext(Dispatchers.IO) { history.recentEvents() }
             preference.summary = if (events.isEmpty()) {
                 context.getString(R.string.account_settings_spam_digest_history_empty)
             } else {
-                events.joinToString("\n") { event -> context.describe(event) }
+                context.describe(events.take(SHOWN_EVENTS))
             }
+        }
+    }
+
+    private fun showAllEvents(fragment: PreferenceFragmentCompat) {
+        val context = fragment.requireContext()
+
+        fragment.lifecycleScope.launch {
+            val events = withContext(Dispatchers.IO) { history.recentEvents() }
+            showHistory(fragment)
+            if (events.isEmpty()) return@launch
+
+            MaterialAlertDialogBuilder(context)
+                .setTitle(R.string.account_settings_spam_digest_history_label)
+                .setMessage(context.describe(events))
+                .setPositiveButton(android.R.string.ok, null)
+                .show()
         }
     }
 
@@ -75,19 +94,28 @@ internal class SpamDigestRunPreferences(
         }
     }
 
-    private fun Context.describe(event: SpamDigestRunEvent): String {
-        val time = DateUtils.formatDateTime(
-            this,
-            event.at.toEpochMilliseconds(),
-            DateUtils.FORMAT_SHOW_DATE or DateUtils.FORMAT_SHOW_TIME or DateUtils.FORMAT_ABBREV_ALL,
-        )
-
-        return getString(R.string.account_settings_spam_digest_history_event, time, describeKind(event))
+    private fun Context.describe(events: List<SpamDigestRunEvent>): String {
+        return events.joinToString("\n") { event ->
+            getString(R.string.account_settings_spam_digest_history_event, formatTime(event), describeKind(event))
+        }
     }
 
-    @Suppress("CyclomaticComplexMethod")
+    /**
+     * To the second: the steps of one run are seconds apart, and how far apart is part of what went wrong.
+     */
+    private fun Context.formatTime(event: SpamDigestRunEvent): String {
+        val millis = event.at.toEpochMilliseconds()
+        val day = DateUtils.formatDateTime(this, millis, DateUtils.FORMAT_SHOW_DATE or DateUtils.FORMAT_ABBREV_ALL)
+        val time = DateFormat.getTimeInstance(DateFormat.MEDIUM).format(Date(millis))
+
+        return "$day, $time"
+    }
+
+    @Suppress("CyclomaticComplexMethod", "LongMethod")
     private fun Context.describeKind(event: SpamDigestRunEvent): String {
         val detail = event.detail
+        val values = detail?.split(SpamDigestRunEvent.DETAIL_SEPARATOR).orEmpty()
+        fun value(index: Int): String = values.getOrNull(index).orEmpty()
         val error = detail ?: getString(R.string.account_settings_spam_digest_history_unknown_error)
 
         return when (event.kind) {
@@ -95,7 +123,18 @@ internal class SpamDigestRunPreferences(
             Kind.CATCH_UP -> getString(R.string.account_settings_spam_digest_history_catch_up)
             Kind.REQUESTED -> getString(R.string.account_settings_spam_digest_history_requested)
             Kind.STARTED -> getString(R.string.account_settings_spam_digest_history_started, detail.orEmpty())
-            Kind.SENT -> getString(R.string.account_settings_spam_digest_history_sent, detail.orEmpty())
+            Kind.READ -> describeRead(values)
+            Kind.SENDING -> getString(
+                R.string.account_settings_spam_digest_history_sending,
+                messages(value(0).toIntOrNull() ?: 0),
+                value(1),
+            )
+            Kind.SENT -> if (values.size > 1) {
+                getString(R.string.account_settings_spam_digest_history_sent_in, value(0), value(1))
+            } else {
+                getString(R.string.account_settings_spam_digest_history_sent, detail.orEmpty())
+            }
+
             Kind.ALREADY_SENT -> if (detail != null) {
                 getString(R.string.account_settings_spam_digest_history_already_sent, detail)
             } else {
@@ -106,6 +145,62 @@ internal class SpamDigestRunPreferences(
             Kind.SENDER_MISSING -> getString(R.string.account_settings_spam_digest_history_sender_missing)
             Kind.FAILED -> getString(R.string.account_settings_spam_digest_history_failed, error)
             Kind.GAVE_UP -> getString(R.string.account_settings_spam_digest_history_gave_up, error)
+            Kind.STOPPED -> getString(R.string.account_settings_spam_digest_history_stopped, error)
+            Kind.WAITING -> getString(R.string.account_settings_spam_digest_history_waiting)
+            Kind.SCHEDULED -> describeScheduled(values)
+        }
+    }
+
+    /**
+     * The values of a [Kind.READ] detail, in order; see [SpamDigestRunEvent.Kind.READ].
+     */
+    private enum class ReadValue { MESSAGES, ACCOUNTS, NOT_REFRESHED, UNREADABLE, NO_SPAM_FOLDER }
+
+    private fun Context.describeRead(values: List<String>): String {
+        fun count(value: ReadValue): Int = values.getOrNull(value.ordinal)?.toIntOrNull() ?: 0
+        val notRefreshed = count(ReadValue.NOT_REFRESHED)
+        val unreadable = count(ReadValue.UNREADABLE)
+        val noSpamFolder = count(ReadValue.NO_SPAM_FOLDER)
+
+        return buildString {
+            append(
+                getString(
+                    R.string.account_settings_spam_digest_history_read,
+                    messages(count(ReadValue.MESSAGES)),
+                    accounts(count(ReadValue.ACCOUNTS)),
+                ),
+            )
+            if (notRefreshed > 0) {
+                append(getString(R.string.account_settings_spam_digest_history_read_not_refreshed, notRefreshed))
+            }
+            if (unreadable > 0) {
+                append(getString(R.string.account_settings_spam_digest_history_read_unreadable, unreadable))
+            }
+            if (noSpamFolder > 0) {
+                append(getString(R.string.account_settings_spam_digest_history_read_no_spam_folder, noSpamFolder))
+            }
+        }
+    }
+
+    private fun Context.messages(count: Int): String =
+        resources.getQuantityString(R.plurals.account_settings_spam_digest_history_messages, count, count)
+
+    private fun Context.accounts(count: Int): String =
+        resources.getQuantityString(R.plurals.account_settings_spam_digest_history_accounts, count, count)
+
+    private fun Context.describeScheduled(values: List<String>): String {
+        val millis = values.getOrNull(0)?.toLongOrNull()
+            ?: return getString(R.string.account_settings_spam_digest_history_scheduled_unknown)
+        val time = DateUtils.formatDateTime(
+            this,
+            millis,
+            DateUtils.FORMAT_SHOW_DATE or DateUtils.FORMAT_SHOW_TIME or DateUtils.FORMAT_ABBREV_ALL,
+        )
+
+        return if (values.getOrNull(1) == SpamDigestRunEvent.EXACT_ALARM) {
+            getString(R.string.account_settings_spam_digest_history_scheduled_exact, time)
+        } else {
+            getString(R.string.account_settings_spam_digest_history_scheduled_inexact, time)
         }
     }
 }

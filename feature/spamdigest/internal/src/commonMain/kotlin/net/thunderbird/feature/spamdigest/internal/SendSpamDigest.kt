@@ -2,6 +2,7 @@ package net.thunderbird.feature.spamdigest.internal
 
 import kotlin.coroutines.cancellation.CancellationException
 import kotlin.time.Clock
+import kotlin.time.TimeSource
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.daysUntil
 import net.thunderbird.core.logging.Logger
@@ -84,6 +85,7 @@ internal class SendSpamDigest(
         val accountSpam = allAccounts
             .filter { settings.isAccountIncluded(it.id) }
             .map { account -> AccountSpam(account, readSpamFolder(account.id, period)) }
+        runLog.record(SpamDigestRunEvent.Kind.READ, accountSpam.readDetail())
 
         val digest = composer.compose(
             day = period.firstDate,
@@ -92,9 +94,14 @@ internal class SendSpamDigest(
             lastDay = period.lastDate,
             timeZone = timeZone,
         )
+        runLog.record(SpamDigestRunEvent.Kind.SENDING, runDetail(accountSpam.messageCount(), period.days()))
+        val sendStarted = TimeSource.Monotonic.markNow()
         mailer.sendToSelf(senderAccountId, digest.subject, digest.body)
         digestLog.markSent(period.lastDate)
-        runLog.record(SpamDigestRunEvent.Kind.SENT, period.days())
+        runLog.record(
+            SpamDigestRunEvent.Kind.SENT,
+            runDetail(period.days(), sendStarted.elapsedNow().inWholeSeconds),
+        )
 
         logger.info(LOG_TAG) {
             "Spam digest sent for ${accountSpam.size} accounts, covering ${period.dayCount()} days"
@@ -122,3 +129,20 @@ internal class SendSpamDigest(
 private fun DigestPeriod.dayCount(): Int = firstDate.daysUntil(lastDate) + 1
 
 private fun DigestPeriod.days(): String = if (isSingleDay) "$firstDate" else "$firstDate – $lastDate"
+
+private fun List<AccountSpam>.messageCount(): Int = sumOf { it.messages().size }
+
+/**
+ * What reading the spam folders found, for [SpamDigestRunEvent.Kind.READ].
+ */
+private fun List<AccountSpam>.readDetail(): String {
+    val read = map { it.result }.filterIsInstance<SpamFolderResult.Read>()
+
+    return runDetail(
+        messageCount(),
+        size,
+        read.count { !it.contents.isRefreshed },
+        count { it.result == SpamFolderResult.Unreadable },
+        count { it.result == SpamFolderResult.NoSpamFolder },
+    )
+}
