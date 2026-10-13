@@ -94,8 +94,8 @@ public interface SpamDigestMailer {
     /**
      * Sends a plain-text message from [accountId] to that account's own address.
      *
-     * Returns once the message is queued for sending; delivery itself goes through the account's outbox like
-     * any other message, with its retries.
+     * Returns once the account's server has taken the message, and throws when it did not, so a digest that was not
+     * sent is never recorded as sent.
      */
     public suspend fun sendToSelf(accountId: String, subject: String, body: String)
 }
@@ -156,7 +156,7 @@ public data class SpamDigestRunEvent(
         /** A run started. */
         STARTED,
 
-        /** The digest was queued for sending. */
+        /** The account's server took the digest. */
         SENT,
 
         /** Every day due had been reported on already. */

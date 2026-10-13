@@ -97,7 +97,7 @@ internal class SendSpamDigest(
         runLog.record(SpamDigestRunEvent.Kind.SENT, period.days())
 
         logger.info(LOG_TAG) {
-            "Spam digest queued for ${accountSpam.size} accounts, covering ${period.dayCount()} days"
+            "Spam digest sent for ${accountSpam.size} accounts, covering ${period.dayCount()} days"
         }
 
         return Outcome.SENT

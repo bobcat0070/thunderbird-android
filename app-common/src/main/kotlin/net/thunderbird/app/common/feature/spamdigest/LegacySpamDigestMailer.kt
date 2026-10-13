@@ -21,8 +21,13 @@ import net.thunderbird.core.preference.GeneralSettingsManager
 import net.thunderbird.feature.spamdigest.SpamDigestMailer
 
 /**
- * Sends the digest through the account's outbox, built the way the composer builds a plain-text message so the
+ * Sends the digest straight to the account's server, built the way the composer builds a plain-text message so the
  * privacy settings - hidden time zone, hidden user agent - apply to it as to anything else the user sends.
+ *
+ * Not through the Outbox: a message queued there is sent after the undo-send pause, by which time the digest's run
+ * has finished and Android may have stopped the app, and digests queued there went missing. Sent from within the
+ * run, a digest the server did not take fails the run, which is tried again. A Microsoft 365 account files
+ * the copy in Sent itself; an IMAP account keeps none, which a report the app writes to the reader can do without.
  */
 internal class LegacySpamDigestMailer(
     private val accountManager: LegacyAccountDtoManager,
@@ -38,9 +43,7 @@ internal class LegacySpamDigestMailer(
         val self = Address(identity.email ?: account.email, identity.name)
 
         val message = buildMessage(identity, self, subject, body)
-        // The variant that throws: a digest that never reached the Outbox must fail its run, so it is tried again
-        // and its day is not recorded as sent.
-        messagingController.sendMessageOrThrow(account, message, subject, null)
+        messagingController.sendMessageBlocking(account, message)
     }
 
     private suspend fun buildMessage(identity: Identity, recipient: Address, subject: String, body: String) =
