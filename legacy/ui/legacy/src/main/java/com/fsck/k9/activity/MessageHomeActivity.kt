@@ -1605,7 +1605,7 @@ open class MessageHomeActivity :
         singleFolderMode = false
 
         val folderIds = search.folderIds
-        account = search.resolveAccount(currentAccount = account, accountManager = accountManager)
+        account = search.displayedAccount(currentAccount = account, accountManager = accountManager)
         singleFolderMode = !search.searchAllAccounts() && folderIds.size == 1
 
         configureDrawer()
