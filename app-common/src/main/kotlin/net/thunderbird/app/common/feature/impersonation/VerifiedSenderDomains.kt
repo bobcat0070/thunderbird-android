@@ -82,7 +82,8 @@ internal class VerifiedSenderDomainScanner(
 }
 
 /**
- * Keeps the verified sender domains scanned once a night, and once straight away when they never have been.
+ * Keeps the verified sender domains scanned once a night, and straight away while none are saved: never scanned, or
+ * scanned before there was any mail - on a new install, the first start runs before an account is set up.
  *
  * A domain that first sends authenticated mail during the day counts from the next night's scan. People the reader
  * writes to need no scan: the recipient index records them as the mail is sent.
@@ -101,7 +102,7 @@ internal class VerifiedSenderDomainsScheduler(
             .build()
         workManager.enqueueUniquePeriodicWork(NIGHTLY_WORK_NAME, ExistingPeriodicWorkPolicy.KEEP, nightly)
 
-        if (store.domains() == null) {
+        if (store.domains().isNullOrEmpty()) {
             val first = OneTimeWorkRequestBuilder<VerifiedSenderDomainsWorker>().build()
             workManager.enqueueUniqueWork(FIRST_WORK_NAME, ExistingWorkPolicy.KEEP, first)
         }
