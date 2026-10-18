@@ -10,8 +10,10 @@ import net.thunderbird.backend.graph.api.MESSAGE_ENVELOPE_EXPAND
 import net.thunderbird.backend.graph.api.batchGet
 import net.thunderbird.backend.graph.api.pathSegment
 import net.thunderbird.backend.graph.api.receivedDate
-import net.thunderbird.core.logging.Logger
+import net.thunderbird.components.core.logging.Logger
 import okhttp3.HttpUrl
+
+private const val TAG = "GraphLastActionReader"
 
 /**
  * Up to this many messages, each is looked up on its own; beyond it, the folder is listed. An incremental round is a
@@ -69,7 +71,7 @@ internal class GraphLastActionReader(
         return try {
             listFolder(folderServerId, messageIds, since)
         } catch (e: Exception) {
-            logger.warn(throwable = e) { "Could not read which stored messages were replied to or forwarded" }
+            logger.warn(TAG, throwable = e) { "Could not read which stored messages were replied to or forwarded" }
             null
         }
     }
@@ -89,14 +91,14 @@ internal class GraphLastActionReader(
                     oldest = messages.mapNotNull { it.receivedDate() }.minOrNull(),
                 )
             }
-            logger.debug {
+            logger.debug(TAG) {
                 val found = lastActions.values.count { it.isNotEmpty() }
                 "Read last actions of ${messages.size} message(s); $found replied to or forwarded"
             }
 
             lastActions
         } catch (e: Exception) {
-            logger.warn(throwable = e) { "Could not read which messages were replied to or forwarded" }
+            logger.warn(TAG, throwable = e) { "Could not read which messages were replied to or forwarded" }
             emptyMap()
         }
     }

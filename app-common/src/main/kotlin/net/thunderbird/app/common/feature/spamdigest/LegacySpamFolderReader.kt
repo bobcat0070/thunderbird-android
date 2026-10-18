@@ -9,8 +9,8 @@ import kotlin.time.Instant
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import net.thunderbird.app.common.account.getByUuid
-import net.thunderbird.core.android.account.LegacyAccountDto
-import net.thunderbird.core.android.account.LegacyAccountDtoManager
+import net.thunderbird.core.android.account.LegacyAccount
+import net.thunderbird.core.android.account.LegacyAccountManager
 import net.thunderbird.feature.spamdigest.SpamFolderContents
 import net.thunderbird.feature.spamdigest.SpamFolderReader
 
@@ -20,7 +20,7 @@ import net.thunderbird.feature.spamdigest.SpamFolderReader
  * What each message's sender is, and whether they can be trusted, is worked out by [SpamSenderAssessor].
  */
 internal class LegacySpamFolderReader(
-    private val accountManager: LegacyAccountDtoManager,
+    private val accountManager: LegacyAccountManager,
     private val messagingController: MessagingController,
     private val messageStoreManager: MessageStoreManager,
     private val spamSenderAssessor: SpamSenderAssessor,
@@ -30,7 +30,7 @@ internal class LegacySpamFolderReader(
         withContext(Dispatchers.IO) {
             val account = accountManager.getByUuid(accountId) ?: return@withContext null
             val folderId = account.spamFolderId ?: return@withContext null
-            val messageStore = messageStoreManager.getMessageStore(account)
+            val messageStore = messageStoreManager.getMessageStore(account.id)
 
             val isRefreshed = refresh(account, folderId, messageStore)
 
@@ -72,11 +72,11 @@ internal class LegacySpamFolderReader(
      * @return whether the sync got through, judged by the folder's last-checked time moving on: a failed sync
      *   leaves it as it was.
      */
-    private fun refresh(account: LegacyAccountDto, folderId: Long, messageStore: MessageStore): Boolean {
+    private fun refresh(account: LegacyAccount, folderId: Long, messageStore: MessageStore): Boolean {
         val folderServerId = messageStore.getFolderServerId(folderId) ?: return false
         val lastCheckedBefore = messageStore.getFolder(folderId) { it.lastChecked }
 
-        messagingController.synchronizeMailboxBlocking(account, folderServerId)
+        messagingController.synchronizeMailboxBlocking(account.id, folderServerId)
 
         val lastCheckedAfter = messageStore.getFolder(folderId) { it.lastChecked }
         return lastCheckedAfter != null && lastCheckedAfter != lastCheckedBefore

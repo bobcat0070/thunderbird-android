@@ -3,7 +3,7 @@ package net.thunderbird.app.common.feature.impersonation
 import app.k9mail.legacy.mailstore.MessageStoreManager
 import com.fsck.k9.mailstore.recipients.RecipientIndex
 import com.fsck.k9.mailstore.recipients.RecipientOrigin
-import net.thunderbird.core.android.account.LegacyAccountDtoManager
+import net.thunderbird.core.android.account.LegacyAccountManager
 import net.thunderbird.feature.impersonation.KnownSenders
 import net.thunderbird.feature.impersonation.KnownSendersSource
 
@@ -17,14 +17,14 @@ import net.thunderbird.feature.impersonation.KnownSendersSource
  * from it.
  */
 internal class LegacyKnownSendersSource(
-    private val accountManager: LegacyAccountDtoManager,
+    private val accountManager: LegacyAccountManager,
     private val recipientIndex: RecipientIndex,
     private val messageStoreManager: MessageStoreManager,
 ) : KnownSendersSource {
 
     override fun knownSenders(): KnownSenders {
         val recipients = recipientIndex.all().filter { it.timesUsed > 0 || it.origin == RecipientOrigin.REMOTE }
-        val accounts = accountManager.getAccounts()
+        val accounts = accountManager.findAll()
         val identities = accounts.flatMap { it.identities }
             .mapNotNull { identity -> identity.email?.lowercase()?.let { email -> identity.name to email } }
 
@@ -40,7 +40,7 @@ internal class LegacyKnownSendersSource(
         }
 
         val verifiedSenderDomains = accounts.flatMapTo(mutableSetOf()) { account ->
-            messageStoreManager.getMessageStore(account).getMessages(
+            messageStoreManager.getMessageStore(account.id).getMessages(
                 selection = "messages.sender_authenticated = 1 AND folders.type NOT IN ('spam', 'trash')",
                 selectionArgs = emptyArray(),
                 sortOrder = "messages.id",

@@ -13,9 +13,11 @@ import net.thunderbird.backend.graph.api.receivedDate
 import net.thunderbird.backend.graph.api.serverCategories
 import net.thunderbird.backend.graph.api.toEnvelopeMessage
 import net.thunderbird.backend.graph.api.toFlags
+import net.thunderbird.components.core.logging.Logger
 import net.thunderbird.core.common.exception.MessagingException
 import net.thunderbird.core.common.mail.Flag
-import net.thunderbird.core.logging.Logger
+
+private const val TAG = "GraphSync"
 
 /**
  * Key under which the Graph delta token for a folder is stored.
@@ -173,7 +175,7 @@ internal class GraphSync(
             listener.syncFinished(folderServerId)
         } catch (e: Exception) {
             // The message is deliberately generic: Graph error payloads can echo message metadata.
-            logger.error(throwable = e) { "Failed to synchronize folder via Microsoft Graph" }
+            logger.error(TAG, throwable = e) { "Failed to synchronize folder via Microsoft Graph" }
 
             backendStorage.getFolder(folderServerId).setStatus(e.messageForStatus())
             listener.syncFailed(folderServerId, e.messageForStatus(), e)
@@ -197,7 +199,7 @@ internal class GraphSync(
             try {
                 return deltaReader.incrementalRound(storedDeltaLink)
             } catch (e: Exception) {
-                logger.debug(throwable = e) { "Delta token rejected; starting a new delta round" }
+                logger.debug(TAG, throwable = e) { "Delta token rejected; starting a new delta round" }
 
                 backendStorage.getFolder(folderServerId).setFolderExtraString(FOLDER_EXTRA_DELTA_LINK, null)
             }

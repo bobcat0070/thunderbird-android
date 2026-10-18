@@ -3,8 +3,8 @@ package net.thunderbird.app.common.feature.spamdigest
 import android.content.Context
 import app.k9mail.legacy.message.controller.SimpleMessagingListener
 import kotlin.coroutines.cancellation.CancellationException
-import net.thunderbird.core.android.account.LegacyAccountDto
-import net.thunderbird.core.logging.Logger
+import net.thunderbird.components.core.logging.Logger
+import net.thunderbird.feature.account.AccountId
 import net.thunderbird.feature.spamdigest.SpamDigestScheduler
 
 private const val LOG_TAG = "SpamDigest"
@@ -20,7 +20,7 @@ internal class SpamDigestCatchUpListener(
     private val logger: Logger,
 ) : SimpleMessagingListener() {
 
-    override fun checkMailFinished(context: Context?, account: LegacyAccountDto?) {
+    override fun checkMailFinished(context: Context?, accountId: AccountId?) {
         try {
             spamDigestScheduler.catchUpIfDue()
         } catch (e: CancellationException) {

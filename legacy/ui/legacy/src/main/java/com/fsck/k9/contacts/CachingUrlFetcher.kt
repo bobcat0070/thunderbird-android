@@ -1,6 +1,6 @@
 package com.fsck.k9.contacts
 
-import net.thunderbird.core.logging.Logger
+import net.thunderbird.components.core.logging.Logger
 import okhttp3.OkHttpClient
 import okhttp3.Request
 

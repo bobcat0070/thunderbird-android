@@ -13,6 +13,8 @@ import net.thunderbird.feature.mail.folder.api.OutboxFolderManager
 import net.thunderbird.feature.search.legacy.sql.SqlWhereClause
 import net.thunderbird.legacy.logging.Log
 
+private const val TAG = "MessageListLoader"
+
 internal class MessageListLoader(
     private val accountManager: LegacyAccountManager,
     private val messageListRepository: MessageListRepository,
@@ -27,7 +29,7 @@ internal class MessageListLoader(
         return try {
             getMessageListInfo(config)
         } catch (e: Exception) {
-            Log.e(e, "Error while fetching message list")
+            Log.e(TAG, e, "Error while fetching message list")
 
             // TODO: Return an error object instead of an empty list
             emptyList()

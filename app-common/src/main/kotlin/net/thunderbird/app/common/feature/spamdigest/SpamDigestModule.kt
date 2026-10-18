@@ -47,6 +47,7 @@ internal val appCommonFeatureSpamDigestModule = module {
 
     single {
         SpamArrivalMessagingListener(
+            accountManager = get(),
             messageStoreManager = get(),
             spamSenderAssessor = get(),
             spamArrivalListener = get(),
@@ -59,7 +60,7 @@ internal val appCommonFeatureSpamDigestModule = module {
         LegacySpamAlertNotifier(
             context = androidContext(),
             accountManager = get(),
-            notificationHelper = get(),
+            notificationChannelManager = get(),
             actionCreator = get(),
             resourceProvider = get(),
             logger = get(),

@@ -7,7 +7,6 @@ import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
-import android.os.Build
 import android.provider.Browser
 import android.webkit.WebResourceError
 import android.webkit.WebResourceRequest
@@ -15,12 +14,13 @@ import android.webkit.WebResourceResponse
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import android.widget.Toast
-import androidx.annotation.RequiresApi
 import com.fsck.k9.helper.ClipboardManager
 import com.fsck.k9.mailstore.AttachmentResolver
 import com.fsck.k9.ui.R
 import com.fsck.k9.view.MessageWebView.OnPageFinishedListener
 import net.thunderbird.legacy.logging.Log
+
+private const val TAG = "K9WebViewClient"
 
 /**
  * [WebViewClient] that intercepts requests for `cid:` URIs to load the respective body part.
@@ -46,7 +46,6 @@ class K9WebViewClient(
         return shouldOverrideUrlLoading(webView, Uri.parse(url))
     }
 
-    @RequiresApi(Build.VERSION_CODES.N)
     override fun shouldOverrideUrlLoading(webView: WebView, request: WebResourceRequest): Boolean {
         return shouldOverrideUrlLoading(webView, request.url)
     }
@@ -103,7 +102,7 @@ class K9WebViewClient(
         try {
             context.startActivity(intent)
         } catch (e: ActivityNotFoundException) {
-            Log.d(e, "Couldn't open URL: %s", uri)
+            Log.d(TAG, e, "Couldn't open URL: %s", uri)
             Toast.makeText(context, R.string.error_activity_not_found, Toast.LENGTH_LONG).show()
         }
     }
@@ -133,7 +132,7 @@ class K9WebViewClient(
                 addCacheControlHeader()
             }
         } catch (e: Exception) {
-            Log.e(e, "Error while intercepting URI: %s", uri)
+            Log.e(TAG, e, "Error while intercepting URI: %s", uri)
             RESULT_DUMMY_RESPONSE
         }
     }
@@ -153,11 +152,10 @@ class K9WebViewClient(
         onPageFinishedListener?.onPageFinished()
     }
 
-    @RequiresApi(Build.VERSION_CODES.M)
     override fun onReceivedError(view: WebView, request: WebResourceRequest, error: WebResourceError) {
         super.onReceivedError(view, request, error)
         if (request.isForMainFrame) {
-            Log.d("Message WebView load error: %d %s for %s", error.errorCode, error.description, request.url)
+            Log.d(TAG, "Message WebView load error: %d %s for %s", error.errorCode, error.description, request.url)
         }
     }
 

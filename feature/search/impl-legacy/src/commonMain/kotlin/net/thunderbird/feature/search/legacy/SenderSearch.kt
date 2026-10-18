@@ -4,8 +4,6 @@ import net.thunderbird.feature.search.legacy.api.MessageSearchField
 import net.thunderbird.feature.search.legacy.api.SearchAttribute
 import net.thunderbird.feature.search.legacy.api.SearchCondition
 
-private const val SENDER_SEARCH_ID_PREFIX = "sender:"
-
 /**
  * What the stored address list puts between an address and its display name.
  */
@@ -22,7 +20,6 @@ fun createSenderSearch(address: String): LocalMessageSearch {
     val normalized = address.trim().lowercase()
 
     return LocalMessageSearch().apply {
-        id = SENDER_SEARCH_ID_PREFIX + normalized
         isManualSearch = true
         and(SearchCondition(MessageSearchField.SENDER_ADDRESS, SearchAttribute.CONTAINS, normalized + NAME_SEPARATOR))
         and(
@@ -36,9 +33,20 @@ fun createSenderSearch(address: String): LocalMessageSearch {
 
 /**
  * The address a search made by [createSenderSearch] is for, or `null` for any other search.
+ *
+ * Read from the search's own condition, which travels with it wherever the search is passed on.
  */
 val LocalMessageSearch.senderSearchAddress: String?
-    get() = id.takeIf { it.startsWith(SENDER_SEARCH_ID_PREFIX) }?.removePrefix(SENDER_SEARCH_ID_PREFIX)
+    get() = conditions.getLeafSet().firstNotNullOfOrNull { node ->
+        node.condition
+            ?.takeIf { condition ->
+                condition.field == MessageSearchField.SENDER_ADDRESS &&
+                    condition.attribute == SearchAttribute.CONTAINS &&
+                    condition.value.endsWith(NAME_SEPARATOR)
+            }
+            ?.value
+            ?.removeSuffix(NAME_SEPARATOR)
+    }
 
 private fun specialFolder(kind: UnifiedFolderKind) =
     SearchCondition(MessageSearchField.SPECIAL_FOLDER, SearchAttribute.EQUALS, kind.name)

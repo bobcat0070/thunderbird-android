@@ -15,7 +15,7 @@ import kotlin.coroutines.resumeWithException
 import kotlinx.coroutines.suspendCancellableCoroutine
 import net.thunderbird.app.common.account.getByUuid
 import net.thunderbird.core.android.account.Identity
-import net.thunderbird.core.android.account.LegacyAccountDtoManager
+import net.thunderbird.core.android.account.LegacyAccountManager
 import net.thunderbird.core.common.exception.MessagingException
 import net.thunderbird.core.preference.GeneralSettingsManager
 import net.thunderbird.feature.spamdigest.SpamDigestMailer
@@ -30,7 +30,7 @@ import net.thunderbird.feature.spamdigest.SpamDigestMailer
  * the copy in Sent itself; an IMAP account keeps none, which a report the app writes to the reader can do without.
  */
 internal class LegacySpamDigestMailer(
-    private val accountManager: LegacyAccountDtoManager,
+    private val accountManager: LegacyAccountManager,
     private val messagingController: MessagingController,
     private val generalSettingsManager: GeneralSettingsManager,
 ) : SpamDigestMailer {
@@ -43,7 +43,7 @@ internal class LegacySpamDigestMailer(
         val self = Address(identity.email ?: account.email, identity.name)
 
         val message = buildMessage(identity, self, subject, body)
-        messagingController.sendMessageBlocking(account, message)
+        messagingController.sendMessageBlocking(account.id, message)
     }
 
     private suspend fun buildMessage(identity: Identity, recipient: Address, subject: String, body: String) =

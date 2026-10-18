@@ -32,10 +32,9 @@ import net.thunderbird.app.common.feature.LoggerLifecycleObserver
 import net.thunderbird.app.common.feature.spamdigest.PendingSpamDigestImport
 import net.thunderbird.app.common.feature.spamdigest.SpamArrivalMessagingListener
 import net.thunderbird.app.common.feature.spamdigest.SpamDigestCatchUpListener
-import net.thunderbird.core.android.account.LegacyAccountDtoManager
-import net.thunderbird.core.common.exception.ExceptionHandler
-import net.thunderbird.core.logging.Logger
-import net.thunderbird.core.logging.file.FileLogSink
+import net.thunderbird.components.core.logging.Logger
+import net.thunderbird.components.core.logging.file.FileLogSink
+import net.thunderbird.core.android.account.LegacyAccountManager
 import net.thunderbird.core.ui.theme.manager.ThemeManager
 import net.thunderbird.feature.navigation.drawer.api.NavigationDrawerExternalContract.PinnedFolderRepository
 import net.thunderbird.feature.spamdigest.SpamDigestScheduler
@@ -45,6 +44,8 @@ import org.koin.android.ext.android.inject
 import org.koin.core.module.Module
 import org.koin.core.qualifier.named
 import androidx.work.Configuration as WorkManagerConfiguration
+
+private const val TAG = "BaseApplication"
 
 abstract class BaseApplication : Application(), WorkManagerConfiguration.Provider {
 
@@ -60,7 +61,7 @@ abstract class BaseApplication : Application(), WorkManagerConfiguration.Provide
     private val spamArrivalMessagingListener: SpamArrivalMessagingListener by inject()
     private val spamDigestCatchUpListener: SpamDigestCatchUpListener by inject()
     private val pendingSpamDigestImport: PendingSpamDigestImport by inject()
-    private val accountManager: LegacyAccountDtoManager by inject()
+    private val accountManager: LegacyAccountManager by inject()
     protected val logger: Logger by inject()
     private val syncDebugFileLogSink: FileLogSink by inject(named("syncDebug"))
 
@@ -93,7 +94,7 @@ abstract class BaseApplication : Application(), WorkManagerConfiguration.Provide
         messagingController.addListener(spamArrivalMessagingListener)
         messagingController.addListener(spamDigestCatchUpListener)
         val originalHandler = Thread.getDefaultUncaughtExceptionHandler()
-        Thread.setDefaultUncaughtExceptionHandler(ExceptionHandler(originalHandler, logger))
+        Thread.setDefaultUncaughtExceptionHandler(ExceptionHandler(originalHandler, logger, syncDebugFileLogSink))
 
         ProcessLifecycleOwner.get().lifecycle.addObserver(LoggerLifecycleObserver(syncDebugFileLogSink))
 
@@ -114,7 +115,7 @@ abstract class BaseApplication : Application(), WorkManagerConfiguration.Provide
         }
 
         // Spam settings imported before the accounts they name are applied once those accounts exist.
-        accountManager.getAccountsFlow()
+        accountManager.observeAll()
             .onEach { pendingSpamDigestImport.applyAvailable() }
             .flowOn(Dispatchers.IO)
             .launchIn(appCoroutineScope)
@@ -165,7 +166,7 @@ abstract class BaseApplication : Application(), WorkManagerConfiguration.Provide
     }
 
     private fun updateConfigurationWithLocale(configuration: Configuration, locale: Locale) {
-        Log.d("Updating application configuration with locale '$locale'")
+        Log.d(TAG, "Updating application configuration with locale '$locale'")
 
         val newConfiguration = Configuration(configuration).apply {
             currentLocale = locale
@@ -189,7 +190,7 @@ abstract class BaseApplication : Application(), WorkManagerConfiguration.Provide
         if (appLanguageManagerInitialized) {
             appLanguageManager.getOverrideLocale()?.let { overrideLocale ->
                 if (resources.configuration.currentLocale != overrideLocale) {
-                    Log.w("Resources configuration was reset. Re-applying locale override.")
+                    Log.w(TAG, "Resources configuration was reset. Re-applying locale override.")
                     appLanguageManager.applyOverrideLocale()
                     applyOverrideLocaleToConfiguration()
                 }

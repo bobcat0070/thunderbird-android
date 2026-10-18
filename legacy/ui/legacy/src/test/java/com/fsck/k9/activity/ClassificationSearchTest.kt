@@ -3,8 +3,11 @@ package com.fsck.k9.activity
 import assertk.assertThat
 import assertk.assertions.contains
 import assertk.assertions.isEqualTo
+import net.thunderbird.feature.account.AccountIdFactory
 import net.thunderbird.feature.mail.message.classification.api.MessageClass
 import net.thunderbird.feature.search.legacy.LocalMessageSearch
+import net.thunderbird.feature.search.legacy.UnifiedFolderKind
+import net.thunderbird.feature.search.legacy.createUnifiedFolderSearch
 import net.thunderbird.feature.search.legacy.api.MessageSearchField
 import net.thunderbird.feature.search.legacy.api.SearchAttribute
 import net.thunderbird.feature.search.legacy.api.SearchCondition
@@ -68,14 +71,16 @@ class ClassificationSearchTest {
 
     @Test
     fun `should keep the accounts the original search was limited to`() {
+        val accountOne = AccountIdFactory.create()
+        val accountTwo = AccountIdFactory.create()
         val search = LocalMessageSearch().apply {
-            addAccountUuid("account-one")
-            addAccountUuid("account-two")
+            addAccountId(accountOne)
+            addAccountId(accountTwo)
         }
 
         val narrowed = search.narrowedToClassification(MessageClass.NEWSLETTER)
 
-        assertThat(narrowed.accountUuids).isEqualTo(setOf("account-one", "account-two"))
+        assertThat(narrowed.accountIds).isEqualTo(setOf(accountOne, accountTwo))
     }
 
     @Test
@@ -91,13 +96,14 @@ class ClassificationSearchTest {
     }
 
     @Test
-    fun `should keep the id of the list it was opened from`() {
-        // The id is what the rest of the app uses to tell which list is on screen.
-        val search = LocalMessageSearch().apply { id = "unified_inbox" }
+    fun `should keep the id and type of the list it was opened from`() {
+        // They are what the rest of the app uses to tell which list is on screen.
+        val search = createUnifiedFolderSearch(UnifiedFolderKind.SENT)
 
         val narrowed = search.narrowedToClassification(MessageClass.NOTIFICATION)
 
-        assertThat(narrowed.id).isEqualTo("unified_inbox")
+        assertThat(narrowed.id).isEqualTo(search.id)
+        assertThat(narrowed.type).isEqualTo(search.type)
     }
 
     private fun LocalMessageSearch.leafConditions(): List<SearchCondition> = leafSet.mapNotNull { it.condition }

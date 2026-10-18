@@ -1,7 +1,7 @@
 package net.thunderbird.app.common.account
 
-import net.thunderbird.core.android.account.LegacyAccountDto
-import net.thunderbird.core.android.account.LegacyAccountDtoManager
+import net.thunderbird.core.android.account.LegacyAccount
+import net.thunderbird.core.android.account.LegacyAccountManager
 import net.thunderbird.feature.account.AccountIdFactory
 
 /**
@@ -10,7 +10,13 @@ import net.thunderbird.feature.account.AccountIdFactory
  * The fork's features keep accounts by the string form of their id, in settings and stores of their own, where the
  * accounts themselves are now looked up by [net.thunderbird.feature.account.AccountId].
  */
-internal fun LegacyAccountDtoManager.getByUuid(accountUuid: String): LegacyAccountDto? {
+internal fun LegacyAccountManager.getByUuid(accountUuid: String): LegacyAccount? {
     val accountId = runCatching { AccountIdFactory.of(accountUuid) }.getOrNull() ?: return null
-    return getById(accountId)
+    return findById(accountId)
 }
+
+/**
+ * The name the account is shown under: its own name, or its email address when it has none - as notifications show it.
+ */
+internal val LegacyAccount.displayName: String
+    get() = name?.takeIf { it.isNotBlank() } ?: email

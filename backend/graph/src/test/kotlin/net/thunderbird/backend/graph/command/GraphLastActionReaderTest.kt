@@ -18,8 +18,8 @@ import net.thunderbird.backend.graph.api.LAST_VERB_EXECUTED_PROPERTY
 import net.thunderbird.backend.graph.api.LAST_VERB_FORWARD
 import net.thunderbird.backend.graph.api.LAST_VERB_REPLY_TO_SENDER
 import net.thunderbird.backend.graph.api.toFlags
+import net.thunderbird.components.core.logging.testing.TestLogger
 import net.thunderbird.core.common.mail.Flag
-import net.thunderbird.core.logging.testing.TestLogger
 import okhttp3.OkHttpClient
 import okhttp3.mockwebserver.Dispatcher
 import okhttp3.mockwebserver.MockResponse

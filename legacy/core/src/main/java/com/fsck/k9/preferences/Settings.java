@@ -24,6 +24,8 @@ import net.thunderbird.core.preference.storage.StorageEditor;
  */
 
 public class Settings {
+    private static final String TAG = "Settings";
+
     /**
      * Version number of global and account settings.
      *
@@ -35,7 +37,10 @@ public class Settings {
      *
      * @see SettingsExporter
      */
-    public static final int VERSION = 113;
+    // The fork's own settings took 112 and 113 before upstream used 112 for its messageFormatAuto upgrade, so
+    // upstream's 112 runs here as 114. Fork exports at 112 and 113 still carry messageFormatAuto; files from
+    // upstream builds at 112 no longer do, and the upgrade leaves them alone.
+    public static final int VERSION = 114;
 
     static Map<String, Object> validate(int version, Map<String, TreeMap<Integer, SettingsDescription<?>>> settings,
             Map<String, String> importedSettings, boolean useDefaultValues) {
@@ -65,7 +70,7 @@ public class Settings {
 
             boolean useDefaultValue;
             if (!importedSettings.containsKey(key)) {
-                Log.v("Key \"%s\" wasn't found in the imported file.%s",
+                Log.v(TAG, "Key \"%s\" wasn't found in the imported file.%s",
                         key,
                         (useDefaultValues) ? " Using default value." : "");
 
@@ -77,7 +82,7 @@ public class Settings {
                     validatedSettings.put(key, internalValue);
                     useDefaultValue = false;
                 } catch (InvalidSettingValueException e) {
-                    Log.v("Key \"%s\" has invalid value \"%s\" in imported file. %s",
+                    Log.v(TAG, "Key \"%s\" has invalid value \"%s\" in imported file. %s",
                             key,
                             prettyValue,
                             (useDefaultValues) ? "Using default value." : "Skipping.");
@@ -127,7 +132,7 @@ public class Settings {
 
                 serializedSettings.put(settingName, stringValue);
             } else {
-                Log.w("Settings.convert() called with a setting that should have been removed: %s", settingName);
+                Log.w(TAG, "Settings.convert() called with a setting that should have been removed: %s", settingName);
             }
         }
 

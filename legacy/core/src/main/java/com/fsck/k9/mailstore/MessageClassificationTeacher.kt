@@ -1,7 +1,7 @@
 package com.fsck.k9.mailstore
 
 import app.k9mail.legacy.mailstore.MessageStoreManager
-import net.thunderbird.core.android.account.LegacyAccountDtoManager
+import net.thunderbird.core.android.account.LegacyAccountManager
 import net.thunderbird.legacy.logging.Log
 import net.thunderbird.feature.mail.message.classification.api.CLASSIFIER_VERSION
 import net.thunderbird.feature.mail.message.classification.api.ClassificationOverrideStore
@@ -11,6 +11,8 @@ import net.thunderbird.feature.mail.message.classification.api.RuleScope
 import net.thunderbird.feature.mail.message.classification.api.SenderClassificationRule
 import net.thunderbird.feature.mail.message.classification.api.senderDomainOrNull
 
+private const val TAG = "MessageClassificationTeacher"
+
 /**
  * Records the user's corrections and applies them to mail that has already arrived.
  *
@@ -19,7 +21,7 @@ import net.thunderbird.feature.mail.message.classification.api.senderDomainOrNul
  */
 class MessageClassificationTeacher(
     private val overrideStore: ClassificationOverrideStore,
-    private val accountManager: LegacyAccountDtoManager,
+    private val accountManager: LegacyAccountManager,
     private val messageStoreManager: MessageStoreManager,
     private val currentTimeMillis: () -> Long = { System.currentTimeMillis() },
 ) {
@@ -45,7 +47,7 @@ class MessageClassificationTeacher(
 
         val updated = applyToStoredMessages(scope, pattern, messageClass)
         // The pattern is a sender's address or domain, so only what it was taught is logged.
-        Log.d("Taught a rule for %s, re-classified %d stored messages", messageClass, updated)
+        Log.d(TAG, "Taught a rule for %s, re-classified %d stored messages", messageClass, updated)
 
         return updated
     }
@@ -79,9 +81,9 @@ class MessageClassificationTeacher(
      * sender reaching a work and a personal account is the same sender.
      */
     private fun applyToStoredMessages(scope: RuleScope, pattern: String, messageClass: MessageClass): Int {
-        return accountManager.getAccounts().sumOf { account ->
+        return accountManager.findAll().sumOf { account ->
             runCatching {
-                messageStoreManager.getMessageStore(account).setClassificationForSender(
+                messageStoreManager.getMessageStore(account.id).setClassificationForSender(
                     scope = scope,
                     pattern = pattern,
                     messageClass = messageClass,
@@ -91,7 +93,7 @@ class MessageClassificationTeacher(
             }.getOrElse { error ->
                 // One unreadable account database must not lose the correction for the others; the rule is
                 // already stored, so new mail is classified correctly regardless.
-                Log.e(error, "Could not re-classify stored messages for account %s", account.id)
+                Log.e(TAG, error, "Could not re-classify stored messages for account %s", account.id)
                 0
             }
         }

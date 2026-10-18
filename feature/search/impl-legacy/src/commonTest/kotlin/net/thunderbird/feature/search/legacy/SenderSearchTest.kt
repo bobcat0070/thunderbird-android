@@ -6,6 +6,7 @@ import assertk.assertions.isEqualTo
 import assertk.assertions.isNull
 import assertk.assertions.isTrue
 import kotlin.test.Test
+import net.thunderbird.feature.search.legacy.serialization.LocalMessageSearchSerializer
 import net.thunderbird.feature.search.legacy.sql.SqlWhereClause
 
 private const val TRASH_FOLDER_ID = 7L
@@ -42,5 +43,14 @@ class SenderSearchTest {
         assertThat(search.searchAllAccounts()).isTrue()
         assertThat(search.senderSearchAddress).isEqualTo("news@shop.example")
         assertThat(createUnifiedFolderSearch(UnifiedFolderKind.SENT).senderSearchAddress).isNull()
+    }
+
+    @Test
+    fun `a sender search should still say which sender it is for once passed on`() {
+        val search = createSenderSearch("News@Shop.Example")
+
+        val restored = LocalMessageSearchSerializer.deserialize(LocalMessageSearchSerializer.serialize(search))
+
+        assertThat(restored.senderSearchAddress).isEqualTo("news@shop.example")
     }
 }

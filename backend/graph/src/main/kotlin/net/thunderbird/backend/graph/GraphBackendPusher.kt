@@ -6,7 +6,9 @@ import com.fsck.k9.mail.power.PowerManager
 import net.thunderbird.backend.graph.api.GraphApiClient
 import net.thunderbird.backend.graph.api.GraphFolderState
 import net.thunderbird.backend.graph.api.readFolderStates
-import net.thunderbird.core.logging.Logger
+import net.thunderbird.components.core.logging.Logger
+
+private const val TAG = "GraphBackendPusher"
 
 /**
  * Shortest interval between polls.
@@ -49,7 +51,7 @@ class GraphBackendPusher internal constructor(
             isStarted = true
         }
 
-        logger.verbose { "Starting Graph push for $accountName" }
+        logger.verbose(TAG) { "Starting Graph push for $accountName" }
         schedulePoll()
     }
 
@@ -68,7 +70,7 @@ class GraphBackendPusher internal constructor(
             isStarted = false
         }
 
-        logger.verbose { "Stopping Graph push for $accountName" }
+        logger.verbose(TAG) { "Stopping Graph push for $accountName" }
         scheduler.cancel()
     }
 
@@ -76,7 +78,7 @@ class GraphBackendPusher internal constructor(
      * Checks immediately, used when connectivity returns.
      */
     override fun reconnect() {
-        logger.verbose { "Reconnecting Graph push for $accountName" }
+        logger.verbose(TAG) { "Reconnecting Graph push for $accountName" }
         scheduler.cancel()
         schedulePoll(delaySeconds = 0)
     }
@@ -111,7 +113,7 @@ class GraphBackendPusher internal constructor(
             }
         } catch (e: Exception) {
             // The message is deliberately generic: Graph error payloads can echo message metadata.
-            logger.debug(throwable = e) { "Graph push poll failed" }
+            logger.debug(TAG, throwable = e) { "Graph push poll failed" }
 
             callback.onPushError(e)
         } finally {

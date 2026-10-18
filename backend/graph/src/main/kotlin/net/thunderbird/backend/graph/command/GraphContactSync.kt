@@ -2,7 +2,7 @@ package net.thunderbird.backend.graph.command
 
 import net.thunderbird.backend.graph.api.GraphApiClient
 import net.thunderbird.backend.graph.api.GraphContactReader
-import net.thunderbird.core.logging.Logger
+import net.thunderbird.components.core.logging.Logger
 
 private const val TAG = "GraphContactSync"
 

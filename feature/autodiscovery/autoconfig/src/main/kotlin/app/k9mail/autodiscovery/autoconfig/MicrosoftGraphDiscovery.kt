@@ -13,6 +13,8 @@ import net.thunderbird.core.common.net.toHostname
 import net.thunderbird.legacy.logging.Log
 import org.minidns.dnsname.InvalidDnsNameException
 
+private const val TAG = "MicrosoftGraphDiscovery"
+
 /**
  * Host name of the Microsoft Graph API. Used as the account host name and as the key for the OAuth configuration.
  */
@@ -97,10 +99,10 @@ class MicrosoftGraphDiscovery internal constructor(
         return try {
             mxResolver.lookup(domain).takeIf { it.mxNames.isNotEmpty() }
         } catch (e: IOException) {
-            Log.d(e, "Failed to get MX record for domain: %s", domain.value)
+            Log.d(TAG, e, "Failed to get MX record for domain: %s", domain.value)
             null
         } catch (e: InvalidDnsNameException) {
-            Log.d(e, "Invalid DNS name for domain: %s", domain.value)
+            Log.d(TAG, e, "Invalid DNS name for domain: %s", domain.value)
             null
         }
     }

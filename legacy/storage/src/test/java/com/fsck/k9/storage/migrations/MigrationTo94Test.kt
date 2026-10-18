@@ -3,19 +3,25 @@ package com.fsck.k9.storage.migrations
 import android.database.sqlite.SQLiteDatabase
 import assertk.assertThat
 import assertk.assertions.containsExactlyInAnyOrder
-import com.fsck.k9.mailstore.MigrationsHelper
+import com.fsck.k9.mail.AuthType
+import com.fsck.k9.mail.ConnectionSecurity
+import com.fsck.k9.mail.ServerSettings
 import kotlin.test.Test
-import net.thunderbird.core.android.account.LegacyAccountDto
+import net.thunderbird.core.android.account.Identity
+import net.thunderbird.core.android.account.LegacyAccount
+import net.thunderbird.feature.account.AccountIdFactory
+import net.thunderbird.feature.account.storage.profile.AvatarDto
+import net.thunderbird.feature.account.storage.profile.AvatarTypeDto
+import net.thunderbird.feature.account.storage.profile.ProfileDto
 import org.junit.After
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
-import net.thunderbird.feature.account.AccountIdFactory
 
 @RunWith(RobolectricTestRunner::class)
 class MigrationTo94Test {
     private val database = createDatabaseVersion93()
-    private val account = LegacyAccountDto(id = AccountIdFactory.of("00000000-0000-4000-8000-000000000001"))
-    private val migration = MigrationTo94(database, createMigrationsHelper(account))
+    private val migrationsHelper = FakeMigrationsHelper(createAccount())
+    private val migration = MigrationTo94(database, migrationsHelper)
 
     @After
     fun tearDown() {
@@ -27,8 +33,7 @@ class MigrationTo94Test {
         val inboxId = database.createFolder(name = "Inbox", syncEnabled = true)
         val sentId = database.createFolder(name = "Sent", syncEnabled = false)
         database.createFolder(name = "Archive", syncEnabled = false)
-        account.inboxFolderId = inboxId
-        account.sentFolderId = sentId
+        migrationsHelper.updateAccount { it.copy(inboxFolderId = inboxId, sentFolderId = sentId) }
 
         migration.enableSentFolderSync()
 
@@ -52,14 +57,38 @@ class MigrationTo94Test {
         )
     }
 
-    private fun createMigrationsHelper(account: LegacyAccountDto): MigrationsHelper {
-        return object : MigrationsHelper {
-            override fun getAccount(): LegacyAccountDto = account
-
-            override fun saveAccount() {
-                throw UnsupportedOperationException("not implemented")
-            }
-        }
+    private fun createAccount(): LegacyAccount {
+        val accountId = AccountIdFactory.of("00000000-0000-4000-8000-000000000001")
+        val serverSettings = ServerSettings(
+            type = "dummy",
+            host = "",
+            port = -1,
+            connectionSecurity = ConnectionSecurity.NONE,
+            authenticationType = AuthType.PLAIN,
+            username = "",
+            password = "",
+            clientCertificateAlias = null,
+        )
+        return LegacyAccount(
+            id = accountId,
+            name = "Account",
+            email = "account@example.org",
+            profile = ProfileDto(
+                id = accountId,
+                name = "Account",
+                color = 0,
+                avatar = AvatarDto(
+                    accountId = accountId,
+                    avatarType = AvatarTypeDto.MONOGRAM,
+                    avatarMonogram = null,
+                    avatarImageUri = null,
+                    avatarIconName = null,
+                ),
+            ),
+            incomingServerSettings = serverSettings,
+            outgoingServerSettings = serverSettings,
+            identities = listOf(Identity(email = "account@example.org")),
+        )
     }
 
     private fun createDatabaseVersion93(): SQLiteDatabase {

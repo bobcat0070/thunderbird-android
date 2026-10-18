@@ -12,7 +12,7 @@ import java.util.Base64
 import mockwebserver3.MockResponse
 import mockwebserver3.MockWebServer
 import net.thunderbird.core.android.testing.RobolectricTest
-import net.thunderbird.core.logging.testing.TestLogger
+import net.thunderbird.components.core.logging.testing.TestLogger
 import net.thunderbird.core.preference.GeneralSettings
 import net.thunderbird.core.preference.GeneralSettingsManager
 import net.thunderbird.core.preference.websiteicon.WebsiteIconSettings

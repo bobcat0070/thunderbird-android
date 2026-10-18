@@ -14,8 +14,8 @@ import com.fsck.k9.search.specialFolderId
 import com.fsck.k9.ui.unsubscribe.OneClickUnsubscriber
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import net.thunderbird.core.android.account.LegacyAccountDto
-import net.thunderbird.core.android.account.LegacyAccountDtoManager
+import net.thunderbird.core.android.account.LegacyAccount
+import net.thunderbird.core.android.account.LegacyAccountManager
 import net.thunderbird.feature.mail.message.classification.api.MessageClass
 import net.thunderbird.feature.newsletter.NewsletterActions
 import net.thunderbird.feature.newsletter.NewsletterSender
@@ -45,7 +45,7 @@ private class StoredMessage(
  * Reads messages from the stores of every account, leaving out the folders given.
  */
 private fun MessageStoreManager.messagesOutside(
-    accounts: List<LegacyAccountDto>,
+    accounts: List<LegacyAccount>,
     excludedFolders: List<UnifiedFolderKind>,
     condition: String,
     conditionArgs: List<String>,
@@ -58,7 +58,7 @@ private fun MessageStoreManager.messagesOutside(
             " AND messages.folder_id NOT IN (${excludedIds.joinToString(",") { "?" }})"
         }
 
-        getMessageStore(account).getMessages(
+        getMessageStore(account.id).getMessages(
             selection = condition + folderCondition,
             selectionArgs = (conditionArgs + excludedIds.map { it.toString() }).toTypedArray(),
             sortOrder = "messages.date DESC",
@@ -83,14 +83,14 @@ private fun MessageStoreManager.messagesOutside(
  * sent or draft mail is the reader's own.
  */
 internal class LegacyNewsletterSenderRepository(
-    private val accountManager: LegacyAccountDtoManager,
+    private val accountManager: LegacyAccountManager,
     private val messageStoreManager: MessageStoreManager,
     private val messageRepository: MessageRepository,
 ) : NewsletterSenderRepository {
 
     override suspend fun senders(): List<NewsletterSender> = withContext(Dispatchers.IO) {
         val newsletters = messageStoreManager.messagesOutside(
-            accounts = accountManager.getAccounts(),
+            accounts = accountManager.findAll(),
             excludedFolders = HANDLED_FOLDERS,
             condition = "messages.classification = ?",
             conditionArgs = listOf(MessageClass.NEWSLETTER.name),
@@ -128,7 +128,7 @@ internal class LegacyNewsletterSenderRepository(
  */
 internal class LegacyNewsletterActions(
     private val context: Context,
-    private val accountManager: LegacyAccountDtoManager,
+    private val accountManager: LegacyAccountManager,
     private val messageStoreManager: MessageStoreManager,
     private val messageRepository: MessageRepository,
     private val messagingController: MessagingControllerWrapper,
@@ -173,7 +173,7 @@ internal class LegacyNewsletterActions(
 
     private fun mailFrom(address: String, excludedFolders: List<UnifiedFolderKind>): List<StoredMessage> {
         return messageStoreManager.messagesOutside(
-            accounts = accountManager.getAccounts(),
+            accounts = accountManager.findAll(),
             excludedFolders = excludedFolders,
             condition = SENDER_ADDRESS_CONDITION,
             conditionArgs = listOf(address.trim().lowercase() + NAME_SEPARATOR),

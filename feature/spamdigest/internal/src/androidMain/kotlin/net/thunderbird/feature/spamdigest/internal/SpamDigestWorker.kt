@@ -6,7 +6,7 @@ import androidx.work.ForegroundInfo
 import androidx.work.WorkInfo
 import androidx.work.WorkerParameters
 import kotlin.coroutines.cancellation.CancellationException
-import net.thunderbird.core.logging.Logger
+import net.thunderbird.components.core.logging.Logger
 import net.thunderbird.feature.spamdigest.SpamDigestRunEvent
 import net.thunderbird.feature.spamdigest.SpamDigestWorkNotification
 

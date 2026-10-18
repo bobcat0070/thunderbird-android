@@ -3,11 +3,13 @@ package com.fsck.k9.mailstore
 import app.k9mail.legacy.mailstore.MessageStore
 import app.k9mail.legacy.mailstore.MessageStoreManager
 import app.k9mail.legacy.mailstore.StoredClassificationEvidence
-import net.thunderbird.core.android.account.LegacyAccountDtoManager
+import net.thunderbird.core.android.account.LegacyAccountManager
 import net.thunderbird.feature.mail.message.classification.api.CLASSIFIER_VERSION
 import net.thunderbird.feature.mail.message.classification.api.MessageClassification
 import net.thunderbird.feature.mail.message.classification.api.MessageClassifier
 import net.thunderbird.legacy.logging.Log
+
+private const val TAG = "MessageReclassifier"
 
 /**
  * How many messages are classified per database round trip.
@@ -35,7 +37,7 @@ private const val EVERY_VERSION = Int.MAX_VALUE
  * only when the rules have actually changed - see [ReclassificationTracker] - so the usual cost is nothing.
  */
 class MessageReclassifier(
-    private val accountManager: LegacyAccountDtoManager,
+    private val accountManager: LegacyAccountManager,
     private val messageStoreManager: MessageStoreManager,
     private val messageClassifier: MessageClassifier,
     private val knownContacts: KnownContacts,
@@ -51,18 +53,18 @@ class MessageReclassifier(
     fun reclassifyIfRulesChanged(): Int {
         if (!tracker.isPassNeeded(CLASSIFIER_VERSION)) return 0
 
-        val updated = accountManager.getAccounts().sumOf { account ->
-            runCatching { reclassify(messageStoreManager.getMessageStore(account)) }.getOrElse { error ->
+        val updated = accountManager.findAll().sumOf { account ->
+            runCatching { reclassify(messageStoreManager.getMessageStore(account.id)) }.getOrElse { error ->
                 // Recorded as done regardless below: an account whose database cannot be read now will not
                 // become readable on the next launch either, and retrying the whole pass every time the app
                 // starts would be a permanent cost for a permanent failure.
-                Log.e(error, "Could not re-classify stored messages for account %s", account.id)
+                Log.e(TAG, error, "Could not re-classify stored messages for account %s", account.id)
                 0
             }
         }
 
         tracker.recordPass(CLASSIFIER_VERSION)
-        Log.i("Re-classified %d stored messages against classifier version %d", updated, CLASSIFIER_VERSION)
+        Log.i(TAG, "Re-classified %d stored messages against classifier version %d", updated, CLASSIFIER_VERSION)
 
         return updated
     }
@@ -78,15 +80,15 @@ class MessageReclassifier(
      * @return how many messages were re-classified.
      */
     fun reclassifyEverything(): Int {
-        val updated = accountManager.getAccounts().sumOf { account ->
-            runCatching { reclassifyAll(messageStoreManager.getMessageStore(account)) }.getOrElse { error ->
-                Log.e(error, "Could not re-classify stored messages for account %s", account.id)
+        val updated = accountManager.findAll().sumOf { account ->
+            runCatching { reclassifyAll(messageStoreManager.getMessageStore(account.id)) }.getOrElse { error ->
+                Log.e(TAG, error, "Could not re-classify stored messages for account %s", account.id)
                 0
             }
         }
 
         tracker.recordPass(CLASSIFIER_VERSION)
-        Log.i("Re-classified %d stored messages on request", updated)
+        Log.i(TAG, "Re-classified %d stored messages on request", updated)
 
         return updated
     }

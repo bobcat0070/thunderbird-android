@@ -1,5 +1,6 @@
 package net.thunderbird.feature.navigation.drawer.dropdown.domain.entity
 
+import net.thunderbird.feature.account.AccountId
 import net.thunderbird.feature.mail.folder.api.Folder
 import net.thunderbird.feature.mail.folder.api.FolderPathDelimiter
 
@@ -16,12 +17,12 @@ import net.thunderbird.feature.mail.folder.api.FolderPathDelimiter
  *   `null` otherwise.
  */
 internal data class PinnedDisplayFolder(
-    val accountId: String,
+    override val accountId: AccountId,
     val accountName: String?,
     val folder: Folder,
     override val unreadMessageCount: Int,
     override val starredMessageCount: Int,
     override val pathDelimiter: FolderPathDelimiter,
 ) : DisplayFolder {
-    override val id: String = createMailDisplayAccountFolderId(accountId, folder.id)
+    override val folderId: String = createMailDisplayAccountFolderId(accountId, folder.id)
 }

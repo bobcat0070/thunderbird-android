@@ -15,7 +15,7 @@ import kotlin.time.Instant
 import kotlinx.coroutines.test.runTest
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
-import net.thunderbird.core.logging.testing.TestLogger
+import net.thunderbird.components.core.logging.testing.TestLogger
 import net.thunderbird.core.testing.TestClock
 import net.thunderbird.feature.spamdigest.SpamDigestAccount
 import net.thunderbird.feature.spamdigest.SpamDigestField

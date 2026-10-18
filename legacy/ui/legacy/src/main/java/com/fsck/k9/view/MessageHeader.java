@@ -57,7 +57,7 @@ import com.fsck.k9.ui.messageview.MessageViewRecipientFormatter;
 import com.fsck.k9.ui.messageview.RecipientNamesView;
 import com.google.android.material.chip.Chip;
 import com.google.android.material.textview.MaterialTextView;
-import net.thunderbird.core.android.account.LegacyAccountDto;
+import net.thunderbird.core.android.account.LegacyAccount;
 import net.thunderbird.core.common.mail.Flag;
 import net.thunderbird.core.preference.GeneralSettingsManager;
 import net.thunderbird.core.preference.display.visualSettings.message.list.MessageListDateTimeFormat;
@@ -79,7 +79,7 @@ public class MessageHeader extends LinearLayout implements OnClickListener, OnLo
     private final MessageViewRecipientFormatter recipientFormatter = DI.get(MessageViewRecipientFormatter.class);
     private final MessageListPreferencesManager messageListPreferencesManager =
         DI.get(MessageListPreferencesManager.class);
-    private final ReplyActionStrategy<LegacyAccountDto, Message> replyActionStrategy = DI.get(ReplyActionStrategy.class);
+    private final ReplyActionStrategy<LegacyAccount, Message> replyActionStrategy = DI.get(ReplyActionStrategy.class);
     private final MessageHelper messageHelper = DI.get(MessageHelper.class);
     private final AuthenticationServerTrust authenticationServerTrust = DI.get(AuthenticationServerTrust.class);
 
@@ -264,7 +264,7 @@ public class MessageHeader extends LinearLayout implements OnClickListener, OnLo
      * Silent for ordinary mail, so the line is a signal rather than a permanent label: seeing it at all means
      * this message came in by a plus address, an alias or a forward.
      */
-    private void showDeliveryAddress(Message message, LegacyAccountDto account) {
+    private void showDeliveryAddress(Message message, LegacyAccount account) {
         String deliveryAddress = DeliveryAddressExtractor.INSTANCE.extractDeliveryAddress(message, account);
 
         if (deliveryAddress == null) {
@@ -577,13 +577,13 @@ public class MessageHeader extends LinearLayout implements OnClickListener, OnLo
         starView.setOnClickListener(listener);
     }
 
-    public void populate(final Message message, final LegacyAccountDto account, boolean showStar,
+    public void populate(final Message message, final LegacyAccount account, boolean showStar,
         boolean showAccountIndicator) {
         accountUuid = account.getId().toString();
         if (showAccountIndicator) {
             accountNameView.setVisibility(View.VISIBLE);
-            accountNameView.setText(account.getDisplayName());
-            accountNameView.setChipBackgroundColor(ColorStateList.valueOf(account.getChipColor()));
+            accountNameView.setText(account.getProfile().getName());
+            accountNameView.setChipBackgroundColor(ColorStateList.valueOf(account.getProfile().getColor()));
         } else {
             accountNameView.setVisibility(View.GONE);
         }
@@ -651,7 +651,7 @@ public class MessageHeader extends LinearLayout implements OnClickListener, OnLo
         setVisibility(View.VISIBLE);
     }
 
-    private void setRecipientNames(Message message, LegacyAccountDto account) {
+    private void setRecipientNames(Message message, LegacyAccount account) {
         DisplayRecipientsExtractor displayRecipientsExtractor = new DisplayRecipientsExtractor(recipientFormatter,
             recipientNamesView.getMaxNumberOfRecipientNames());
 
@@ -661,7 +661,7 @@ public class MessageHeader extends LinearLayout implements OnClickListener, OnLo
             displayRecipients.getNumberOfRecipients());
     }
 
-    private void setReplyActions(Message message, LegacyAccountDto account) {
+    private void setReplyActions(Message message, LegacyAccount account) {
         ReplyActions replyActions = replyActionStrategy.getReplyActions(account, message);
         this.replyActions = replyActions;
 

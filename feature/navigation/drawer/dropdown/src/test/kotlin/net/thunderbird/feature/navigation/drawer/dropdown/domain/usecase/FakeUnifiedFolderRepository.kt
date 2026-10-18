@@ -22,7 +22,7 @@ internal class FakeUnifiedFolderRepository(
 
     companion object {
         fun emptyUnifiedFolder(type: UnifiedDisplayFolderType) = UnifiedDisplayFolder(
-            id = type.id,
+            folderId = type.id,
             unifiedType = type,
             unreadMessageCount = 0,
             starredMessageCount = 0,

@@ -1,20 +1,25 @@
 package net.thunderbird.app.common.feature.spamdigest
 
 import android.Manifest
+import android.annotation.SuppressLint
+import android.app.Notification
 import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Build
 import androidx.core.app.NotificationCompat
+import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import app.k9mail.legacy.message.controller.MessageReference
 import com.fsck.k9.notification.NotificationActionCreator
+import com.fsck.k9.notification.NotificationChannelManager
 import com.fsck.k9.notification.NotificationChannelManager.ChannelType
-import com.fsck.k9.notification.NotificationHelper
 import com.fsck.k9.notification.NotificationResourceProvider
 import net.thunderbird.app.common.R
+import net.thunderbird.app.common.account.displayName
 import net.thunderbird.app.common.account.getByUuid
-import net.thunderbird.core.android.account.LegacyAccountDtoManager
-import net.thunderbird.core.logging.Logger
+import net.thunderbird.components.core.logging.Logger
+import net.thunderbird.core.android.account.LegacyAccount
+import net.thunderbird.core.android.account.LegacyAccountManager
 import net.thunderbird.feature.spamdigest.SpamAlertNotifier
 import net.thunderbird.feature.spamdigest.SpamMessage
 
@@ -39,8 +44,8 @@ private const val MAX_TEXT_LENGTH = 120
  */
 internal class LegacySpamAlertNotifier(
     private val context: Context,
-    private val accountManager: LegacyAccountDtoManager,
-    private val notificationHelper: NotificationHelper,
+    private val accountManager: LegacyAccountManager,
+    private val notificationChannelManager: NotificationChannelManager,
     private val actionCreator: NotificationActionCreator,
     private val resourceProvider: NotificationResourceProvider,
     private val logger: Logger,
@@ -65,16 +70,16 @@ internal class LegacySpamAlertNotifier(
             MessageReference(account.id, folderId, messageServerId),
         )
 
-        val publicVersion = notificationHelper.createNotificationBuilder(account, ChannelType.MISCELLANEOUS)
+        val publicVersion = createNotificationBuilder(account)
             .setSmallIcon(resourceProvider.iconWarning)
-            .setColor(account.chipColor)
+            .setColor(account.profile.color)
             .setContentTitle(title)
             .setSubText(account.displayName)
             .build()
 
-        val notification = notificationHelper.createNotificationBuilder(account, ChannelType.MISCELLANEOUS)
+        val notification = createNotificationBuilder(account)
             .setSmallIcon(resourceProvider.iconWarning)
-            .setColor(account.chipColor)
+            .setColor(account.profile.color)
             .setWhen(System.currentTimeMillis())
             .setAutoCancel(true)
             .setContentTitle(title)
@@ -87,11 +92,35 @@ internal class LegacySpamAlertNotifier(
             .setPublicVersion(publicVersion)
             .build()
 
-        // Posted through the helper the app's other notifications use, which handles a refused notification.
         val notificationId =
             NOTIFICATION_ID_BASE + ("$accountId/$folderId/$messageServerId".hashCode() and NOTIFICATION_ID_MASK)
-        notificationHelper.notify(account, notificationId, notification)
-        logger.debug(LOG_TAG) { "Posted a spam alert" }
+        post(notificationId, notification)
+    }
+
+    /**
+     * Posts the alert. Only called from [notify], after it has checked that notifications may be posted.
+     */
+    @SuppressLint("MissingPermission")
+    private fun post(notificationId: Int, notification: Notification) {
+        try {
+            NotificationManagerCompat.from(context).notify(notificationId, notification)
+            logger.debug(LOG_TAG) { "Posted a spam alert" }
+        } catch (e: SecurityException) {
+            // Refused, as the app's other notifications can be, e.g. for a channel sound this app may not read.
+            logger.warn(LOG_TAG, e) { "Could not post a spam alert" }
+        }
+    }
+
+    /**
+     * A builder on the account's miscellaneous channel, where its other warnings go.
+     */
+    private fun createNotificationBuilder(account: LegacyAccount): NotificationCompat.Builder {
+        val channelId = notificationChannelManager.getChannelIdFor(
+            account.id,
+            ChannelType.MISCELLANEOUS,
+            account.messagesNotificationChannelVersion,
+        )
+        return NotificationCompat.Builder(context, channelId)
     }
 
     private fun String.oneLine(): String {

@@ -1,7 +1,7 @@
 package com.fsck.k9.mailstore
 
-import com.fsck.k9.Preferences
-import net.thunderbird.core.android.account.LegacyAccountDtoManager
+import net.thunderbird.core.preference.storage.StorageProvider
+import net.thunderbird.core.android.account.LegacyAccountManager
 import net.thunderbird.core.common.mail.Protocols
 import net.thunderbird.feature.account.AccountIdFactory
 
@@ -49,8 +49,8 @@ interface AuthenticationServerTrust {
 }
 
 internal class DefaultAuthenticationServerTrust(
-    private val preferences: Preferences,
-    private val accountManager: LegacyAccountDtoManager,
+    private val storageProvider: StorageProvider,
+    private val accountManager: LegacyAccountManager,
 ) : AuthenticationServerTrust {
     private val lock = Any()
 
@@ -61,7 +61,7 @@ internal class DefaultAuthenticationServerTrust(
     private val samples = mutableMapOf<String, ArrayDeque<String?>>()
 
     override fun trustedServerId(accountUuid: String): String? {
-        return preferences.storage.getStringOrNull(key(accountUuid)) ?: knownServerId(accountUuid)
+        return storageProvider.storage.getStringOrNull(key(accountUuid)) ?: knownServerId(accountUuid)
     }
 
     override fun observe(accountUuid: String, headerValues: List<String>) {
@@ -73,8 +73,8 @@ internal class DefaultAuthenticationServerTrust(
             recent.dominantName()
         } ?: return
 
-        if (learned != preferences.storage.getStringOrNull(key(accountUuid))) {
-            preferences.createStorageEditor().putString(key(accountUuid), learned).commit()
+        if (learned != storageProvider.storage.getStringOrNull(key(accountUuid))) {
+            storageProvider.createStorageEditor().putString(key(accountUuid), learned).commit()
         }
     }
 
@@ -92,7 +92,7 @@ internal class DefaultAuthenticationServerTrust(
      */
     private fun knownServerId(accountUuid: String): String? {
         val server = runCatching { AccountIdFactory.of(accountUuid) }.getOrNull()
-            ?.let(accountManager::getById)
+            ?.let(accountManager::findById)
             ?.incomingServerSettings
             ?: return null
         val host = server.host?.lowercase().orEmpty()

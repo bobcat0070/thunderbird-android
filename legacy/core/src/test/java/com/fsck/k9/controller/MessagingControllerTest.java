@@ -9,26 +9,26 @@ import java.util.List;
 import java.util.Set;
 
 import android.content.Context;
-import net.thunderbird.core.android.account.LegacyAccountDto;
+
+import com.fsck.k9.FakeLegacyAccount;
+import net.thunderbird.core.android.account.LegacyAccount;
+import net.thunderbird.core.android.account.LegacyAccountManager;
 import net.thunderbird.core.featureflag.FeatureFlagProvider;
 import net.thunderbird.core.featureflag.FeatureFlagResult.Disabled;
 import app.k9mail.legacy.message.controller.SimpleMessagingListener;
 import com.fsck.k9.K9;
+import com.fsck.k9.LegacyAccountCopies;
 import com.fsck.k9.K9RobolectricTest;
-import com.fsck.k9.Preferences;
 import com.fsck.k9.backend.BackendManager;
 import org.mockito.ArgumentCaptor;
 import com.fsck.k9.controller.MessagingControllerCommands.PendingSetServerCategories;
 import com.fsck.k9.controller.MessagingControllerCommands.PendingCommand;
 import com.fsck.k9.backend.api.Backend;
-import com.fsck.k9.mail.AuthType;
 import com.fsck.k9.mail.AuthenticationFailedException;
 import com.fsck.k9.mail.CertificateChainException;
 import com.fsck.k9.mail.CertificateValidationException;
-import com.fsck.k9.mail.ConnectionSecurity;
 import net.thunderbird.core.common.mail.Flag;
 import net.thunderbird.core.common.exception.MessagingException;
-import com.fsck.k9.mail.ServerSettings;
 import com.fsck.k9.mailstore.LocalFolder;
 import com.fsck.k9.mail.Message;
 import com.fsck.k9.mailstore.LocalMessage;
@@ -45,10 +45,10 @@ import com.fsck.k9.mailstore.SendState;
 import com.fsck.k9.mailstore.SpecialLocalFoldersCreator;
 import com.fsck.k9.notification.NotificationController;
 import com.fsck.k9.notification.NotificationStrategy;
-import net.thunderbird.core.common.mail.Protocols;
-import net.thunderbird.core.logging.Logger;
+import net.thunderbird.components.core.logging.Logger;;
 import net.thunderbird.components.core.outcome.Outcome;
 import net.thunderbird.feature.account.AccountId;
+import net.thunderbird.feature.account.AccountIdFactory;
 import net.thunderbird.feature.mail.message.list.LocalDeleteOperationDecider;
 import net.thunderbird.feature.mail.folder.api.OutboxFolderManager;
 import net.thunderbird.feature.mail.folder.api.OutboxFolderManagerKt;
@@ -104,7 +104,9 @@ public class MessagingControllerTest extends K9RobolectricTest {
     private MessagingController controller;
     private UndoSendHold undoSendHold;
     private OutboxFolderManager outboxFolderManager;
-    private LegacyAccountDto account;
+
+    private AccountId accountId;
+    private LegacyAccount account;
     @Mock
     private BackendManager backendManager;
     @Mock
@@ -145,8 +147,7 @@ public class MessagingControllerTest extends K9RobolectricTest {
     private LocalMessage localMessageToSend1;
     private volatile boolean hasFetchedMessage = false;
 
-    private Preferences preferences;
-    private AccountId accountId;
+    private LegacyAccountManager accountManager;
     private FeatureFlagProvider featureFlagProvider;
 
     @Mock
@@ -158,7 +159,6 @@ public class MessagingControllerTest extends K9RobolectricTest {
         MockitoAnnotations.initMocks(this);
         appContext = RuntimeEnvironment.getApplication();
 
-        preferences = Preferences.getPreferences();
         final LocalDeleteOperationDecider noOpLocalDeleteOperationDecider = new StubLocalDeleteOperationDecider();
         final LocalMessageUidPrefixProvider fakeLocalMessageUidPrefixProvider = new FakeLocalMessageUidPrefixProvider();
         featureFlagProvider = key -> Disabled.INSTANCE;
@@ -173,6 +173,8 @@ public class MessagingControllerTest extends K9RobolectricTest {
 
         // Holds for ten seconds and never lets go on its own, so a test can put a message on hold and keep it there.
         undoSendHold = new UndoSendHold(() -> 10, () -> 0L, (delayMillis, action) -> Unit.INSTANCE);
+        accountId = AccountIdFactory.INSTANCE.create();
+        accountManager = mock(LegacyAccountManager.class);
 
         controller = new MessagingController(
             appContext,
@@ -180,7 +182,6 @@ public class MessagingControllerTest extends K9RobolectricTest {
             notificationStrategy,
             localStoreProvider,
             backendManager,
-            preferences,
             messageStoreManager,
             saveMessageDataCreator,
             specialLocalFoldersCreator,
@@ -192,7 +193,8 @@ public class MessagingControllerTest extends K9RobolectricTest {
             syncLogger,
             notificationManager,
             outboxFolderManager,
-            undoSendHold
+            undoSendHold,
+            accountManager
         );
 
         configureAccount();
@@ -202,7 +204,6 @@ public class MessagingControllerTest extends K9RobolectricTest {
 
     @After
     public void tearDown() throws Exception {
-        removeAccountsFromPreferences();
         controller.stop();
         autoClose();
     }
@@ -210,11 +211,11 @@ public class MessagingControllerTest extends K9RobolectricTest {
     @Test
     public void setServerCategoriesSynchronous_shouldStoreTheCategories() throws MessagingException {
         ListenableMessageStore messageStore = mock(ListenableMessageStore.class);
-        when(messageStoreManager.getMessageStore(account)).thenReturn(messageStore);
+        when(messageStoreManager.getMessageStore(accountId)).thenReturn(messageStore);
         when(backend.getSupportsServerCategories()).thenReturn(true);
         List<String> categories = Arrays.asList("Red category", "Project X");
 
-        controller.setServerCategoriesSynchronous(account, FOLDER_ID, 42L, "uid1", categories);
+        controller.setServerCategoriesSynchronous(accountId, FOLDER_ID, 42L, "uid1", categories);
 
         verify(messageStore).setServerCategories(Collections.singletonList(42L), categories);
     }
@@ -222,11 +223,11 @@ public class MessagingControllerTest extends K9RobolectricTest {
     @Test
     public void setServerCategoriesSynchronous_shouldQueueTheChangeForTheServer() throws MessagingException {
         ListenableMessageStore messageStore = mock(ListenableMessageStore.class);
-        when(messageStoreManager.getMessageStore(account)).thenReturn(messageStore);
+        when(messageStoreManager.getMessageStore(accountId)).thenReturn(messageStore);
         when(backend.getSupportsServerCategories()).thenReturn(true);
         List<String> categories = Collections.singletonList("Red category");
 
-        controller.setServerCategoriesSynchronous(account, FOLDER_ID, 42L, "uid1", categories);
+        controller.setServerCategoriesSynchronous(accountId, FOLDER_ID, 42L, "uid1", categories);
 
         ArgumentCaptor<PendingCommand> commandCaptor = ArgumentCaptor.forClass(PendingCommand.class);
         verify(localStore).addPendingCommand(commandCaptor.capture());
@@ -240,11 +241,11 @@ public class MessagingControllerTest extends K9RobolectricTest {
     public void setServerCategoriesSynchronous_shouldNotQueueAnythingForABackendWithoutServerCategories()
         throws MessagingException {
         ListenableMessageStore messageStore = mock(ListenableMessageStore.class);
-        when(messageStoreManager.getMessageStore(account)).thenReturn(messageStore);
+        when(messageStoreManager.getMessageStore(accountId)).thenReturn(messageStore);
         when(backend.getSupportsServerCategories()).thenReturn(false);
 
         controller.setServerCategoriesSynchronous(
-            account, FOLDER_ID, 42L, "uid1", Collections.singletonList("Red category"));
+            accountId, FOLDER_ID, 42L, "uid1", Collections.singletonList("Red category"));
 
         verify(localStore, never()).addPendingCommand(any(PendingCommand.class));
     }
@@ -252,34 +253,34 @@ public class MessagingControllerTest extends K9RobolectricTest {
     @Test
     public void processPendingSetServerCategories_shouldSendTheCategoriesToTheBackend() throws MessagingException {
         ListenableMessageStore messageStore = mock(ListenableMessageStore.class);
-        when(messageStoreManager.getMessageStore(account)).thenReturn(messageStore);
+        when(messageStoreManager.getMessageStore(accountId)).thenReturn(messageStore);
         when(messageStore.getFolderServerId(FOLDER_ID)).thenReturn(FOLDER_NAME);
         List<String> categories = Arrays.asList("Red category", "Project X");
         List<String> uids = Collections.singletonList("uid1");
 
         controller.processPendingSetServerCategories(
-            PendingSetServerCategories.create(FOLDER_ID, categories, uids), account);
+            PendingSetServerCategories.create(FOLDER_ID, categories, uids), accountId);
 
         verify(backend).setServerCategories(FOLDER_NAME, uids, categories);
     }
 
     @Test
     public void clearFolderSynchronous_shouldOpenFolderForWriting() throws MessagingException {
-        controller.clearFolderSynchronous(account, FOLDER_ID);
+        controller.clearFolderSynchronous(accountId, FOLDER_ID);
 
         verify(localFolder).open();
     }
 
     @Test
     public void clearFolderSynchronous_shouldClearAllMessagesInTheFolder() throws MessagingException {
-        controller.clearFolderSynchronous(account, FOLDER_ID);
+        controller.clearFolderSynchronous(accountId, FOLDER_ID);
 
         verify(localFolder).clearAllMessages();
     }
 
     @Test
     public void refreshRemoteSynchronous_shouldCallBackend() throws MessagingException {
-        controller.refreshFolderListSynchronous(account);
+        controller.refreshFolderListSynchronous(accountId);
 
         verify(backend).refreshFolderList();
     }
@@ -315,7 +316,8 @@ public class MessagingControllerTest extends K9RobolectricTest {
         reqFlags = Collections.singleton(Flag.ANSWERED);
         forbiddenFlags = Collections.singleton(Flag.DELETED);
 
-        account.setRemoteSearchNumResults(50);
+        account = FakeLegacyAccount.create(accountId, null, 50);
+        when(accountManager.findById(accountId)).thenReturn(account);
     }
 
     @Test
@@ -408,7 +410,7 @@ public class MessagingControllerTest extends K9RobolectricTest {
         when(localFolder.exists()).thenReturn(false);
         controller.addListener(listener);
 
-        controller.sendPendingMessagesSynchronous(account);
+        controller.sendPendingMessagesSynchronous(accountId);
 
         verifyNoMoreInteractions(listener);
     }
@@ -417,10 +419,11 @@ public class MessagingControllerTest extends K9RobolectricTest {
     public void sendPendingMessagesSynchronous_whenServerFilesItsOwnSentCopy_shouldNotUploadAnother()
         throws MessagingException {
         setupAccountWithMessageToSend();
-        account.setUploadSentMessages(true);
+        account = LegacyAccountCopies.withUploadSentMessages(account, true);
+        when(accountManager.findById(accountId)).thenReturn(account);
         when(backend.getSavesSentMessages()).thenReturn(true);
 
-        controller.sendPendingMessagesSynchronous(account);
+        controller.sendPendingMessagesSynchronous(accountId);
 
         // The server's copy arrives with the next sync of the Sent folder; keeping this one would show it twice.
         verify(localMessageToSend1).destroy();
@@ -430,9 +433,9 @@ public class MessagingControllerTest extends K9RobolectricTest {
     @Test
     public void sendPendingMessagesSynchronous_shouldNotSendAMessageStillHeldForUndo() throws MessagingException {
         setupAccountWithMessageToSend();
-        undoSendHold.hold(account.getId().toString(), 42L, () -> { });
+        undoSendHold.hold(accountId.toString(), 42L, () -> { });
 
-        controller.sendPendingMessagesSynchronous(account);
+        controller.sendPendingMessagesSynchronous(accountId);
 
         verify(backend, never()).sendMessage(any(Message.class));
     }
@@ -444,10 +447,11 @@ public class MessagingControllerTest extends K9RobolectricTest {
         long draftsFolderId = 30L;
         long draftId = 99L;
         String[] draftServerId = { "K9LOCAL:draft" };
-        account.setDraftsFolderId(draftsFolderId);
-        OutboxFolderManagerKt.getOutboxFolderIdSync(outboxFolderManager, account.getId().toString(), true);
+        account = LegacyAccountCopies.withDraftsFolderId(account, draftsFolderId);
+        when(accountManager.findById(accountId)).thenReturn(account);
+        OutboxFolderManagerKt.getOutboxFolderIdSync(outboxFolderManager, accountId, true);
         ListenableMessageStore messageStore = mock(ListenableMessageStore.class);
-        when(messageStoreManager.getMessageStore(account)).thenReturn(messageStore);
+        when(messageStoreManager.getMessageStore(accountId)).thenReturn(messageStore);
         when(messageStore.getMessageServerId(42L)).thenReturn("localMessageToSend1");
         when(messageStore.getMessageServerId(draftId)).thenAnswer(invocation -> draftServerId[0]);
         when(messageStore.saveLocalMessage(eq(draftsFolderId), any(), nullable(Long.class))).thenReturn(draftId);
@@ -457,27 +461,27 @@ public class MessagingControllerTest extends K9RobolectricTest {
             draftServerId[0] = "uploaded-draft";
             return emptyList();
         });
-        undoSendHold.hold(account.getId().toString(), 42L, () -> { });
+        undoSendHold.hold(accountId.toString(), 42L, () -> { });
 
-        MessageReference draft = controller.undoSend(account, 42L);
+        MessageReference draft = controller.undoSend(accountId, 42L);
 
-        assertEquals(new MessageReference(account.getId(), draftsFolderId, "uploaded-draft"), draft);
+        assertEquals(new MessageReference(accountId, draftsFolderId, "uploaded-draft"), draft);
     }
 
     @Test
     public void sendPendingMessagesSynchronous_shouldSetProgress() throws MessagingException {
         setupAccountWithMessageToSend();
 
-        controller.sendPendingMessagesSynchronous(account);
+        controller.sendPendingMessagesSynchronous(accountId);
 
-        verify(listener).synchronizeMailboxProgress(account, FOLDER_ID, 0, 1);
+        verify(listener).synchronizeMailboxProgress(accountId, FOLDER_ID, 0, 1);
     }
 
     @Test
     public void sendPendingMessagesSynchronous_shouldSendMessageUsingTransport() throws MessagingException {
         setupAccountWithMessageToSend();
 
-        controller.sendPendingMessagesSynchronous(account);
+        controller.sendPendingMessagesSynchronous(accountId);
 
         verify(backend).sendMessage(localMessageToSend1);
     }
@@ -486,7 +490,7 @@ public class MessagingControllerTest extends K9RobolectricTest {
     public void sendPendingMessagesSynchronous_shouldSetAndRemoveSendInProgressFlag() throws MessagingException {
         setupAccountWithMessageToSend();
 
-        controller.sendPendingMessagesSynchronous(account);
+        controller.sendPendingMessagesSynchronous(accountId);
 
         InOrder ordering = inOrder(localMessageToSend1, backend);
         ordering.verify(localMessageToSend1).setFlag(Flag.X_SEND_IN_PROGRESS, true);
@@ -498,7 +502,7 @@ public class MessagingControllerTest extends K9RobolectricTest {
     public void sendPendingMessagesSynchronous_shouldMarkSentMessageAsSeen() throws MessagingException {
         setupAccountWithMessageToSend();
 
-        controller.sendPendingMessagesSynchronous(account);
+        controller.sendPendingMessagesSynchronous(accountId);
 
         verify(localMessageToSend1).setFlag(Flag.SEEN, true);
     }
@@ -507,18 +511,18 @@ public class MessagingControllerTest extends K9RobolectricTest {
     public void sendPendingMessagesSynchronous_whenMessageSentSuccesfully_shouldUpdateProgress() throws MessagingException {
         setupAccountWithMessageToSend();
 
-        controller.sendPendingMessagesSynchronous(account);
+        controller.sendPendingMessagesSynchronous(accountId);
 
-        verify(listener).synchronizeMailboxProgress(account, FOLDER_ID, 1, 1);
+        verify(listener).synchronizeMailboxProgress(accountId, FOLDER_ID, 1, 1);
     }
 
     @Test
     public void sendPendingMessagesSynchronous_shouldUpdateProgress() throws MessagingException {
         setupAccountWithMessageToSend();
 
-        controller.sendPendingMessagesSynchronous(account);
+        controller.sendPendingMessagesSynchronous(accountId);
 
-        verify(listener).synchronizeMailboxProgress(account, FOLDER_ID, 1, 1);
+        verify(listener).synchronizeMailboxProgress(accountId, FOLDER_ID, 1, 1);
     }
 
     @Test
@@ -526,9 +530,9 @@ public class MessagingControllerTest extends K9RobolectricTest {
         setupAccountWithMessageToSend();
         doThrow(new AuthenticationFailedException("Test")).when(backend).sendMessage(localMessageToSend1);
 
-        controller.sendPendingMessagesSynchronous(account);
+        controller.sendPendingMessagesSynchronous(accountId);
 
-        verify(notificationController).showAuthenticationErrorNotification(account, false);
+        verify(notificationController).showAuthenticationErrorNotification(accountId, false);
     }
 
     @Test
@@ -537,13 +541,14 @@ public class MessagingControllerTest extends K9RobolectricTest {
         doThrow(new CertificateValidationException(emptyList(), new CertificateChainException("", null, null)))
             .when(backend).sendMessage(localMessageToSend1);
 
-        controller.sendPendingMessagesSynchronous(account);
+        controller.sendPendingMessagesSynchronous(accountId);
 
-        verify(notificationController).showCertificateErrorNotification(account, false);
+        verify(notificationController).showCertificateErrorNotification(accountId, false);
     }
 
     private void setupAccountWithMessageToSend() throws MessagingException {
-        account.setSentFolderId(SENT_FOLDER_ID);
+        account = FakeLegacyAccount.create(accountId, SENT_FOLDER_ID, 0);
+        when(accountManager.findById(accountId)).thenReturn(account);
         when(localStore.getFolder(SENT_FOLDER_ID)).thenReturn(sentFolder);
         when(sentFolder.getDatabaseId()).thenReturn(SENT_FOLDER_ID);
         when(localFolder.exists()).thenReturn(true);
@@ -570,15 +575,10 @@ public class MessagingControllerTest extends K9RobolectricTest {
     }
 
     private void configureAccount() {
-        account = preferences.newAccount();
-        accountId = account.getId();
-
-        account.setIncomingServerSettings(new ServerSettings(Protocols.IMAP, "host", 993,
-            ConnectionSecurity.SSL_TLS_REQUIRED, AuthType.PLAIN, "username", "password", null));
-        account.setOutgoingServerSettings(new ServerSettings(Protocols.SMTP, "host", 465,
-            ConnectionSecurity.SSL_TLS_REQUIRED, AuthType.PLAIN, "username", "password", null));
-        account.setMaximumAutoDownloadMessageSize(MAXIMUM_SMALL_MESSAGE_SIZE);
-        account.setEmail("user@host.com");
+        accountId = AccountIdFactory.INSTANCE.create();
+        account = FakeLegacyAccount.create(accountId, null, 0);
+        when(accountManager.findById(accountId)).thenReturn(account);
+        when(accountManager.findAll()).thenReturn(Collections.singletonList(account));
     }
 
     @Test
@@ -727,7 +727,9 @@ public class MessagingControllerTest extends K9RobolectricTest {
     public void searchRemoteSenderEverywhere_shouldDownloadPastTheResultLimit() throws Exception {
         // The sender's list is meant to show all of their mail, not the first few matches of a quick search.
         setupRemoteSearch();
-        account.setRemoteSearchNumResults(1);
+        account = LegacyAccountCopies.withRemoteSearchNumResults(account, 1);
+        when(accountManager.findById(accountId)).thenReturn(account);
+        when(accountManager.findAll()).thenReturn(Collections.singletonList(account));
         when(backend.searchAllFoldersFromSender(SENDER_ADDRESS))
             .thenReturn(Collections.singletonMap(FOLDER_NAME, remoteMessages));
 
@@ -781,12 +783,8 @@ public class MessagingControllerTest extends K9RobolectricTest {
         when(localFolder.getDatabaseId()).thenReturn(FOLDER_ID);
         when(localFolder.getServerId()).thenReturn(FOLDER_NAME);
         when(localStore.getPersonalNamespaces(false)).thenReturn(Collections.singletonList(localFolder));
-        when(localStoreProvider.getInstance(account)).thenReturn(localStore);
+        when(localStoreProvider.getInstance(accountId)).thenReturn(localStore);
         when(localFolder.isLocalOnly()).thenReturn(false);
         when(backend.isPushCapable()).thenReturn(true);
-    }
-
-    private void removeAccountsFromPreferences() {
-        preferences.clearAccounts();
     }
 }

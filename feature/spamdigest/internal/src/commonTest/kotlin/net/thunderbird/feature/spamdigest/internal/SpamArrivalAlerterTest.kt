@@ -8,7 +8,7 @@ import kotlin.time.Duration.Companion.days
 import kotlin.time.Duration.Companion.hours
 import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Instant
-import net.thunderbird.core.logging.testing.TestLogger
+import net.thunderbird.components.core.logging.testing.TestLogger
 import net.thunderbird.core.testing.TestClock
 import net.thunderbird.feature.spamdigest.SpamAlertNotifier
 import net.thunderbird.feature.spamdigest.SpamMessage

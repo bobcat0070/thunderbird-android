@@ -4,7 +4,7 @@ import android.graphics.Bitmap
 import android.graphics.Canvas
 import com.caverock.androidsvg.SVG
 import com.fsck.k9.contacts.AvatarCache
-import net.thunderbird.core.logging.Logger
+import net.thunderbird.components.core.logging.Logger
 import net.thunderbird.core.preference.GeneralSettingsManager
 import okhttp3.OkHttpClient
 import okhttp3.Request

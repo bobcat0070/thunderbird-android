@@ -90,13 +90,13 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
-import net.thunderbird.core.android.account.LegacyAccountDto
-import net.thunderbird.core.android.account.LegacyAccountDtoManager
+import net.thunderbird.core.android.account.LegacyAccount
+import net.thunderbird.core.android.account.LegacyAccountManager
 import net.thunderbird.core.common.mail.Flag
 import net.thunderbird.core.common.provider.AppNameProvider
 import net.thunderbird.core.featureflag.FeatureFlagProvider
 import net.thunderbird.core.featureflag.keys.GeneratedFeatureFlagKey
-import net.thunderbird.core.logging.Logger
+import net.thunderbird.components.core.logging.Logger
 import net.thunderbird.feature.mail.message.classification.api.MessageClass
 import net.thunderbird.feature.mail.message.classification.api.RuleScope
 import net.thunderbird.core.preference.GeneralSettingsManager
@@ -124,6 +124,8 @@ import app.k9mail.legacy.mailstore.MessageStoreManager
 import app.k9mail.legacy.mailstore.ServerCategoriesColumn
 import com.fsck.k9.ui.servercategories.ServerCategoriesDialogFragment
 
+private const val TAG = "MessageViewFragment"
+
 @Suppress("LargeClass", "TooManyFunctions")
 class MessageViewFragment :
     Fragment(),
@@ -134,7 +136,8 @@ class MessageViewFragment :
     private val themeManager: ThemeManager by inject()
     private val themeProvider: FeatureThemeProvider by inject()
     private val messageLoaderHelperFactory: MessageLoaderHelperFactory by inject()
-    private val accountManager: LegacyAccountDtoManager by inject()
+    private val accountManager: LegacyAccountManager by inject()
+    private val lastSelectedFolderStore: LastSelectedFolderStore by inject()
     private val authenticationServerTrust: AuthenticationServerTrust by inject()
     private val messagingController: MessagingController by inject()
     private val mailActionHold: MailActionHold by inject()
@@ -153,7 +156,7 @@ class MessageViewFragment :
             folderNameFormatter = get { parametersOf(requireContext()) },
         )
     }
-    private val replayAllStrategy: ReplyActionStrategy<LegacyAccountDto, Message> by inject()
+    private val replayAllStrategy: ReplyActionStrategy<LegacyAccount, Message> by inject()
     private val messageStoreManager: MessageStoreManager by inject()
 
     /**
@@ -201,7 +204,7 @@ class MessageViewFragment :
     private var destinationFolderId: Long? = null
     private lateinit var fragmentListener: MessageViewFragmentListener
 
-    private lateinit var account: LegacyAccountDto
+    private lateinit var account: LegacyAccount
     lateinit var messageReference: MessageReference
     private var showAccountIndicator: Boolean = true
 
@@ -374,9 +377,9 @@ class MessageViewFragment :
     }
 
     private fun loadMessage(messageReference: MessageReference) {
-        Log.d("MessageViewFragment displaying message %s", messageReference)
+        Log.d(TAG, "MessageViewFragment displaying message %s", messageReference)
 
-        account = accountManager.getById(messageReference.accountId)
+        account = accountManager.findById(messageReference.accountId)
             ?: error("Account ${messageReference.accountId} not found")
 
         messageLoaderHelper.asyncStartOrResumeLoadingMessage(messageReference, null)
@@ -497,7 +500,7 @@ class MessageViewFragment :
         menu.findItem(R.id.move_to_drafts).isVisible = isOutbox
         pinnedFolderMenu.addTo(
             menu = menu,
-            account = account,
+            accountId = account.id,
             currentFolderId = messageReference.folderId,
             title = moveToTitle(::getString),
             onFolderChosen = ::onRefile,
@@ -565,7 +568,7 @@ class MessageViewFragment :
 
             R.id.set_format_plain -> onDisplayPlainText()
             R.id.set_format_html -> onDisplayHTML()
-            R.id.view_compose -> MessageActions.actionCompose(requireActivity(), account)
+            R.id.view_compose -> MessageActions.actionCompose(requireActivity(), account.id)
             else -> return false
         }
 
@@ -647,7 +650,7 @@ class MessageViewFragment :
 
         viewLifecycleOwner.lifecycleScope.launch {
             val knownCategories = withContext(Dispatchers.IO) {
-                messageStoreManager.getMessageStore(account).getServerCategories()
+                messageStoreManager.getMessageStore(account.id).getServerCategories()
             }
 
             ServerCategoriesDialogFragment.create(assignedCategories, knownCategories)
@@ -664,7 +667,7 @@ class MessageViewFragment :
         serverCategories = categories
         messageTopView.messageHeaderView.setServerCategories(categories)
         messagingController.setServerCategories(
-            account,
+            account.id,
             message.folder.databaseId,
             message.databaseId,
             message.uid,
@@ -724,7 +727,7 @@ class MessageViewFragment :
         if (!handledByCryptoPresenter) {
             messageTopView.showMessage(account, messageViewInfo)
 
-            if (account.isOpenPgpProviderConfigured) {
+            if (account.isOpenPgpProviderConfigured()) {
                 messageTopView.messageHeaderView.setCryptoStatusDisabled()
             } else {
                 messageTopView.messageHeaderView.hideCryptoStatus()
@@ -752,7 +755,7 @@ class MessageViewFragment :
         messageTopView.messageHeaderView.setServerCategories(currentServerCategories)
         messageTopView.messageHeaderView.setServerCategoriesEditable(canEditServerCategories)
 
-        if (account.isOpenPgpProviderConfigured) {
+        if (account.isOpenPgpProviderConfigured()) {
             messageTopView.messageHeaderView.setCryptoStatusLoading()
         }
 
@@ -863,7 +866,7 @@ class MessageViewFragment :
     }
 
     private fun onRefile(destinationFolderId: Long?) {
-        if (destinationFolderId == null || !messagingController.isMoveCapable(account)) {
+        if (destinationFolderId == null || !messagingController.isMoveCapable(account.id)) {
             return
         }
 
@@ -897,10 +900,10 @@ class MessageViewFragment :
      */
     private fun holdMove(kind: MailActionHold.Kind, destinationFolderId: Long) {
         val controller = messagingController
-        val account = account
+        val accountId = account.id
         val reference = messageReference
         mailActionHold.hold(kind, listOf(reference)) {
-            controller.moveMessage(account, reference.folderId, reference, destinationFolderId)
+            controller.moveMessage(accountId, reference.folderId, reference, destinationFolderId)
         }
     }
 
@@ -952,7 +955,7 @@ class MessageViewFragment :
     }
 
     fun onMove() {
-        check(messagingController.isMoveCapable(account))
+        check(messagingController.isMoveCapable(account.id))
         checkNotNull(message)
 
         if (!messagingController.isMoveCapable(messageReference)) {
@@ -964,14 +967,14 @@ class MessageViewFragment :
             input = ChooseFolderResultContract.Input(
                 accountId = account.id,
                 currentFolderId = messageReference.folderId,
-                scrollToFolderId = account.lastSelectedFolderId,
+                scrollToFolderId = lastSelectedFolderStore.get(account.id),
                 messageReference = messageReference,
             ),
         )
     }
 
     fun onCopy() {
-        check(messagingController.isCopyCapable(account))
+        check(messagingController.isCopyCapable(account.id))
         checkNotNull(message)
 
         if (!messagingController.isCopyCapable(messageReference)) {
@@ -983,7 +986,7 @@ class MessageViewFragment :
             input = ChooseFolderResultContract.Input(
                 accountId = account.id,
                 currentFolderId = messageReference.folderId,
-                scrollToFolderId = account.lastSelectedFolderId,
+                scrollToFolderId = lastSelectedFolderStore.get(account.id),
                 messageReference = messageReference,
             ),
         )
@@ -995,7 +998,7 @@ class MessageViewFragment :
         val account = account
         val folderId = messageReference.folderId
         val messages = listOf(messageReference)
-        messagingController.moveToDraftsFolder(account, folderId, messages)
+        messagingController.moveToDraftsFolder(account.id, folderId, messages)
     }
 
     fun onArchive() {
@@ -1091,7 +1094,7 @@ class MessageViewFragment :
         val messageReference = MessageReference.parse(messageReferenceString)
         if (this.messageReference != messageReference) return
 
-        account.setLastSelectedFolderId(destinationFolderId)
+        setLastSelectedFolderId(destinationFolderId)
 
         fragmentListener.performNavigationAfterMessageRemoval()
 
@@ -1106,9 +1109,13 @@ class MessageViewFragment :
         val messageReference = MessageReference.parse(messageReferenceString)
         if (this.messageReference != messageReference) return
 
-        account.setLastSelectedFolderId(destinationFolderId)
+        setLastSelectedFolderId(destinationFolderId)
 
         copyMessage(messageReference, destinationFolderId)
+    }
+
+    private fun setLastSelectedFolderId(folderId: Long) {
+        lastSelectedFolderStore.set(account.id, folderId)
     }
 
     @OptIn(ExperimentalTime::class)
@@ -1168,7 +1175,7 @@ class MessageViewFragment :
         val message = checkNotNull(this.message)
 
         val newState = !message.isSet(flag)
-        messagingController.setFlag(account, message.folder.databaseId, listOf(message), flag, newState)
+        messagingController.setFlag(account.id, message.folder.databaseId, listOf(message), flag, newState)
 
         messageTopView.setHeaders(message, account, true)
         serverCategories?.let { messageTopView.messageHeaderView.setServerCategories(it) }
@@ -1177,7 +1184,7 @@ class MessageViewFragment :
     }
 
     private fun copyMessage(reference: MessageReference?, folderId: Long) {
-        messagingController.copyMessage(account, messageReference.folderId, reference, folderId)
+        messagingController.copyMessage(account.id, messageReference.folderId, reference, folderId)
     }
 
     private fun showDialog(dialogId: Int) {
@@ -1266,13 +1273,13 @@ class MessageViewFragment :
         get() = message?.isSet(Flag.SEEN) == true
 
     private val isCopyCapable: Boolean
-        get() = !isOutbox && messagingController.isCopyCapable(account)
+        get() = !isOutbox && messagingController.isCopyCapable(account.id)
 
     private val isMoveCapable: Boolean
-        get() = !isOutbox && messagingController.isMoveCapable(account)
+        get() = !isOutbox && messagingController.isMoveCapable(account.id)
 
     private val canEditServerCategories: Boolean
-        get() = !isOutbox && message != null && messagingController.supportsServerCategories(account)
+        get() = !isOutbox && message != null && messagingController.supportsServerCategories(account.id)
 
     private fun canMessageBeArchived(): Boolean {
         val archiveFolderId = account.archiveFolderId ?: return false
@@ -1330,7 +1337,7 @@ class MessageViewFragment :
         val message = message ?: return
 
         if (!wasMessageMarkedAsOpened) {
-            messagingController.markMessageAsOpened(account, message)
+            messagingController.markMessageAsOpened(account.id, message)
             wasMessageMarkedAsOpened = true
         }
     }
@@ -1438,7 +1445,7 @@ class MessageViewFragment :
                     maskedRequestCode,
                 )
             } catch (e: SendIntentException) {
-                Log.e(e, "Irrecoverable error calling PendingIntent!")
+                Log.e(TAG, e, "Irrecoverable error calling PendingIntent!")
             }
 
             return true

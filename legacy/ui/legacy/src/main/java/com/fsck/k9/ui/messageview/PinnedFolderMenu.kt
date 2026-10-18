@@ -8,8 +8,7 @@ import com.fsck.k9.ui.R
 import com.fsck.k9.ui.settings.account.PinnedFolderStore
 import kotlinx.coroutines.runBlocking
 import net.thunderbird.components.core.outcome.fold
-import net.thunderbird.feature.account.Account
-import net.thunderbird.feature.mail.account.api.BaseAccount
+import net.thunderbird.feature.account.AccountId
 import net.thunderbird.feature.mail.folder.api.RemoteFolder
 import net.thunderbird.feature.mail.folder.api.data.repository.RemoteFolderQueryRepository
 
@@ -56,19 +55,19 @@ internal class PinnedFolderMenu(
      * @param alwaysShown how many of the folders get a toolbar place outright, rather than only if there is room.
      * @param onFolderChosen invoked with the folder id to file into.
      */
-    fun <T> addTo(
+    fun addTo(
         menu: Menu,
-        account: T,
+        accountId: AccountId,
         currentFolderId: Long?,
         title: (String) -> String,
         alwaysShown: Int = PINNED_FOLDERS_ALWAYS_SHOWN,
         onFolderChosen: (Long) -> Unit,
-    ) where T : Account, T : BaseAccount {
+    ) {
         removeFrom(menu)
 
         var shownInToolbar = 0
 
-        for (folder in pinnedFolders(account)) {
+        for (folder in pinnedFolders(accountId)) {
             if (folder.id == currentFolderId) continue
 
             val showAsAction = if (shownInToolbar < alwaysShown) {
@@ -101,14 +100,14 @@ internal class PinnedFolderMenu(
     }
 
     @Suppress("TooGenericExceptionCaught", "SwallowedException")
-    private fun <T> pinnedFolders(account: T): List<RemoteFolder> where T : Account, T : BaseAccount {
-        val pinnedIds = pinnedFolderStore.pinnedFolderIds(account.id.toString())
+    private fun pinnedFolders(accountId: AccountId): List<RemoteFolder> {
+        val pinnedIds = pinnedFolderStore.pinnedFolderIds(accountId.toString())
         if (pinnedIds.isEmpty()) return emptyList()
 
         // Blocking, as the read it replaces was: the menu is built synchronously, and this is one indexed query
         // over the folder table, run only when the reader has pinned something.
         return try {
-            runBlocking { remoteFolderQueryRepository.getAllByAccountId(account.id) }
+            runBlocking { remoteFolderQueryRepository.getAllByAccountId(accountId) }
                 .fold(onSuccess = { folders -> folders }, onFailure = { emptyList() })
                 .filter { it.id in pinnedIds }
         } catch (e: Exception) {

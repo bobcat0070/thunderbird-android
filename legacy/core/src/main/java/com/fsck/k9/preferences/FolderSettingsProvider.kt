@@ -2,7 +2,7 @@ package com.fsck.k9.preferences
 
 import app.k9mail.legacy.mailstore.RemoteFolderDetails
 import net.thunderbird.components.core.outcome.fold
-import net.thunderbird.core.android.account.LegacyAccountDto
+import net.thunderbird.core.android.account.LegacyAccount
 import net.thunderbird.feature.mail.folder.api.data.repository.RemoteFolderDetailsRepository
 
 class FolderSettingsProvider(
@@ -10,7 +10,7 @@ class FolderSettingsProvider(
     private val folderPinSettings: FolderPinSettings? = null,
     private val categoryGroupingStore: CategoryGroupingStore? = null,
 ) {
-    suspend fun getFolderSettings(account: LegacyAccountDto): List<FolderSettings> {
+    suspend fun getFolderSettings(account: LegacyAccount): List<FolderSettings> {
         return remoteFolderDetailsRepository
             .getAllByAccountId(account.id)
             .fold(

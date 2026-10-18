@@ -1,7 +1,7 @@
 package com.fsck.k9.mailstore
 
 import app.k9mail.legacy.mailstore.MessageStore
-import com.fsck.k9.Preferences
+import net.thunderbird.core.preference.storage.StorageProvider
 import com.fsck.k9.preferences.FolderPinSettings
 
 private const val PINNED_FOR_FILING = "pinnedForFiling"
@@ -18,7 +18,7 @@ private const val PINNED_TO_DRAWER = "pinnedToDrawer"
  * first sync happened to finish before the folder list was complete.
  */
 internal class ImportedFolderPinsRefreshListener(
-    private val preferences: Preferences,
+    private val storageProvider: StorageProvider,
     private val accountUuid: String,
     private val messageStore: MessageStore,
     private val folderPinSettings: FolderPinSettings,
@@ -27,7 +27,7 @@ internal class ImportedFolderPinsRefreshListener(
     override fun onBeforeFolderListRefresh() = Unit
 
     override suspend fun onAfterFolderListRefresh() {
-        val storage = preferences.storage
+        val storage = storageProvider.storage
         val prefix = "$accountUuid."
         val pendingKeys = storage.getAll().keys.filter { key ->
             key.startsWith(prefix) && (key.endsWith(".$PINNED_FOR_FILING") || key.endsWith(".$PINNED_TO_DRAWER"))
@@ -37,7 +37,7 @@ internal class ImportedFolderPinsRefreshListener(
         // Server ids may contain dots themselves, so the setting name is taken off the end rather than split on.
         val keysByServerId = pendingKeys.groupBy { key -> key.removePrefix(prefix).substringBeforeLast('.') }
 
-        val editor = preferences.createStorageEditor()
+        val editor = storageProvider.createStorageEditor()
         for ((serverId, keys) in keysByServerId) {
             val folderId = messageStore.getFolderId(serverId) ?: continue
 

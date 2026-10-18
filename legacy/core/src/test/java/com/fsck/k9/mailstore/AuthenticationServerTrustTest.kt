@@ -4,23 +4,21 @@ import assertk.assertThat
 import assertk.assertions.isEqualTo
 import assertk.assertions.isNull
 import com.fsck.k9.K9RobolectricTest
-import com.fsck.k9.Preferences
+import com.fsck.k9.FakeLegacyAccount
 import com.fsck.k9.mail.AuthType
 import com.fsck.k9.mail.ConnectionSecurity
 import com.fsck.k9.mail.ServerSettings
+import net.thunderbird.core.android.account.fake.FakeLegacyAccountManager
 import net.thunderbird.core.common.mail.Protocols
-import org.junit.Before
+import net.thunderbird.core.preference.storage.StorageProvider
+import net.thunderbird.feature.account.AccountIdFactory
 import org.junit.Test
 import org.koin.core.component.inject
 
 class AuthenticationServerTrustTest : K9RobolectricTest() {
-    private val preferences: Preferences by inject()
-    private val testSubject by lazy { DefaultAuthenticationServerTrust(preferences, preferences) }
-
-    @Before
-    fun before() {
-        preferences.clearAccounts()
-    }
+    private val storageProvider: StorageProvider by inject()
+    private val accountManager = FakeLegacyAccountManager()
+    private val testSubject by lazy { DefaultAuthenticationServerTrust(storageProvider, accountManager) }
 
     @Test
     fun `a server that stamps every message should be learned`() {
@@ -63,28 +61,29 @@ class AuthenticationServerTrustTest : K9RobolectricTest() {
     }
 
     private fun accountOn(protocol: String, host: String): String {
-        val account = preferences.newAccount()
-        account.incomingServerSettings = ServerSettings(
-            protocol,
-            host,
-            993,
-            ConnectionSecurity.SSL_TLS_REQUIRED,
-            AuthType.PLAIN,
-            "username",
-            "password",
-            null,
+        val account = FakeLegacyAccount.create(id = AccountIdFactory.create()).copy(
+            incomingServerSettings = ServerSettings(
+                protocol,
+                host,
+                993,
+                ConnectionSecurity.SSL_TLS_REQUIRED,
+                AuthType.PLAIN,
+                "username",
+                "password",
+                null,
+            ),
+            outgoingServerSettings = ServerSettings(
+                Protocols.SMTP,
+                host,
+                465,
+                ConnectionSecurity.SSL_TLS_REQUIRED,
+                AuthType.PLAIN,
+                "username",
+                "password",
+                null,
+            ),
         )
-        account.outgoingServerSettings = ServerSettings(
-            Protocols.SMTP,
-            host,
-            465,
-            ConnectionSecurity.SSL_TLS_REQUIRED,
-            AuthType.PLAIN,
-            "username",
-            "password",
-            null,
-        )
-        preferences.saveAccount(account)
+        accountManager.createSync(account)
 
         return account.id.toString()
     }

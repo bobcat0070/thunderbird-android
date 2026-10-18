@@ -6,9 +6,12 @@ import assertk.assertions.isEqualTo
 import assertk.assertions.isNull
 import assertk.assertions.isSameInstanceAs
 import kotlin.test.Test
+import net.thunderbird.feature.account.UnifiedAccountId
+import net.thunderbird.feature.mail.folder.FolderType
 import net.thunderbird.feature.search.legacy.api.MessageSearchField
 import net.thunderbird.feature.search.legacy.api.SearchAttribute
 import net.thunderbird.feature.search.legacy.api.SearchCondition
+import net.thunderbird.feature.search.legacy.serialization.LocalMessageSearchSerializer
 import net.thunderbird.feature.search.legacy.sql.SqlWhereClause
 
 private const val SENT_FOLDER_ID = 42L
@@ -16,14 +19,14 @@ private const val SENT_FOLDER_ID = 42L
 class UnifiedFolderKindTest {
 
     @Test
-    fun `the unified inbox should keep the search id everything already refers to`() {
-        assertThat(UnifiedFolderKind.INBOX.searchId).isEqualTo(SearchAccount.UNIFIED_FOLDERS)
+    fun `the unified inbox should keep the view id everything already refers to`() {
+        assertThat(UnifiedFolderKind.INBOX.searchId).isEqualTo("unified_folders")
     }
 
     @Test
-    fun `a search id should map back to its unified folder`() {
+    fun `a view id should map back to its unified folder`() {
         assertThat(UnifiedFolderKind.fromSearchId("unified_sent")).isEqualTo(UnifiedFolderKind.SENT)
-        assertThat(UnifiedFolderKind.fromSearchId(SearchAccount.UNIFIED_FOLDERS)).isEqualTo(UnifiedFolderKind.INBOX)
+        assertThat(UnifiedFolderKind.fromSearchId("unified_folders")).isEqualTo(UnifiedFolderKind.INBOX)
         assertThat(UnifiedFolderKind.fromSearchId("something_else")).isNull()
         assertThat(UnifiedFolderKind.fromSearchId(null)).isNull()
     }
@@ -32,7 +35,9 @@ class UnifiedFolderKindTest {
     fun `the unified inbox should still be chosen by the folders integrate flag`() {
         val search = createUnifiedFolderSearch(UnifiedFolderKind.INBOX)
 
-        assertThat(search.id).isEqualTo(SearchAccount.UNIFIED_FOLDERS)
+        assertThat(search.id).isEqualTo(UnifiedAccountId)
+        assertThat(search.type)
+            .isEqualTo(LocalMessageSearchType.Unified(UnifiedFolderSelection.Special(FolderType.INBOX)))
         assertThat(search.conditions.condition)
             .isEqualTo(SearchCondition(MessageSearchField.INTEGRATE, SearchAttribute.EQUALS, "1"))
     }
@@ -41,11 +46,29 @@ class UnifiedFolderKindTest {
     fun `a unified special folder should be chosen by role`() {
         val search = createUnifiedFolderSearch(UnifiedFolderKind.SENT)
 
-        assertThat(search.id).isEqualTo("unified_sent")
+        assertThat(search.type)
+            .isEqualTo(LocalMessageSearchType.Unified(UnifiedFolderSelection.Special(FolderType.SENT)))
         assertThat(search.conditions.condition)
             .isEqualTo(SearchCondition(MessageSearchField.SPECIAL_FOLDER, SearchAttribute.EQUALS, "SENT"))
         // Across every account, not limited to one.
         assertThat(search.searchAllAccounts()).isEqualTo(true)
+    }
+
+    @Test
+    fun `a search should map back to the unified folder it shows`() {
+        UnifiedFolderKind.entries.forEach { kind ->
+            assertThat(UnifiedFolderKind.fromSearch(createUnifiedFolderSearch(kind))).isEqualTo(kind)
+        }
+        assertThat(UnifiedFolderKind.fromSearch(LocalMessageSearch())).isNull()
+    }
+
+    @Test
+    fun `a unified folder should survive being passed on as a serialized search`() {
+        val search = createUnifiedFolderSearch(UnifiedFolderKind.TRASH)
+
+        val restored = LocalMessageSearchSerializer.deserialize(LocalMessageSearchSerializer.serialize(search))
+
+        assertThat(UnifiedFolderKind.fromSearch(restored)).isEqualTo(UnifiedFolderKind.TRASH)
     }
 
     @Test

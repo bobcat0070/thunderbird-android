@@ -5,7 +5,7 @@ import kotlin.time.Clock
 import kotlin.time.TimeSource
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.daysUntil
-import net.thunderbird.core.logging.Logger
+import net.thunderbird.components.core.logging.Logger
 import net.thunderbird.feature.spamdigest.SpamDigestAccounts
 import net.thunderbird.feature.spamdigest.SpamDigestMailer
 import net.thunderbird.feature.spamdigest.SpamDigestRunEvent

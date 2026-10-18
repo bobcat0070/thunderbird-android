@@ -5,8 +5,9 @@ import com.fsck.k9.backend.BackendManager
 import com.fsck.k9.backend.api.DirectorySearcher
 import com.fsck.k9.mailstore.recipients.RecipientIndex
 import com.fsck.k9.mailstore.recipients.SentMailRecipientScanner
-import net.thunderbird.core.android.account.LegacyAccountDtoManager
-import net.thunderbird.core.logging.Logger
+import net.thunderbird.feature.account.AccountId
+import net.thunderbird.core.android.account.LegacyAccountManager
+import net.thunderbird.components.core.logging.Logger
 import net.thunderbird.core.preference.GeneralSettingsManager
 
 /**
@@ -54,7 +55,7 @@ class DefaultRecipientSuggestions(
     private val scanner: () -> SentMailRecipientScanner = { DI.get(SentMailRecipientScanner::class.java) },
     private val settings: () -> GeneralSettingsManager = { DI.get(GeneralSettingsManager::class.java) },
     private val backendManager: () -> BackendManager = { DI.get(BackendManager::class.java) },
-    private val accountManager: () -> LegacyAccountDtoManager = { DI.get(LegacyAccountDtoManager::class.java) },
+    private val accountManager: () -> LegacyAccountManager = { DI.get(LegacyAccountManager::class.java) },
     private val logger: () -> Logger = { DI.get(Logger::class.java) },
 ) : RecipientSuggestions {
 
@@ -86,8 +87,8 @@ class DefaultRecipientSuggestions(
 
         val backendManager = backendManager()
 
-        return accountManager().getAccounts().flatMap { account ->
-            val searcher = directorySearcherFor(backendManager, account.id.toString()) ?: return@flatMap emptyList()
+        return accountManager().findAll().flatMap { account ->
+            val searcher = directorySearcherFor(backendManager, account.id) ?: return@flatMap emptyList()
 
             searcher.searchDirectory(query).flatMap { contact ->
                 contact.addresses.map { SuggestedRecipient(it, contact.displayName) }
@@ -102,9 +103,9 @@ class DefaultRecipientSuggestions(
      * not an error here: completion carries on with what the device already knows.
      */
     @Suppress("TooGenericExceptionCaught")
-    private fun directorySearcherFor(backendManager: BackendManager, accountUuid: String): DirectorySearcher? {
+    private fun directorySearcherFor(backendManager: BackendManager, accountId: AccountId): DirectorySearcher? {
         return try {
-            backendManager.getBackend(accountUuid) as? DirectorySearcher
+            backendManager.getBackend(accountId) as? DirectorySearcher
         } catch (e: Exception) {
             logger().debug("RecipientSuggestions", e) { "Could not reach a backend to search its directory" }
 

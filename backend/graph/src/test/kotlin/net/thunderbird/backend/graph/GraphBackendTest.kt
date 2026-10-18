@@ -11,7 +11,7 @@ import kotlin.test.Test
 import net.thunderbird.backend.graph.api.GraphApiClient
 import net.thunderbird.backend.graph.command.FOLDER_EXTRA_ID_FORMAT
 import net.thunderbird.backend.graph.command.ID_FORMAT_IMMUTABLE
-import net.thunderbird.core.logging.testing.TestLogger
+import net.thunderbird.components.core.logging.testing.TestLogger
 import okhttp3.OkHttpClient
 import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer

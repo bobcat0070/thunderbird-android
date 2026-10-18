@@ -13,7 +13,6 @@ dependencies {
     implementation(projects.backend.pop3)
 
     implementation(projects.core.featureflag)
-    implementation(projects.core.logging.api)
     implementation(projects.feature.launcher)
 
     implementation(projects.feature.account.setup)
@@ -31,7 +30,7 @@ dependencies {
     implementation(libs.glide)
     annotationProcessor(libs.glide.compiler)
 
-    testImplementation(projects.core.logging.testing)
+    testImplementation(projects.core.android.account.fake)
     testImplementation(libs.robolectric)
     testImplementation(libs.androidx.test.core)
     testImplementation(projects.feature.account.fake)

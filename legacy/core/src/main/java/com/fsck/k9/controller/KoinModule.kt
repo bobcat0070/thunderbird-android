@@ -6,7 +6,6 @@ import app.k9mail.legacy.mailstore.domain.GetFolderIdsForTypeUseCase
 import app.k9mail.legacy.mailstore.domain.SetPushForFolderUseCase
 import app.k9mail.legacy.message.controller.MessageCountsProvider
 import app.k9mail.legacy.message.controller.MessagingControllerRegistry
-import com.fsck.k9.Preferences
 import com.fsck.k9.backend.BackendManager
 import com.fsck.k9.mailstore.LocalStoreProvider
 import com.fsck.k9.mailstore.SaveMessageDataCreator
@@ -14,9 +13,11 @@ import com.fsck.k9.mailstore.SpecialLocalFoldersCreator
 import com.fsck.k9.mailstore.recipients.RecipientIndex
 import com.fsck.k9.notification.NotificationController
 import com.fsck.k9.notification.NotificationStrategy
+import net.thunderbird.core.android.account.LegacyAccountManager
 import net.thunderbird.core.featureflag.FeatureFlagProvider
-import net.thunderbird.core.logging.Logger
+import net.thunderbird.components.core.logging.Logger
 import net.thunderbird.core.preference.GeneralSettingsManager
+import net.thunderbird.feature.account.AccountCapabilities
 import net.thunderbird.feature.mail.folder.api.OutboxFolderManager
 import net.thunderbird.feature.mail.message.list.LocalDeleteOperationDecider
 import net.thunderbird.feature.mail.message.list.LocalMessageUidPrefixProvider
@@ -33,7 +34,6 @@ val controllerModule = module {
             get<NotificationStrategy>(),
             get<LocalStoreProvider>(),
             get<BackendManager>(),
-            get<Preferences>(),
             get<MessageStoreManager>(),
             get<SaveMessageDataCreator>(),
             get<SpecialLocalFoldersCreator>(),
@@ -46,6 +46,7 @@ val controllerModule = module {
             get<NotificationManager>(),
             get<OutboxFolderManager>(),
             get<UndoSendHold>(),
+            get<LegacyAccountManager>(),
         )
     } binds arrayOf(MessagingControllerRegistry::class)
 
@@ -59,6 +60,12 @@ val controllerModule = module {
     single {
         MessagingControllerWrapper(
             messagingController = get(),
+        )
+    }
+
+    single<AccountCapabilities> {
+        RealAccountCapabilities(
+            messagingController = get(),
             accountManager = get(),
         )
     }
@@ -71,6 +78,7 @@ val controllerModule = module {
             messageStoreManager = get(),
             messagingControllerRegistry = get(),
             outboxFolderManager = get(),
+            logger = get(),
         )
     }
 

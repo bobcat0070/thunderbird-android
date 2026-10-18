@@ -7,19 +7,28 @@ import assertk.assertions.containsExactly
 import assertk.assertions.isEmpty
 import assertk.assertions.isEqualTo
 import assertk.assertions.isNull
+import com.fsck.k9.mail.AuthType
+import com.fsck.k9.mail.ConnectionSecurity
+import com.fsck.k9.mail.ServerSettings
 import kotlin.test.Test
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
-import net.thunderbird.account.fake.FakeAccountData.ACCOUNT_ID_RAW
-import net.thunderbird.core.android.account.LegacyAccountDto
+import net.thunderbird.account.fake.FakeAccountData.ACCOUNT_ID
+import net.thunderbird.core.android.account.Identity
+import net.thunderbird.core.android.account.LegacyAccount
+import net.thunderbird.core.android.account.fake.FakeLegacyAccountManager
+import net.thunderbird.feature.account.AccountId
 import net.thunderbird.feature.account.AccountIdFactory
+import net.thunderbird.feature.account.UnifiedAccountId
+import net.thunderbird.feature.account.storage.profile.AvatarDto
+import net.thunderbird.feature.account.storage.profile.AvatarTypeDto
+import net.thunderbird.feature.account.storage.profile.ProfileDto
 import net.thunderbird.feature.navigation.drawer.api.NavigationDrawerExternalContract.PinnedFolder
 import net.thunderbird.feature.navigation.drawer.dropdown.domain.entity.DisplayFolder
 import net.thunderbird.feature.navigation.drawer.dropdown.domain.entity.MailDisplayFolder
 import net.thunderbird.feature.navigation.drawer.dropdown.domain.entity.PinnedDisplayFolder
-import net.thunderbird.feature.navigation.drawer.dropdown.domain.entity.UnifiedDisplayAccount
 import net.thunderbird.feature.navigation.drawer.dropdown.domain.entity.UnifiedDisplayFolder
 import net.thunderbird.feature.navigation.drawer.dropdown.domain.entity.UnifiedDisplayFolderType
 import net.thunderbird.feature.navigation.drawer.dropdown.domain.usecase.FakeUnifiedFolderRepository.Companion.OTHER_UNIFIED_FOLDERS
@@ -30,7 +39,7 @@ internal class GetDisplayFoldersForAccountTest {
 
     @Test
     fun `should return account folders when account id is regular`() = runTest {
-        val accountId = ACCOUNT_ID_RAW
+        val accountId = ACCOUNT_ID
         val legacyDisplayFolderFlow = MutableStateFlow(LEGACY_DISPLAY_FOLDERS)
         val displayFolderRepository = FakeDisplayFolderRepository(legacyDisplayFolderFlow)
         val unifiedFolderFlow = MutableStateFlow(DISPLAY_UNIFIED_FOLDER)
@@ -39,7 +48,7 @@ internal class GetDisplayFoldersForAccountTest {
             displayFolderRepository = displayFolderRepository,
             unifiedFolderRepository = unifiedFolderRepository,
             pinnedFolderRepository = FakePinnedFolderRepository(),
-            accountManager = FakeLegacyAccountDtoManager(),
+            accountManager = FakeLegacyAccountManager(),
         )
 
         val result = testSubject(accountId).first()
@@ -49,7 +58,7 @@ internal class GetDisplayFoldersForAccountTest {
 
     @Test
     fun `should return unifed account folders when account id is unified`() = runTest {
-        val accountId = UnifiedDisplayAccount.UNIFIED_ACCOUNT_ID
+        val accountId = UnifiedAccountId
         val legacyDisplayFolderFlow = MutableStateFlow(LEGACY_DISPLAY_FOLDERS)
         val displayFolderRepository = FakeDisplayFolderRepository(legacyDisplayFolderFlow)
         val unifiedFolderFlow = MutableStateFlow(DISPLAY_UNIFIED_FOLDER)
@@ -58,7 +67,7 @@ internal class GetDisplayFoldersForAccountTest {
             displayFolderRepository = displayFolderRepository,
             unifiedFolderRepository = unifiedFolderRepository,
             pinnedFolderRepository = FakePinnedFolderRepository(),
-            accountManager = FakeLegacyAccountDtoManager(),
+            accountManager = FakeLegacyAccountManager(),
         )
 
         val result = testSubject(accountId).first()
@@ -68,7 +77,7 @@ internal class GetDisplayFoldersForAccountTest {
 
     @Test
     fun `should only emit new list when account folders emit new items`() = runTest {
-        val accountId = ACCOUNT_ID_RAW
+        val accountId = ACCOUNT_ID
         val legacyDisplayFolderFlow = MutableStateFlow(LEGACY_DISPLAY_FOLDERS)
         val displayFolderRepository = FakeDisplayFolderRepository(legacyDisplayFolderFlow)
         val unifiedFolderFlow = MutableStateFlow(DISPLAY_UNIFIED_FOLDER)
@@ -77,7 +86,7 @@ internal class GetDisplayFoldersForAccountTest {
             displayFolderRepository = displayFolderRepository,
             unifiedFolderRepository = unifiedFolderRepository,
             pinnedFolderRepository = FakePinnedFolderRepository(),
-            accountManager = FakeLegacyAccountDtoManager(),
+            accountManager = FakeLegacyAccountManager(),
         )
 
         testSubject(accountId).test {
@@ -93,7 +102,7 @@ internal class GetDisplayFoldersForAccountTest {
 
     @Test
     fun `should only emit new list when unified account folders emit new items`() = runTest {
-        val accountId = UnifiedDisplayAccount.UNIFIED_ACCOUNT_ID
+        val accountId = UnifiedAccountId
         val legacyDisplayFolderFlow = MutableStateFlow(LEGACY_DISPLAY_FOLDERS)
         val displayFolderRepository = FakeDisplayFolderRepository(legacyDisplayFolderFlow)
         val unifiedFolderFlow = MutableStateFlow(DISPLAY_UNIFIED_FOLDER)
@@ -102,7 +111,7 @@ internal class GetDisplayFoldersForAccountTest {
             displayFolderRepository = displayFolderRepository,
             unifiedFolderRepository = unifiedFolderRepository,
             pinnedFolderRepository = FakePinnedFolderRepository(),
-            accountManager = FakeLegacyAccountDtoManager(),
+            accountManager = FakeLegacyAccountManager(),
         )
 
         testSubject(accountId).test {
@@ -119,7 +128,7 @@ internal class GetDisplayFoldersForAccountTest {
     fun `should list every unified folder, inbox first`() = runTest {
         val testSubject = createUnifiedTestSubject()
 
-        val result = testSubject(UnifiedDisplayAccount.UNIFIED_ACCOUNT_ID).first()
+        val result = testSubject(UnifiedAccountId).first()
 
         assertThat(result.filterIsInstance<UnifiedDisplayFolder>().map { it.unifiedType })
             .containsExactly(*UnifiedDisplayFolderType.entries.toTypedArray())
@@ -132,7 +141,7 @@ internal class GetDisplayFoldersForAccountTest {
         )
         val testSubject = createUnifiedTestSubject(pinned = pinned, accounts = listOf(account(ACCOUNT_UUID_1, "Work")))
 
-        val result = testSubject(UnifiedDisplayAccount.UNIFIED_ACCOUNT_ID).first()
+        val result = testSubject(UnifiedAccountId).first()
 
         assertThat(result.drop(UnifiedDisplayFolderType.entries.size).map { (it as PinnedDisplayFolder).folder.id })
             .containsExactly(2L, 1L)
@@ -143,12 +152,12 @@ internal class GetDisplayFoldersForAccountTest {
         val pinned = FakePinnedFolderRepository(listOf(PinnedFolder(ACCOUNT_UUID_1, 2)))
         val testSubject = createUnifiedTestSubject(pinned = pinned, accounts = listOf(account(ACCOUNT_UUID_1, "Work")))
 
-        val pin = testSubject(UnifiedDisplayAccount.UNIFIED_ACCOUNT_ID).first()
+        val pin = testSubject(UnifiedAccountId).first()
             .filterIsInstance<PinnedDisplayFolder>()
             .single()
 
         assertThat(pin.unreadMessageCount).isEqualTo(1)
-        assertThat(pin.accountId).isEqualTo(ACCOUNT_UUID_1)
+        assertThat(pin.accountId).isEqualTo(AccountIdFactory.of(ACCOUNT_UUID_1))
     }
 
     @Test
@@ -158,12 +167,12 @@ internal class GetDisplayFoldersForAccountTest {
         val single = createUnifiedTestSubject(
             pinned = FakePinnedFolderRepository(pins),
             accounts = listOf(account(ACCOUNT_UUID_1, "Work")),
-        ).invoke(UnifiedDisplayAccount.UNIFIED_ACCOUNT_ID).first().filterIsInstance<PinnedDisplayFolder>().single()
+        ).invoke(UnifiedAccountId).first().filterIsInstance<PinnedDisplayFolder>().single()
 
         val several = createUnifiedTestSubject(
             pinned = FakePinnedFolderRepository(pins),
             accounts = listOf(account(ACCOUNT_UUID_1, "Work"), account(ACCOUNT_UUID_2, "Home")),
-        ).invoke(UnifiedDisplayAccount.UNIFIED_ACCOUNT_ID).first().filterIsInstance<PinnedDisplayFolder>().single()
+        ).invoke(UnifiedAccountId).first().filterIsInstance<PinnedDisplayFolder>().single()
 
         assertThat(single.accountName).isNull()
         assertThat(several.accountName).isEqualTo("Work")
@@ -179,7 +188,7 @@ internal class GetDisplayFoldersForAccountTest {
             displayFolderRepository = FailingForAccount(ACCOUNT_UUID_2),
         )
 
-        val result = testSubject(UnifiedDisplayAccount.UNIFIED_ACCOUNT_ID).first()
+        val result = testSubject(UnifiedAccountId).first()
 
         assertThat(result.filterIsInstance<PinnedDisplayFolder>()).isEmpty()
     }
@@ -189,7 +198,7 @@ internal class GetDisplayFoldersForAccountTest {
         val pinned = FakePinnedFolderRepository(listOf(PinnedFolder(ACCOUNT_UUID_1, 999)))
         val testSubject = createUnifiedTestSubject(pinned = pinned, accounts = listOf(account(ACCOUNT_UUID_1, "Work")))
 
-        val result = testSubject(UnifiedDisplayAccount.UNIFIED_ACCOUNT_ID).first()
+        val result = testSubject(UnifiedAccountId).first()
 
         assertThat(result.filterIsInstance<PinnedDisplayFolder>()).isEmpty()
     }
@@ -199,7 +208,7 @@ internal class GetDisplayFoldersForAccountTest {
         val pinned = FakePinnedFolderRepository()
         val testSubject = createUnifiedTestSubject(pinned = pinned, accounts = listOf(account(ACCOUNT_UUID_1, "Work")))
 
-        testSubject(UnifiedDisplayAccount.UNIFIED_ACCOUNT_ID).test {
+        testSubject(UnifiedAccountId).test {
             assertThat(awaitItem().filterIsInstance<PinnedDisplayFolder>()).isEmpty()
 
             pinned.pin(PinnedFolder(ACCOUNT_UUID_1, 1))
@@ -212,7 +221,7 @@ internal class GetDisplayFoldersForAccountTest {
 
     private fun createUnifiedTestSubject(
         pinned: FakePinnedFolderRepository = FakePinnedFolderRepository(),
-        accounts: List<LegacyAccountDto> = emptyList(),
+        accounts: List<LegacyAccount> = emptyList(),
         displayFolderRepository: DisplayFolderRepository = FakeDisplayFolderRepository(
             MutableStateFlow(LEGACY_DISPLAY_FOLDERS),
         ),
@@ -220,23 +229,54 @@ internal class GetDisplayFoldersForAccountTest {
         displayFolderRepository = displayFolderRepository,
         unifiedFolderRepository = FakeUnifiedFolderRepository(MutableStateFlow(DISPLAY_UNIFIED_FOLDER)),
         pinnedFolderRepository = pinned,
-        accountManager = FakeLegacyAccountDtoManager(accounts = accounts),
+        accountManager = FakeLegacyAccountManager(initialAccounts = accounts),
     )
 
-    private fun account(uuid: String, name: String) =
-        LegacyAccountDto(AccountIdFactory.of(uuid)).apply { this.name = name }
+    private fun account(uuid: String, name: String): LegacyAccount {
+        val accountId = AccountIdFactory.of(uuid)
+        val serverSettings = ServerSettings(
+            type = "dummy",
+            host = "",
+            port = -1,
+            connectionSecurity = ConnectionSecurity.NONE,
+            authenticationType = AuthType.PLAIN,
+            username = "",
+            password = "",
+            clientCertificateAlias = null,
+        )
+        return LegacyAccount(
+            id = accountId,
+            name = name,
+            email = "$name@example.org",
+            profile = ProfileDto(
+                id = accountId,
+                name = name,
+                color = 0,
+                avatar = AvatarDto(
+                    accountId = accountId,
+                    avatarType = AvatarTypeDto.MONOGRAM,
+                    avatarMonogram = null,
+                    avatarImageUri = null,
+                    avatarIconName = null,
+                ),
+            ),
+            incomingServerSettings = serverSettings,
+            outgoingServerSettings = serverSettings,
+            identities = listOf(Identity(email = "$name@example.org")),
+        )
+    }
 
     /**
      * Fails for one account, the way the real repository does for an account that does not exist.
      */
     private class FailingForAccount(private val missingAccountUuid: String) : DisplayFolderRepository {
         override fun getDisplayFoldersFlow(
-            account: LegacyAccountDto,
+            accountId: AccountId,
             includeHiddenFolders: Boolean,
         ): Flow<List<LegacyDisplayFolder>> = error("Not used")
 
-        override fun getDisplayFoldersFlow(accountUuid: String): Flow<List<LegacyDisplayFolder>> {
-            check(accountUuid != missingAccountUuid) { "Account not found: $accountUuid" }
+        override fun getDisplayFoldersFlow(accountId: AccountId): Flow<List<LegacyDisplayFolder>> {
+            check(accountId.toString() != missingAccountUuid) { "Account not found: $accountId" }
             return MutableStateFlow(LEGACY_DISPLAY_FOLDERS)
         }
     }
@@ -277,14 +317,14 @@ internal class GetDisplayFoldersForAccountTest {
         )
 
         val DISPLAY_UNIFIED_FOLDER = UnifiedDisplayFolder(
-            id = "unified_inbox",
+            folderId = "unified_inbox",
             unifiedType = UnifiedDisplayFolderType.INBOX,
             unreadMessageCount = 2,
             starredMessageCount = 2,
         )
 
         val DISPLAY_UNIFIED_FOLDER_2 = UnifiedDisplayFolder(
-            id = "unified_inbox",
+            folderId = "unified_inbox",
             unifiedType = UnifiedDisplayFolderType.INBOX,
             unreadMessageCount = 3,
             starredMessageCount = 3,
@@ -294,7 +334,7 @@ internal class GetDisplayFoldersForAccountTest {
 
         val DISPLAY_ACCOUNT_FOLDERS = listOf<DisplayFolder>(
             MailDisplayFolder(
-                accountId = ACCOUNT_ID_RAW,
+                accountId = ACCOUNT_ID,
                 folder = FakeData.FOLDER,
                 isInTopGroup = false,
                 unreadMessageCount = 0,
@@ -302,7 +342,7 @@ internal class GetDisplayFoldersForAccountTest {
                 pathDelimiter = "/",
             ),
             MailDisplayFolder(
-                accountId = ACCOUNT_ID_RAW,
+                accountId = ACCOUNT_ID,
                 folder = FakeData.FOLDER.copy(
                     id = 2,
                     name = "Folder 2",
@@ -315,7 +355,7 @@ internal class GetDisplayFoldersForAccountTest {
         )
 
         val DISPLAY_ACCOUNT_FOLDERS_2 = DISPLAY_ACCOUNT_FOLDERS + MailDisplayFolder(
-            accountId = ACCOUNT_ID_RAW,
+            accountId = ACCOUNT_ID,
             folder = FakeData.FOLDER.copy(
                 id = 3,
                 name = "Folder 3",

@@ -4,7 +4,7 @@ import com.fsck.k9.contacts.bimi.BimiLogoLoader
 import com.fsck.k9.contacts.bimi.CertificateRevocationChecker
 import com.fsck.k9.contacts.bimi.DnsTxtLookup
 import com.fsck.k9.ui.unsubscribe.OneClickUnsubscriber
-import net.thunderbird.core.logging.Logger
+import net.thunderbird.components.core.logging.Logger
 import com.fsck.k9.contacts.bimi.PlatformDnsTxtLookup
 import com.fsck.k9.contacts.bimi.VmcValidator
 import com.fsck.k9.contacts.bimi.loadMvaRoots

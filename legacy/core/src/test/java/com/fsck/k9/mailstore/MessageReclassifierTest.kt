@@ -5,19 +5,20 @@ import app.k9mail.legacy.mailstore.MessageStore
 import app.k9mail.legacy.mailstore.MessageStoreManager
 import app.k9mail.legacy.mailstore.StoredClassificationEvidence
 import assertk.assertThat
+import com.fsck.k9.FakeLegacyAccount
 import assertk.assertions.isEqualTo
 import assertk.assertions.isFalse
 import assertk.assertions.isTrue
 import kotlinx.coroutines.Dispatchers
-import net.thunderbird.core.android.account.LegacyAccountDto
-import net.thunderbird.core.android.account.LegacyAccountDtoManager
+import net.thunderbird.core.android.account.LegacyAccount
+import net.thunderbird.core.android.account.LegacyAccountManager
 import net.thunderbird.feature.mail.message.classification.api.CLASSIFIER_VERSION
 import net.thunderbird.feature.mail.message.classification.api.ClassificationSignal
 import net.thunderbird.feature.mail.message.classification.api.MessageClass
 import net.thunderbird.feature.mail.message.classification.api.MessageClassification
 import net.thunderbird.feature.mail.message.classification.api.MessageClassifier
 import net.thunderbird.feature.mail.message.classification.api.MessageEvidence
-import net.thunderbird.core.logging.testing.TestLogger
+import net.thunderbird.components.core.logging.testing.TestLogger
 import net.thunderbird.legacy.logging.Log
 import org.junit.Before
 import org.junit.Test
@@ -150,12 +151,12 @@ class MessageReclassifierTest {
     }
 
     private fun reclassifier(): MessageReclassifier {
-        val account = mock<LegacyAccountDto>()
-        val accountManager = mock<LegacyAccountDtoManager> {
-            on { getAccounts() } doReturn listOf(account)
+        val account = FakeLegacyAccount.ACCOUNT
+        val accountManager = mock<LegacyAccountManager> {
+            on { findAll() } doReturn listOf(account)
         }
         val messageStoreManager = mock<MessageStoreManager> {
-            on { getMessageStore(account) } doAnswer {
+            on { getMessageStore(account.id) } doAnswer {
                 // No main dispatcher exists in a JVM test, and the store's default one would throw on
                 // construction - which the pass swallows per account, so every test would see nothing.
                 ListenableMessageStore(messageStore, mainImmediateDispatcher = Dispatchers.Unconfined)

@@ -2,7 +2,7 @@ package net.thunderbird.app.common.feature.spamdigest
 
 import app.k9mail.legacy.mailstore.MessageStoreManager
 import net.thunderbird.app.common.account.getByUuid
-import net.thunderbird.core.android.account.LegacyAccountDtoManager
+import net.thunderbird.core.android.account.LegacyAccountManager
 import net.thunderbird.feature.spamdigest.SpamFolderBackgroundSync
 
 /**
@@ -10,7 +10,7 @@ import net.thunderbird.feature.spamdigest.SpamFolderBackgroundSync
  * the alert turns on is visible there and can be turned off there too.
  */
 internal class LegacySpamFolderBackgroundSync(
-    private val accountManager: LegacyAccountDtoManager,
+    private val accountManager: LegacyAccountManager,
     private val messageStoreManager: MessageStoreManager,
 ) : SpamFolderBackgroundSync {
 
@@ -18,7 +18,7 @@ internal class LegacySpamFolderBackgroundSync(
         val account = accountManager.getByUuid(accountId) ?: return null
 
         return account.spamFolderId?.let { spamFolderId ->
-            messageStoreManager.getMessageStore(account).getFolder(spamFolderId) { it.isSyncEnabled }
+            messageStoreManager.getMessageStore(account.id).getFolder(spamFolderId) { it.isSyncEnabled }
         }
     }
 
@@ -26,6 +26,6 @@ internal class LegacySpamFolderBackgroundSync(
         val account = accountManager.getByUuid(accountId) ?: return
         val spamFolderId = account.spamFolderId ?: return
 
-        messageStoreManager.getMessageStore(account).setSyncEnabled(spamFolderId, enabled)
+        messageStoreManager.getMessageStore(account.id).setSyncEnabled(spamFolderId, enabled)
     }
 }

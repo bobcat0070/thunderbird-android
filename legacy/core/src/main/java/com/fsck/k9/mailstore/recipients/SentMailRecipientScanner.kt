@@ -1,8 +1,8 @@
 package com.fsck.k9.mailstore.recipients
 
 import app.k9mail.legacy.mailstore.MessageListRepository
-import net.thunderbird.core.android.account.LegacyAccountDtoManager
-import net.thunderbird.core.logging.Logger
+import net.thunderbird.core.android.account.LegacyAccountManager
+import net.thunderbird.components.core.logging.Logger
 import net.thunderbird.feature.account.AccountId
 
 private const val TAG = "SentMailRecipientScanner"
@@ -39,7 +39,7 @@ private const val SCAN_WATERMARK_KEY = "sent_scan_highest_id"
  * the server does not keep, and it does not depend on a sync having happened.
  */
 class SentMailRecipientScanner(
-    private val accountManager: LegacyAccountDtoManager,
+    private val accountManager: LegacyAccountManager,
     private val messageListRepository: MessageListRepository,
     private val index: RecipientIndex,
     private val logger: Logger? = null,
@@ -72,7 +72,7 @@ class SentMailRecipientScanner(
     private fun scan(): Int {
         var messages = 0
 
-        for (account in accountManager.getAccounts()) {
+        for (account in accountManager.findAll()) {
             val sentFolderId = account.sentFolderId ?: continue
 
             // One unreadable account must not stop the others: the cost is that its history is missing from

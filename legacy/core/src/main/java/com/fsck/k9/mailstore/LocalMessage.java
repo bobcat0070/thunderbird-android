@@ -16,6 +16,7 @@ import app.k9mail.legacy.mailstore.ServerCategoriesColumn;
 import app.k9mail.legacy.message.controller.MessageReference;
 import com.fsck.k9.core.BuildConfig;
 import com.fsck.k9.mail.Address;
+import net.thunderbird.core.android.account.LegacyAccount;
 import net.thunderbird.core.common.mail.Flag;
 import net.thunderbird.core.common.exception.MessagingException;
 import com.fsck.k9.mail.MimeType;
@@ -24,7 +25,6 @@ import com.fsck.k9.mail.internet.MimeMessage;
 import com.fsck.k9.mail.message.MessageHeaderParser;
 import com.fsck.k9.mailstore.LockableDatabase.DbCallback;
 import app.k9mail.legacy.message.extractors.PreviewResult.PreviewType;
-import net.thunderbird.core.android.account.LegacyAccountDto;
 import net.thunderbird.feature.account.AccountId;
 import net.thunderbird.legacy.logging.Log;
 import net.thunderbird.core.preference.GeneralSettingsManager;
@@ -34,6 +34,8 @@ import net.thunderbird.feature.mail.message.list.LocalMessageUidPrefixProvider;
 
 
 public class LocalMessage extends MimeMessage {
+    private static final String TAG = "LocalMessage";
+
     private final LocalStore localStore;
 
     private long databaseId;
@@ -94,7 +96,7 @@ public class LocalMessage extends MimeMessage {
 
                 catch (Exception e) {
                     if (!"X_BAD_FLAG".equals(flag)) {
-                        Log.w("Unable to parse flag %s", flag);
+                        Log.w(TAG, "Unable to parse flag %s", flag);
                     }
                 }
             }
@@ -151,7 +153,7 @@ public class LocalMessage extends MimeMessage {
         if (header != null) {
             MessageHeaderParser.parse(new ByteArrayInputStream(header), this::addRawHeader);
         } else {
-            Log.d("No headers available for this message!");
+            Log.d(TAG, "No headers available for this message!");
         }
 
         classification = MessageClassificationKt.messageClassOrUnknown(cursor.getString(LocalStore.MSG_INDEX_CLASSIFICATION));
@@ -420,8 +422,9 @@ public class LocalMessage extends MimeMessage {
         return rootId;
     }
 
-    public LegacyAccountDto getAccount() {
-        return localStore.getAccount();
+    @Override
+    public AccountId getAccountId() {
+        return localStore.getAccountId();
     }
 
     public MessageReference makeMessageReference() {
@@ -501,8 +504,4 @@ public class LocalMessage extends MimeMessage {
         return result;
     }
 
-    @Override
-    public AccountId getAccountId() {
-        return getAccount().getId();
-    }
 }

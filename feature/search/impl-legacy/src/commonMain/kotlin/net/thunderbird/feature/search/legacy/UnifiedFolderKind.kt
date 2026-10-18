@@ -1,5 +1,7 @@
 package net.thunderbird.feature.search.legacy
 
+import net.thunderbird.feature.account.UnifiedAccountId
+import net.thunderbird.feature.mail.folder.FolderType
 import net.thunderbird.feature.search.legacy.SearchConditionTreeNode.Operator
 import net.thunderbird.feature.search.legacy.api.MessageSearchField
 import net.thunderbird.feature.search.legacy.api.SearchAttribute
@@ -10,24 +12,34 @@ import net.thunderbird.feature.search.legacy.api.SearchCondition
  *
  * Ordered as they are listed, which is the order a mail client conventionally presents them in.
  *
- * @param searchId identifies the search, so a list can tell which unified folder it is showing after being
- *   recreated. The inbox keeps [SearchAccount.UNIFIED_FOLDERS], the id it has always had, because notifications,
- *   widgets and saved intents already refer to it.
+ * @param searchId identifies the unified folder in views that need a string, such as the drawer's folder list and
+ *   per-view settings. The inbox keeps "unified_folders", the id it has always had there. A search itself carries
+ *   its unified folder in [LocalMessageSearch.type]; see [fromSearch].
+ * @param folderType the special folder this shows from each account.
  */
-enum class UnifiedFolderKind(val searchId: String) {
-    INBOX(SearchAccount.UNIFIED_FOLDERS),
-    DRAFTS("unified_drafts"),
-    SENT("unified_sent"),
-    ARCHIVE("unified_archive"),
-    SPAM("unified_spam"),
-    TRASH("unified_trash"),
+enum class UnifiedFolderKind(val searchId: String, val folderType: FolderType) {
+    INBOX("unified_folders", FolderType.INBOX),
+    DRAFTS("unified_drafts", FolderType.DRAFTS),
+    SENT("unified_sent", FolderType.SENT),
+    ARCHIVE("unified_archive", FolderType.ARCHIVE),
+    SPAM("unified_spam", FolderType.SPAM),
+    TRASH("unified_trash", FolderType.TRASH),
     ;
 
     companion object {
         /**
-         * @return the unified folder a search shows, or `null` for any other search.
+         * @return the unified folder with this [searchId], or `null` for any other id.
          */
         fun fromSearchId(searchId: String?): UnifiedFolderKind? = entries.firstOrNull { it.searchId == searchId }
+
+        /**
+         * @return the unified folder a search shows, or `null` for any other search.
+         */
+        fun fromSearch(search: LocalMessageSearch): UnifiedFolderKind? {
+            val selection = (search.type as? LocalMessageSearchType.Unified)?.folder as? UnifiedFolderSelection.Special
+                ?: return null
+            return entries.firstOrNull { it.folderType == selection.folderType }
+        }
     }
 }
 
@@ -40,7 +52,8 @@ enum class UnifiedFolderKind(val searchId: String) {
  */
 fun createUnifiedFolderSearch(kind: UnifiedFolderKind): LocalMessageSearch {
     return LocalMessageSearch().apply {
-        id = kind.searchId
+        id = UnifiedAccountId
+        type = LocalMessageSearchType.Unified(UnifiedFolderSelection.Special(kind.folderType))
         if (kind == UnifiedFolderKind.INBOX) {
             and(MessageSearchField.INTEGRATE, "1", SearchAttribute.EQUALS)
         } else {

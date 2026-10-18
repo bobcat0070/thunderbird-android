@@ -6,7 +6,6 @@ import kotlinx.coroutines.flow.map
 import net.thunderbird.feature.navigation.drawer.dropdown.domain.DomainContract
 import net.thunderbird.feature.navigation.drawer.dropdown.domain.entity.UnifiedDisplayFolder
 import net.thunderbird.feature.navigation.drawer.dropdown.domain.entity.UnifiedDisplayFolderType
-import net.thunderbird.feature.search.legacy.LocalMessageSearch
 import net.thunderbird.feature.search.legacy.createUnifiedFolderSearch
 
 internal class UnifiedFolderRepository(
@@ -14,23 +13,13 @@ internal class UnifiedFolderRepository(
 ) : DomainContract.UnifiedFolderRepository {
 
     override fun getUnifiedDisplayFolderFlow(unifiedFolderType: UnifiedDisplayFolderType): Flow<UnifiedDisplayFolder> {
-        return messageCountsProvider.getMessageCountsFlow(createUnifiedFolderSearch(unifiedFolderType)).map {
+        return messageCountsProvider.getMessageCountsFlow(createUnifiedFolderSearch(unifiedFolderType.kind)).map {
             UnifiedDisplayFolder(
-                id = unifiedFolderType.id,
+                folderId = unifiedFolderType.id,
                 unifiedType = unifiedFolderType,
                 unreadMessageCount = it.unread,
                 starredMessageCount = it.starred,
             )
         }
-    }
-
-    private fun createUnifiedFolderSearch(unifiedFolderType: UnifiedDisplayFolderType): LocalMessageSearch {
-        return createUnifiedFolderSearch(unifiedFolderType.kind).apply {
-            id = unifiedFolderType.id
-        }
-    }
-
-    companion object {
-        const val UNIFIED_INBOX_ID = "unified_inbox"
     }
 }

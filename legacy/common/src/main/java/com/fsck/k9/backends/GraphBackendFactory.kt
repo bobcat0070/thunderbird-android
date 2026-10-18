@@ -11,7 +11,7 @@ import net.thunderbird.backend.graph.GraphPushSupport
 import net.thunderbird.backend.graph.createGraphBackend
 import com.fsck.k9.mailstore.recipients.RecipientIndex
 import net.thunderbird.core.android.account.LegacyAccountManager
-import net.thunderbird.core.logging.Logger
+import net.thunderbird.components.core.logging.Logger
 import net.thunderbird.feature.account.AccountId
 import okhttp3.OkHttpClient
 
@@ -53,7 +53,7 @@ class DefaultGraphBackendFactory(
     }
 
     override fun createBackend(accountId: AccountId): Backend {
-        val account = accountManager.getById(accountId) ?: error("Account not found: $accountId")
+        val account = accountManager.findById(accountId) ?: error("Account not found: $accountId")
         val backendStorage = backendStorageFactory.createBackendStorage(accountId)
         val authStateStorage = AccountAuthStateStorage(accountManager, accountId)
         val tokenProvider = RealOAuth2TokenProvider(context, authStateStorage)

@@ -2,7 +2,7 @@ package com.fsck.k9.contacts
 
 import android.graphics.Bitmap
 import java.security.MessageDigest
-import net.thunderbird.core.logging.Logger
+import net.thunderbird.components.core.logging.Logger
 import net.thunderbird.core.preference.GeneralSettingsManager
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.OkHttpClient

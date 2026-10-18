@@ -7,8 +7,9 @@ import com.fsck.k9.mailstore.authenticationResultsHeaderName
 import kotlin.coroutines.cancellation.CancellationException
 import kotlin.time.Clock
 import kotlin.time.Instant
-import net.thunderbird.core.android.account.LegacyAccountDto
-import net.thunderbird.core.logging.Logger
+import net.thunderbird.components.core.logging.Logger
+import net.thunderbird.core.android.account.LegacyAccountManager
+import net.thunderbird.feature.account.AccountId
 import net.thunderbird.feature.spamdigest.SpamArrivalListener
 
 private const val LOG_TAG = "SpamAlert"
@@ -19,6 +20,7 @@ private const val LOG_TAG = "SpamAlert"
  * Runs on the sync thread, once per new unread message, so it only looks the message up in what is already stored.
  */
 internal class SpamArrivalMessagingListener(
+    private val accountManager: LegacyAccountManager,
     private val messageStoreManager: MessageStoreManager,
     private val spamSenderAssessor: SpamSenderAssessor,
     private val spamArrivalListener: SpamArrivalListener,
@@ -26,9 +28,9 @@ internal class SpamArrivalMessagingListener(
     private val logger: Logger,
 ) : SimpleMessagingListener() {
 
-    override fun synchronizeMailboxNewMessage(account: LegacyAccountDto, folderServerId: String, message: Message) {
-        val spamFolderId = account.spamFolderId ?: return
-        val messageStore = messageStoreManager.getMessageStore(account)
+    override fun synchronizeMailboxNewMessage(accountId: AccountId, folderServerId: String, message: Message) {
+        val spamFolderId = accountManager.findById(accountId)?.spamFolderId ?: return
+        val messageStore = messageStoreManager.getMessageStore(accountId)
         if (messageStore.getFolderId(folderServerId) != spamFolderId) return
 
         try {
@@ -41,14 +43,14 @@ internal class SpamArrivalMessagingListener(
                 ?: clock.now()
 
             val spamMessage = spamSenderAssessor.assess(
-                accountId = account.id.toString(),
+                accountId = accountId.toString(),
                 sender = message.from?.firstOrNull(),
                 subject = message.subject,
                 receivedAt = receivedAt,
                 authenticationResults = authenticationResults,
             )
 
-            spamArrivalListener.onSpamArrived(account.id.toString(), spamFolderId, message.uid, spamMessage)
+            spamArrivalListener.onSpamArrived(accountId.toString(), spamFolderId, message.uid, spamMessage)
         } catch (e: CancellationException) {
             throw e
         } catch (@Suppress("TooGenericExceptionCaught") e: Exception) {

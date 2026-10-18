@@ -4,7 +4,8 @@ import assertk.assertThat
 import assertk.assertions.isEqualTo
 import assertk.assertions.isNull
 import com.fsck.k9.K9RobolectricTest
-import com.fsck.k9.Preferences
+import com.fsck.k9.FakeLegacyAccount
+import net.thunderbird.core.preference.storage.StorageProvider
 import kotlinx.coroutines.test.runTest
 import net.thunderbird.components.core.outcome.Outcome
 import net.thunderbird.feature.mail.folder.FolderType
@@ -16,12 +17,12 @@ import org.junit.Test
 import org.koin.core.component.inject
 
 class CategoryGroupingStoreTest : K9RobolectricTest() {
-    private val preferences: Preferences by inject()
-    private val testSubject by lazy { PreferencesCategoryGroupingStore(preferences) }
+    private val storageProvider: StorageProvider by inject()
+    private val testSubject by lazy { PreferencesCategoryGroupingStore(storageProvider) }
 
     @Before
     fun before() {
-        preferences.createStorageEditor().remove(VIEW_CATEGORY_GROUPING_KEY).commit()
+        storageProvider.createStorageEditor().remove(VIEW_CATEGORY_GROUPING_KEY).commit()
     }
 
     @Test
@@ -30,7 +31,7 @@ class CategoryGroupingStoreTest : K9RobolectricTest() {
 
         assertThat(testSubject.getFolderGrouping("account", "Sent Items")).isEqualTo(CategoryGrouping.GROUPED)
         // The same key an import writes a folder setting to, so an imported choice is read without further work.
-        assertThat(preferences.storage.getStringOrNull("account.Sent Items.$FOLDER_CATEGORY_GROUPING_KEY"))
+        assertThat(storageProvider.storage.getStringOrNull("account.Sent Items.$FOLDER_CATEGORY_GROUPING_KEY"))
             .isEqualTo("GROUPED")
     }
 
@@ -40,7 +41,7 @@ class CategoryGroupingStoreTest : K9RobolectricTest() {
 
         testSubject.setFolderGrouping("account", "INBOX", CategoryGrouping.DEFAULT)
 
-        assertThat(preferences.storage.getStringOrNull("account.INBOX.$FOLDER_CATEGORY_GROUPING_KEY")).isNull()
+        assertThat(storageProvider.storage.getStringOrNull("account.INBOX.$FOLDER_CATEGORY_GROUPING_KEY")).isNull()
     }
 
     @Test
@@ -54,7 +55,7 @@ class CategoryGroupingStoreTest : K9RobolectricTest() {
 
     @Test
     fun `an entry that cannot be read should not cost the other views their choice`() {
-        preferences.createStorageEditor()
+        storageProvider.createStorageEditor()
             .putString(VIEW_CATEGORY_GROUPING_KEY, "unified_sent=GROUPED,garbage,new_messages=SIDEWAYS")
             .commit()
 
@@ -64,7 +65,7 @@ class CategoryGroupingStoreTest : K9RobolectricTest() {
 
     @Test
     fun `a folder's choice should be exported with its settings`() = runTest {
-        val account = preferences.newAccount()
+        val account = FakeLegacyAccount.ACCOUNT
         testSubject.setFolderGrouping(account.id.toString(), "Sent", CategoryGrouping.GROUPED)
         val provider = FolderSettingsProvider(
             remoteFolderDetailsRepository = FakeRemoteFolderDetailsRepository(folder(1L, "Sent"), folder(2L, "Work")),

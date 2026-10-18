@@ -1,9 +1,9 @@
 package net.thunderbird.feature.account.settings.impl.domain.usecase
 
-import kotlinx.coroutines.flow.firstOrNull
 import net.thunderbird.components.core.outcome.Outcome
 import net.thunderbird.core.android.account.DeletePolicy
 import net.thunderbird.core.android.account.Expunge
+import net.thunderbird.core.android.account.LegacyAccount
 import net.thunderbird.core.android.account.LegacyAccountRepository
 import net.thunderbird.feature.account.AccountId
 import net.thunderbird.feature.account.settings.impl.domain.AccountSettingsDomainContract
@@ -14,27 +14,26 @@ internal class UpdateFetchingMailSettings(
     private val repository: LegacyAccountRepository,
 ) : UseCase.UpdateFetchingMailSettings {
 
-    @Suppress("LongMethod", "CyclomaticComplexMethod")
     override suspend fun invoke(
         accountId: AccountId,
         command: Command,
     ): Outcome<Unit, AccountSettingsDomainContract.AccountSettingError> {
-        val account = repository.observeById(accountId)
-            .firstOrNull()
+        repository.update(accountId) { account -> account.updatedWith(command) }
             ?: return Outcome.failure(
                 AccountSettingsDomainContract.AccountSettingError.NotFound(
                     "Account not found",
                 ),
             )
 
-        val updatedAccount = when (command) {
+        return Outcome.success(Unit)
+    }
+
+    @Suppress("LongMethod", "CyclomaticComplexMethod")
+    private fun LegacyAccount.updatedWith(command: Command): LegacyAccount {
+        val account = this
+        return when (command) {
             is Command.UpdateLocalFolderSize -> {
-                account.copy(
-                    displayCount = command.value,
-                    // Each folder keeps its own limit, set from this one. Without the marker, saving changes the
-                    // setting but no folder fetches more or fewer messages.
-                    isChangedVisibleLimits = command.value != account.displayCount,
-                )
+                account.copy(displayCount = command.value)
             }
 
             is Command.UpdateSyncMessageFrom -> {
@@ -87,9 +86,5 @@ internal class UpdateFetchingMailSettings(
                 account.copy(idleRefreshMinutes = command.value)
             }
         }
-
-        repository.update(updatedAccount)
-
-        return Outcome.success(Unit)
     }
 }

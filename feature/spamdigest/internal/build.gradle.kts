@@ -15,7 +15,6 @@ kotlin {
         }
         commonTest.dependencies {
             implementation(projects.core.testing)
-            implementation(projects.core.logging.testing)
         }
         androidMain.dependencies {
             implementation(libs.androidx.work.runtime)

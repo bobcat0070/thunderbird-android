@@ -1,6 +1,7 @@
 package net.thunderbird.feature.navigation.drawer.dropdown
 
 import androidx.appcompat.app.AppCompatActivity
+import androidx.compose.runtime.Stable
 import androidx.compose.ui.platform.ComposeView
 import androidx.core.view.GravityCompat
 import androidx.core.view.ViewCompat
@@ -9,9 +10,10 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.update
 import net.thunderbird.core.ui.theme.api.FeatureThemeProvider
+import net.thunderbird.feature.account.AccountId
+import net.thunderbird.feature.account.UnifiedAccountId
 import net.thunderbird.feature.navigation.drawer.api.NavigationDrawer
 import net.thunderbird.feature.navigation.drawer.api.R
-import net.thunderbird.feature.navigation.drawer.dropdown.domain.entity.UnifiedDisplayAccount
 import net.thunderbird.feature.navigation.drawer.dropdown.domain.entity.UnifiedDisplayFolderType
 import net.thunderbird.feature.navigation.drawer.dropdown.domain.entity.createMailDisplayAccountFolderId
 import net.thunderbird.feature.navigation.drawer.dropdown.ui.DrawerView
@@ -19,16 +21,17 @@ import net.thunderbird.feature.search.legacy.UnifiedFolderKind
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
 
+@Stable
 internal data class FolderDrawerState(
-    val selectedAccountUuid: String? = null,
+    val selectedAccountId: AccountId? = null,
     val selectedFolderId: String? = null,
 )
 
 @Suppress("LongParameterList")
 class DropDownDrawer(
     override val parent: AppCompatActivity,
-    private val openAccount: (accountId: String) -> Unit,
-    private val openFolder: (accountId: String, folderId: Long) -> Unit,
+    private val openAccount: (accountId: AccountId) -> Unit,
+    private val openFolder: (accountId: AccountId, folderId: Long) -> Unit,
     private val openUnifiedFolder: (UnifiedFolderKind) -> Unit,
     private val openSettings: () -> Unit,
     private val openAddAccount: () -> Unit,
@@ -70,17 +73,17 @@ class DropDownDrawer(
     override val isOpen: Boolean
         get() = drawer.isDrawerOpen(GravityCompat.START)
 
-    override fun selectAccount(accountUuid: String) {
+    override fun selectAccount(accountId: AccountId) {
         drawerState.update {
-            it.copy(selectedAccountUuid = accountUuid)
+            it.copy(selectedAccountId = accountId)
         }
     }
 
-    override fun selectFolder(accountUuid: String, folderId: Long) {
+    override fun selectFolder(accountId: AccountId, folderId: Long) {
         drawerState.update {
             it.copy(
-                selectedAccountUuid = accountUuid,
-                selectedFolderId = createMailDisplayAccountFolderId(accountUuid, folderId),
+                selectedAccountId = accountId,
+                selectedFolderId = createMailDisplayAccountFolderId(accountId, folderId),
             )
         }
     }
@@ -88,7 +91,7 @@ class DropDownDrawer(
     override fun selectUnifiedInbox() {
         drawerState.update {
             it.copy(
-                selectedAccountUuid = UnifiedDisplayAccount.UNIFIED_ACCOUNT_ID,
+                selectedAccountId = UnifiedAccountId,
                 selectedFolderId = UnifiedDisplayFolderType.INBOX.id,
             )
         }
@@ -99,7 +102,7 @@ class DropDownDrawer(
 
         drawerState.update {
             it.copy(
-                selectedAccountUuid = UnifiedDisplayAccount.UNIFIED_ACCOUNT_ID,
+                selectedAccountId = UnifiedAccountId,
                 selectedFolderId = UnifiedDisplayFolderType.fromKind(kind).id,
             )
         }

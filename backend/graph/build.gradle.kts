@@ -16,7 +16,6 @@ dependencies {
     implementation(libs.okio)
     implementation(libs.kotlinx.serialization.json)
 
-    testImplementation(projects.core.logging.testing)
     testImplementation(projects.mail.testing)
     testImplementation(projects.backend.testing)
 

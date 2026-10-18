@@ -1,6 +1,6 @@
 package com.fsck.k9.preferences
 
-import com.fsck.k9.Preferences
+import net.thunderbird.core.preference.storage.StorageProvider
 
 /**
  * Whether a list's messages are shown grouped by category, as chosen for that list.
@@ -47,17 +47,17 @@ private const val ENTRY_SEPARATOR = ","
 private const val VALUE_SEPARATOR = "="
 
 internal class PreferencesCategoryGroupingStore(
-    private val preferences: Preferences,
+    private val storageProvider: StorageProvider,
 ) : CategoryGroupingStore {
 
     override fun getFolderGrouping(accountUuid: String, folderServerId: String): CategoryGrouping {
-        return preferences.storage.getStringOrNull(folderKey(accountUuid, folderServerId)).toCategoryGrouping()
+        return storageProvider.storage.getStringOrNull(folderKey(accountUuid, folderServerId)).toCategoryGrouping()
     }
 
     override fun setFolderGrouping(accountUuid: String, folderServerId: String, grouping: CategoryGrouping) {
         val key = folderKey(accountUuid, folderServerId)
 
-        preferences.createStorageEditor().apply {
+        storageProvider.createStorageEditor().apply {
             if (grouping == CategoryGrouping.DEFAULT) remove(key) else putString(key, grouping.name)
         }.commit()
     }
@@ -74,14 +74,14 @@ internal class PreferencesCategoryGroupingStore(
             "$id$VALUE_SEPARATOR${choice.name}"
         }
 
-        preferences.createStorageEditor().putString(VIEW_CATEGORY_GROUPING_KEY, value).commit()
+        storageProvider.createStorageEditor().putString(VIEW_CATEGORY_GROUPING_KEY, value).commit()
     }
 
     /**
      * An entry that cannot be read - from a newer version, say - is skipped rather than failing every view over it.
      */
     private fun readViewGroupings(): Map<String, CategoryGrouping> {
-        return preferences.storage.getStringOrNull(VIEW_CATEGORY_GROUPING_KEY)
+        return storageProvider.storage.getStringOrNull(VIEW_CATEGORY_GROUPING_KEY)
             .orEmpty()
             .split(ENTRY_SEPARATOR)
             .mapNotNull { entry ->

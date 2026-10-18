@@ -10,20 +10,19 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import net.thunderbird.core.logging.Logger
+import net.thunderbird.components.core.logging.Logger
 import net.thunderbird.core.preference.PreferenceChangeBroker
 import net.thunderbird.core.preference.PreferenceChangeSubscriber
 import net.thunderbird.core.preference.PreferenceScope
 import net.thunderbird.core.preference.storage.Storage
 import net.thunderbird.core.preference.storage.StorageEditor
-import net.thunderbird.core.preference.storage.StoragePersister
+import net.thunderbird.core.preference.storage.StorageProvider
 
 private const val TAG = "DefaultGravatarSettingsPreferenceManager"
 
 class DefaultGravatarSettingsPreferenceManager(
     private val logger: Logger,
-    private val storagePersister: StoragePersister,
-    private val storageEditor: StorageEditor,
+    private val storageProvider: StorageProvider,
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
     private var scope: CoroutineScope = CoroutineScope(SupervisorJob()),
     preferenceChangeBroker: PreferenceChangeBroker,
@@ -36,7 +35,7 @@ class DefaultGravatarSettingsPreferenceManager(
     private val configState: MutableStateFlow<GravatarSettings> = MutableStateFlow(value = loadConfig())
     private val mutex = Mutex()
     private val storage: Storage
-        get() = storagePersister.loadValues()
+        get() = storageProvider.loadLatestStorage()
 
     override fun getConfig(): GravatarSettings = configState.value
     override fun getConfigFlow(): Flow<GravatarSettings> = configState
@@ -62,6 +61,7 @@ class DefaultGravatarSettingsPreferenceManager(
     private fun writeConfig(config: GravatarSettings) {
         scope.launch(ioDispatcher) {
             mutex.withLock {
+                val storageEditor = storageProvider.createStorageEditor()
                 storageEditor.putBoolean(GravatarSettingKey.Enabled.value, config.isEnabled)
                 storageEditor.putString(GravatarSettingKey.ApiKey.value, config.apiKey)
                 storageEditor.commit().also { commited ->

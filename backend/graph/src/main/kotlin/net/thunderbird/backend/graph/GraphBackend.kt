@@ -29,8 +29,8 @@ import net.thunderbird.backend.graph.command.GraphContactSync
 import net.thunderbird.backend.graph.command.GraphContactUpdate
 import net.thunderbird.backend.graph.command.GraphSync
 import net.thunderbird.backend.graph.command.ID_FORMAT_IMMUTABLE
+import net.thunderbird.components.core.logging.Logger
 import net.thunderbird.core.common.mail.Flag
-import net.thunderbird.core.logging.Logger
 import net.thunderbird.feature.mail.folder.api.FolderPathDelimiter
 
 /**

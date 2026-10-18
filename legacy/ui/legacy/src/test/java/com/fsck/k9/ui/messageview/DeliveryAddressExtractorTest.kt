@@ -7,7 +7,7 @@ import com.fsck.k9.mail.Address
 import com.fsck.k9.mail.Message
 import com.fsck.k9.mail.internet.MimeMessage
 import net.thunderbird.core.android.account.Identity
-import net.thunderbird.core.android.account.LegacyAccountDto
+import net.thunderbird.core.android.account.LegacyAccount
 import org.junit.Test
 import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.mock
@@ -111,7 +111,7 @@ class DeliveryAddressExtractorTest {
     /**
      * One identity, at one domain, which is the shape almost every account has.
      */
-    private fun account(): LegacyAccountDto {
+    private fun account(): LegacyAccount {
         val identity = Identity(email = "felix@mine.example")
 
         return mock {

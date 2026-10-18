@@ -2,7 +2,7 @@ package com.fsck.k9.ui.messageview
 
 import com.fsck.k9.mail.Address
 import com.fsck.k9.mail.Message
-import net.thunderbird.core.android.account.LegacyAccountDto
+import net.thunderbird.core.android.account.LegacyAccount
 
 /**
  * Set by a delivering server to record the address it delivered to, which is the whole answer when there is one.
@@ -26,7 +26,7 @@ internal object DeliveryAddressExtractor {
      * @return the address the message was delivered to, or `null` when it cannot be told or is simply the
      *   reader's usual address, which is not worth saying.
      */
-    fun extractDeliveryAddress(message: Message, account: LegacyAccountDto): String? {
+    fun extractDeliveryAddress(message: Message, account: LegacyAccount): String? {
         val delivered = deliveredHeaderAddress(message) ?: recipientBelongingToReader(message, account)
 
         return delivered?.takeUnless { account.isAnIdentity(Address(it)) }
@@ -50,7 +50,7 @@ internal object DeliveryAddressExtractor {
      * which is what a plus-addressed variant is. Recipients at other domains are left alone: without a header
      * saying so there is no way to tell the reader's own alias from a stranger who was written to as well.
      */
-    private fun recipientBelongingToReader(message: Message, account: LegacyAccountDto): String? {
+    private fun recipientBelongingToReader(message: Message, account: LegacyAccount): String? {
         val identityDomains = account.identities
             .mapNotNull { identity -> identity.email?.domainOrNull() }
             .toSet()

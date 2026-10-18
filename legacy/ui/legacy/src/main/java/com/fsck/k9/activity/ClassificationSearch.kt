@@ -20,7 +20,8 @@ internal fun LocalMessageSearch.narrowedToClassification(messageClass: MessageCl
 
     return LocalMessageSearch().apply {
         id = source.id
-        source.accountUuids.forEach { accountUuid -> addAccountUuid(accountUuid) }
+        type = source.type
+        source.accountIds.forEach { accountId -> addAccountId(accountId) }
         and(source.conditions)
         and(MessageSearchField.CLASSIFICATION, messageClass.name, SearchAttribute.EQUALS)
     }

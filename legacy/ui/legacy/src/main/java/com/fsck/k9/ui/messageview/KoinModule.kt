@@ -5,6 +5,7 @@ import org.koin.dsl.module
 
 val messageViewUiModule = module {
     single { RemoteImageSenderStore(context = androidContext()) }
+    single { LastSelectedFolderStore() }
 
     factory {
         createMessageViewRecipientFormatter(

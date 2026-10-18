@@ -16,7 +16,9 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import net.thunderbird.backend.graph.GraphPushScheduler
-import net.thunderbird.core.logging.Logger
+import net.thunderbird.components.core.logging.Logger
+
+private const val TAG = "GraphPushAlarmScheduler"
 
 private const val ALARM_ACTION = "com.fsck.k9.backends.GRAPH_PUSH_ALARM"
 private const val ALARM_SCHEME = "graphpush"
@@ -91,6 +93,6 @@ class GraphPushAlarmScheduler(
         cancel()
 
         runCatching { context.unregisterReceiver(receiver) }
-            .onFailure { logger.debug(throwable = it) { "Graph push receiver was already unregistered" } }
+            .onFailure { logger.debug(TAG, throwable = it) { "Graph push receiver was already unregistered" } }
     }
 }

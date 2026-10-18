@@ -12,7 +12,7 @@ import com.fsck.k9.mail.power.WakeLock
 import kotlin.test.AfterTest
 import kotlin.test.Test
 import net.thunderbird.backend.graph.api.GraphApiClient
-import net.thunderbird.core.logging.testing.TestLogger
+import net.thunderbird.components.core.logging.testing.TestLogger
 import okhttp3.OkHttpClient
 import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer

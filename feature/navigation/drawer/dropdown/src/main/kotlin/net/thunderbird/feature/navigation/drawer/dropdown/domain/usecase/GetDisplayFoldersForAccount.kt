@@ -8,8 +8,11 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
-import net.thunderbird.core.android.account.LegacyAccountDto
-import net.thunderbird.core.android.account.LegacyAccountDtoManager
+import net.thunderbird.core.android.account.LegacyAccount
+import net.thunderbird.core.android.account.LegacyAccountManager
+import net.thunderbird.feature.account.AccountId
+import net.thunderbird.feature.account.AccountIdFactory
+import net.thunderbird.feature.account.UnifiedAccountId
 import net.thunderbird.feature.navigation.drawer.api.NavigationDrawerExternalContract.PinnedFolder
 import net.thunderbird.feature.navigation.drawer.api.NavigationDrawerExternalContract.PinnedFolderRepository
 import net.thunderbird.feature.navigation.drawer.dropdown.domain.DomainContract.UnifiedFolderRepository
@@ -17,7 +20,6 @@ import net.thunderbird.feature.navigation.drawer.dropdown.domain.DomainContract.
 import net.thunderbird.feature.navigation.drawer.dropdown.domain.entity.DisplayFolder
 import net.thunderbird.feature.navigation.drawer.dropdown.domain.entity.MailDisplayFolder
 import net.thunderbird.feature.navigation.drawer.dropdown.domain.entity.PinnedDisplayFolder
-import net.thunderbird.feature.navigation.drawer.dropdown.domain.entity.UnifiedDisplayAccount
 import net.thunderbird.feature.navigation.drawer.dropdown.domain.entity.UnifiedDisplayFolder
 import net.thunderbird.feature.navigation.drawer.dropdown.domain.entity.UnifiedDisplayFolderType
 import app.k9mail.legacy.ui.folder.DisplayFolder as LegacyDisplayFolder
@@ -26,10 +28,10 @@ internal class GetDisplayFoldersForAccount(
     private val displayFolderRepository: DisplayFolderRepository,
     private val unifiedFolderRepository: UnifiedFolderRepository,
     private val pinnedFolderRepository: PinnedFolderRepository,
-    private val accountManager: LegacyAccountDtoManager,
+    private val accountManager: LegacyAccountManager,
 ) : UseCase.GetDisplayFoldersForAccount {
-    override fun invoke(accountId: String): Flow<List<DisplayFolder>> {
-        if (accountId == UnifiedDisplayAccount.UNIFIED_ACCOUNT_ID) {
+    override fun invoke(accountId: AccountId): Flow<List<DisplayFolder>> {
+        if (accountId == UnifiedAccountId) {
             return combine(getUnifiedFoldersFlow(), getPinnedFoldersFlow()) { unifiedFolders, pinnedFolders ->
                 unifiedFolders + pinnedFolders
             }.distinctUntilChanged()
@@ -63,7 +65,7 @@ internal class GetDisplayFoldersForAccount(
      */
     @OptIn(ExperimentalCoroutinesApi::class)
     private fun getPinnedFoldersFlow(): Flow<List<PinnedDisplayFolder>> {
-        return combine(pinnedFolderRepository.getPinnedFoldersFlow(), accountManager.getAccountsFlow()) {
+        return combine(pinnedFolderRepository.getPinnedFoldersFlow(), accountManager.observeAll()) {
                 pins,
                 accounts,
             ->
@@ -74,7 +76,8 @@ internal class GetDisplayFoldersForAccount(
             if (livePins.isEmpty()) return@flatMapLatest flowOf(emptyList())
 
             val folderFlows = livePins.map { it.accountUuid }.distinct().map { accountUuid ->
-                displayFolderRepository.getDisplayFoldersFlow(accountUuid).map { folders -> accountUuid to folders }
+                displayFolderRepository.getDisplayFoldersFlow(AccountIdFactory.of(accountUuid))
+                    .map { folders -> accountUuid to folders }
             }
 
             combine(folderFlows) { foldersByAccount ->
@@ -85,7 +88,7 @@ internal class GetDisplayFoldersForAccount(
 
     private fun toPinnedDisplayFolders(
         pins: List<PinnedFolder>,
-        accountsById: Map<String, LegacyAccountDto>,
+        accountsById: Map<String, LegacyAccount>,
         foldersByAccount: Map<String, List<LegacyDisplayFolder>>,
     ): List<PinnedDisplayFolder> {
         // With one account there is nothing to tell apart, and repeating its name on every pin is noise.
@@ -96,8 +99,8 @@ internal class GetDisplayFoldersForAccount(
                 ?: return@mapNotNull null
 
             PinnedDisplayFolder(
-                accountId = pin.accountUuid,
-                accountName = accountsById[pin.accountUuid]?.displayName?.takeIf { showAccountName },
+                accountId = AccountIdFactory.of(pin.accountUuid),
+                accountName = accountsById[pin.accountUuid]?.let { it.name ?: it.email }?.takeIf { showAccountName },
                 folder = displayFolder.folder,
                 unreadMessageCount = displayFolder.unreadMessageCount,
                 starredMessageCount = displayFolder.starredMessageCount,

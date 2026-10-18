@@ -9,7 +9,6 @@ import com.fsck.k9.preferences.CategoryGrouping
 import com.fsck.k9.preferences.CategoryGroupingStore
 import kotlin.test.Test
 import net.thunderbird.feature.mail.folder.FolderType
-import net.thunderbird.feature.search.legacy.SearchAccount
 import net.thunderbird.feature.search.legacy.UnifiedFolderKind
 
 class CategoryGroupingPreferenceTest {
@@ -60,17 +59,17 @@ class CategoryGroupingPreferenceTest {
     @Test
     fun `unified sent should start ungrouped and unified inbox follow the app-wide setting`() {
         assertThat(testSubject.isGrouped(CategoryGroupingScope.View(UnifiedFolderKind.SENT.searchId))).isFalse()
-        assertThat(testSubject.isGrouped(CategoryGroupingScope.View(SearchAccount.UNIFIED_FOLDERS))).isTrue()
+        assertThat(testSubject.isGrouped(CategoryGroupingScope.View(UnifiedFolderKind.INBOX.searchId))).isTrue()
     }
 
     @Test
     fun `a view's own choice should be kept for that view`() {
-        val view = CategoryGroupingScope.View(SearchAccount.UNIFIED_FOLDERS)
+        val view = CategoryGroupingScope.View(UnifiedFolderKind.INBOX.searchId)
 
         testSubject.setGrouped(view, isGrouped = false)
 
         assertThat(testSubject.isGrouped(view)).isFalse()
-        assertThat(store.viewGroupings[SearchAccount.UNIFIED_FOLDERS]).isEqualTo(CategoryGrouping.UNGROUPED)
+        assertThat(store.viewGroupings[UnifiedFolderKind.INBOX.searchId]).isEqualTo(CategoryGrouping.UNGROUPED)
     }
 
     @Test

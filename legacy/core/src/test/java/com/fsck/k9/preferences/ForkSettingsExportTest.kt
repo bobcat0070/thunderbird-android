@@ -7,12 +7,12 @@ import assertk.assertions.isEmpty
 import assertk.assertions.isEqualTo
 import assertk.assertions.isNull
 import com.fsck.k9.K9RobolectricTest
-import com.fsck.k9.Preferences
+import net.thunderbird.core.android.account.LegacyAccountManager
+import net.thunderbird.core.preference.storage.StorageProvider
 import java.io.ByteArrayOutputStream
 import kotlinx.coroutines.test.runTest
 import org.jdom2.Document
 import org.jdom2.input.SAXBuilder
-import org.junit.Before
 import org.junit.Test
 import org.koin.core.component.inject
 import org.mockito.kotlin.mock
@@ -22,14 +22,16 @@ import org.robolectric.RuntimeEnvironment
  * The settings this fork added have to survive being exported and imported onto another device.
  */
 class ForkSettingsExportTest : K9RobolectricTest() {
-    private val preferences: Preferences by inject()
+    private val storageProvider: StorageProvider by inject()
+    private val accountManager: LegacyAccountManager by inject()
     private val folderSettingsProvider: FolderSettingsProvider by inject()
     private val externalSettings = FakeExternalGlobalSettings()
 
     private val testSubject by lazy {
         SettingsExporter(
             RuntimeEnvironment.getApplication().contentResolver,
-            preferences,
+            accountManager,
+            storageProvider,
             folderSettingsProvider,
             folderQueryRepository = get(),
             notificationSettingsUpdater = mock(),
@@ -47,18 +49,13 @@ class ForkSettingsExportTest : K9RobolectricTest() {
             accountSettingsWriter = get(),
             accountSettingsUpgrader = get(),
             generalSettingsWriter = GeneralSettingsWriter(
-                preferences = preferences,
+                storageProvider = storageProvider,
                 generalSettingsManager = get(),
                 changePublisher = get(),
                 externalGlobalSettings = listOf(externalSettings),
             ),
             unifiedInboxConfigurator = mock(),
         )
-    }
-
-    @Before
-    fun before() {
-        preferences.clearAccounts()
     }
 
     @Test
@@ -101,7 +98,7 @@ class ForkSettingsExportTest : K9RobolectricTest() {
         importer.importSettings(exported.inputStream(), globalSettings = true, accountUuids = emptyList())
 
         for ((key, value) in NON_DEFAULT_VALUES) {
-            assertThat(preferences.storage.getStringOrNull(key), key).isEqualTo(value)
+            assertThat(storageProvider.storage.getStringOrNull(key), key).isEqualTo(value)
         }
     }
 
@@ -115,7 +112,8 @@ class ForkSettingsExportTest : K9RobolectricTest() {
 
         assertThat(externalSettings.imported)
             .containsOnly(ExternalSettingKeys.LEARNED_CLASSIFICATION_RULES_KEY to "[\"rule\"]")
-        assertThat(preferences.storage.getStringOrNull(ExternalSettingKeys.LEARNED_CLASSIFICATION_RULES_KEY)).isNull()
+        assertThat(storageProvider.storage.getStringOrNull(ExternalSettingKeys.LEARNED_CLASSIFICATION_RULES_KEY))
+            .isNull()
     }
 
     @Test
@@ -126,7 +124,7 @@ class ForkSettingsExportTest : K9RobolectricTest() {
 
         importer.importSettings(OLD_FILE.inputStream(), globalSettings = true, accountUuids = emptyList())
 
-        assertThat(preferences.storage.getStringOrNull("bimiEnabled")).isEqualTo("false")
+        assertThat(storageProvider.storage.getStringOrNull("bimiEnabled")).isEqualTo("false")
     }
 
     @Test
@@ -138,13 +136,13 @@ class ForkSettingsExportTest : K9RobolectricTest() {
     }
 
     private fun writeStorage(values: Map<String, String>) {
-        val editor = preferences.createStorageEditor()
+        val editor = storageProvider.createStorageEditor()
         values.forEach { (key, value) -> editor.putString(key, value) }
         editor.commit()
     }
 
     private fun resetStorage(keys: Set<String>) {
-        val editor = preferences.createStorageEditor()
+        val editor = storageProvider.createStorageEditor()
         keys.forEach { editor.remove(it) }
         editor.commit()
     }

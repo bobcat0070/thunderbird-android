@@ -5,7 +5,7 @@ import com.fsck.k9.mail.oauth.OAuth2TokenProvider
 import net.thunderbird.backend.graph.api.GRAPH_BASE_URL
 import net.thunderbird.backend.graph.api.GraphApiClient
 import net.thunderbird.backend.graph.command.GraphContactStore
-import net.thunderbird.core.logging.Logger
+import net.thunderbird.components.core.logging.Logger
 import okhttp3.OkHttpClient
 
 /**

@@ -23,6 +23,8 @@ import net.thunderbird.feature.search.legacy.api.MessageSearchField
 import net.thunderbird.feature.search.legacy.sql.SqlWhereClause
 import net.thunderbird.legacy.logging.Log
 
+private const val TAG = "MessageListLoader"
+
 @Suppress("LongParameterList")
 class MessageListLoader(
     private val accountManager: LegacyAccountManager,
@@ -44,7 +46,7 @@ class MessageListLoader(
         return try {
             getMessageListInfo(config, limit)
         } catch (e: Exception) {
-            Log.e(e, "Error while fetching message list")
+            Log.e(TAG, e, "Error while fetching message list")
 
             // TODO: Return an error object instead of an empty list
             MessageListInfo(messageListItems = emptyList(), hasMoreMessages = false)
@@ -223,8 +225,8 @@ class MessageListLoader(
     @Suppress("TooGenericExceptionCaught", "SwallowedException")
     private fun isGoneFromItsFolder(message: MessageReference): Boolean {
         return try {
-            val account = accountManager.getById(message.accountId) ?: return true
-            val localMessage = localStoreProvider.getInstanceByLegacyAccount(account)
+            accountManager.findById(message.accountId) ?: return true
+            val localMessage = localStoreProvider.getInstance(message.accountId)
                 .getFolder(message.folderId)
                 .getMessage(message.uid)
 
@@ -238,7 +240,7 @@ class MessageListLoader(
     @Suppress("TooGenericExceptionCaught", "SwallowedException")
     private fun loadFolder(account: LegacyAccount, folderId: Long): ListFolder? {
         return try {
-            val localFolder = localStoreProvider.getInstanceByLegacyAccount(account).getFolder(folderId)
+            val localFolder = localStoreProvider.getInstance(account.id).getFolder(folderId)
             localFolder.open()
             ListFolder(localFolder.name, localFolder.type)
         } catch (e: Exception) {
@@ -251,7 +253,7 @@ class MessageListLoader(
         return if (accounts.size == 1 && folderIds.size == 1) {
             val account = accounts[0]
             val folderId = folderIds[0]
-            val localStore = localStoreProvider.getInstanceByLegacyAccount(account)
+            val localStore = localStoreProvider.getInstance(account.id)
             val localFolder = localStore.getFolder(folderId)
             localFolder.open()
             localFolder.hasMoreMessages()

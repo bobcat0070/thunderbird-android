@@ -3,7 +3,7 @@ package net.thunderbird.feature.spamdigest.internal
 import kotlin.time.Clock
 import kotlin.time.Duration.Companion.days
 import kotlin.time.Duration.Companion.hours
-import net.thunderbird.core.logging.Logger
+import net.thunderbird.components.core.logging.Logger
 import net.thunderbird.feature.spamdigest.SpamAlertNotifier
 import net.thunderbird.feature.spamdigest.SpamArrivalListener
 import net.thunderbird.feature.spamdigest.SpamMessage

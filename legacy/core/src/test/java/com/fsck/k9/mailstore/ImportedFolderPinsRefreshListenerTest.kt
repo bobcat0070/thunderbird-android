@@ -8,7 +8,7 @@ import assertk.assertions.isFalse
 import assertk.assertions.isNull
 import assertk.assertions.isTrue
 import com.fsck.k9.K9RobolectricTest
-import com.fsck.k9.Preferences
+import net.thunderbird.core.preference.storage.StorageProvider
 import com.fsck.k9.preferences.FolderPinSettings
 import kotlinx.coroutines.test.runTest
 import org.junit.Test
@@ -19,7 +19,7 @@ private const val ACCOUNT = "11111111-1111-4111-8111-111111111111"
 private const val OTHER_ACCOUNT = "22222222-2222-4222-8222-222222222222"
 
 class ImportedFolderPinsRefreshListenerTest : K9RobolectricTest() {
-    private val preferences: Preferences by inject()
+    private val storageProvider: StorageProvider by inject()
     private val pins = FakeFolderPinSettings()
 
     @Test
@@ -37,7 +37,7 @@ class ImportedFolderPinsRefreshListenerTest : K9RobolectricTest() {
 
         listenerFor(folders = mapOf("Projects" to 7L)).onAfterFolderListRefresh()
 
-        assertThat(preferences.storage.getStringOrNull("$ACCOUNT.Projects.pinnedToDrawer")).isNull()
+        assertThat(storageProvider.storage.getStringOrNull("$ACCOUNT.Projects.pinnedToDrawer")).isNull()
     }
 
     @Test
@@ -48,7 +48,7 @@ class ImportedFolderPinsRefreshListenerTest : K9RobolectricTest() {
         listenerFor(folders = emptyMap()).onAfterFolderListRefresh()
 
         assertThat(pins.applied).isEmpty()
-        assertThat(preferences.storage.getBoolean("$ACCOUNT.Later.pinnedToDrawer", false)).isTrue()
+        assertThat(storageProvider.storage.getBoolean("$ACCOUNT.Later.pinnedToDrawer", false)).isTrue()
     }
 
     @Test
@@ -68,7 +68,7 @@ class ImportedFolderPinsRefreshListenerTest : K9RobolectricTest() {
         listenerFor(folders = mapOf("Projects" to 7L)).onAfterFolderListRefresh()
 
         assertThat(pins.applied).isEmpty()
-        assertThat(preferences.storage.getBoolean("$OTHER_ACCOUNT.Projects.pinnedToDrawer", false)).isTrue()
+        assertThat(storageProvider.storage.getBoolean("$OTHER_ACCOUNT.Projects.pinnedToDrawer", false)).isTrue()
     }
 
     @Test
@@ -82,13 +82,13 @@ class ImportedFolderPinsRefreshListenerTest : K9RobolectricTest() {
     }
 
     private fun pending(vararg entries: Pair<String, String>) {
-        val editor = preferences.createStorageEditor()
+        val editor = storageProvider.createStorageEditor()
         entries.forEach { (key, value) -> editor.putString(key, value) }
         editor.commit()
     }
 
     private fun listenerFor(folders: Map<String, Long>) = ImportedFolderPinsRefreshListener(
-        preferences = preferences,
+        storageProvider = storageProvider,
         accountUuid = ACCOUNT,
         messageStore = FakeMessageStore(folders),
         folderPinSettings = pins,

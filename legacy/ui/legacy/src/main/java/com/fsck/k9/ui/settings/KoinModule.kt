@@ -10,7 +10,6 @@ import com.fsck.k9.ui.settings.export.SettingsExportViewModel
 import com.fsck.k9.ui.settings.general.GeneralSettingsDataStore
 import com.fsck.k9.ui.settings.general.GeneralSettingsViewModel
 import java.util.concurrent.Executors
-import net.thunderbird.core.logging.file.FileLogSink
 import org.koin.core.module.dsl.viewModel
 import org.koin.core.qualifier.named
 import org.koin.dsl.module
@@ -20,8 +19,8 @@ val settingsUiModule = module {
 
     viewModel {
         GeneralSettingsViewModel(
-            logFileWriter = get(),
-            syncDebugFileLogSink = get<FileLogSink>(named("syncDebug")),
+            logcatExporter = get(),
+            syncDebugLogExporter = get(),
         )
     }
     factory {
@@ -39,7 +38,7 @@ val settingsUiModule = module {
     viewModel { AccountSettingsViewModel(get(), get(), get()) }
     single {
         AccountSettingsDataStoreFactory(
-            preferences = get(),
+            accountManager = get(),
             jobManager = get(),
             executorService = get(named("SaveSettingsExecutorService")),
             notificationChannelManager = get(),
@@ -47,6 +46,7 @@ val settingsUiModule = module {
             messagingController = get(),
             pinnedFolderStore = get(),
             spamDigestSettingsRepository = get(),
+            logger = get(),
         )
     }
     single { PinnedFolderStore(context = get()) }

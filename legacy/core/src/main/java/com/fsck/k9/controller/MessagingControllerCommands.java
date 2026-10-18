@@ -5,7 +5,7 @@ import java.util.List;
 import java.util.Map;
 import net.thunderbird.core.common.mail.Flag;
 import net.thunderbird.core.common.exception.MessagingException;
-import net.thunderbird.core.android.account.LegacyAccountDto;
+import net.thunderbird.feature.account.AccountId;
 
 import static com.fsck.k9.controller.Preconditions.requireNotNull;
 import static com.fsck.k9.controller.Preconditions.requireValidUids;
@@ -31,7 +31,7 @@ public class MessagingControllerCommands {
         PendingCommand() { }
 
         public abstract String getCommandName();
-        public abstract void execute(MessagingController controller, LegacyAccountDto account) throws MessagingException;
+        public abstract void execute(MessagingController controller, AccountId accountId) throws MessagingException;
     }
 
     public static class PendingMoveOrCopy extends PendingCommand {
@@ -63,8 +63,8 @@ public class MessagingControllerCommands {
         }
 
         @Override
-        public void execute(MessagingController controller, LegacyAccountDto account) throws MessagingException {
-            controller.processPendingMoveOrCopy(this, account);
+        public void execute(MessagingController controller, AccountId accountId) throws MessagingException {
+            controller.processPendingMoveOrCopy(this, accountId);
         }
     }
 
@@ -91,8 +91,8 @@ public class MessagingControllerCommands {
         }
 
         @Override
-        public void execute(MessagingController controller, LegacyAccountDto account) throws MessagingException {
-            controller.processPendingMoveAndRead(this, account);
+        public void execute(MessagingController controller, AccountId accountId) throws MessagingException {
+            controller.processPendingMoveAndRead(this, accountId);
         }
     }
 
@@ -107,8 +107,8 @@ public class MessagingControllerCommands {
         }
 
         @Override
-        public void execute(MessagingController controller, LegacyAccountDto account) throws MessagingException {
-            controller.processPendingEmptySpam(account);
+        public void execute(MessagingController controller, AccountId accountId) throws MessagingException {
+            controller.processPendingEmptySpam(accountId);
         }
     }
 
@@ -123,8 +123,8 @@ public class MessagingControllerCommands {
         }
 
         @Override
-        public void execute(MessagingController controller, LegacyAccountDto account) throws MessagingException {
-            controller.processPendingEmptyTrash(account);
+        public void execute(MessagingController controller, AccountId accountId) throws MessagingException {
+            controller.processPendingEmptyTrash(accountId);
         }
     }
 
@@ -154,8 +154,8 @@ public class MessagingControllerCommands {
         }
 
         @Override
-        public void execute(MessagingController controller, LegacyAccountDto account) throws MessagingException {
-            controller.processPendingSetFlag(this, account);
+        public void execute(MessagingController controller, AccountId accountId) throws MessagingException {
+            controller.processPendingSetFlag(this, accountId);
         }
     }
 
@@ -183,8 +183,8 @@ public class MessagingControllerCommands {
         }
 
         @Override
-        public void execute(MessagingController controller, LegacyAccountDto account) throws MessagingException {
-            controller.processPendingSetServerCategories(this, account);
+        public void execute(MessagingController controller, AccountId accountId) throws MessagingException {
+            controller.processPendingSetServerCategories(this, accountId);
         }
     }
 
@@ -209,8 +209,8 @@ public class MessagingControllerCommands {
         }
 
         @Override
-        public void execute(MessagingController controller, LegacyAccountDto account) throws MessagingException {
-            controller.processPendingAppend(this, account);
+        public void execute(MessagingController controller, AccountId accountId) throws MessagingException {
+            controller.processPendingAppend(this, accountId);
         }
     }
 
@@ -236,8 +236,8 @@ public class MessagingControllerCommands {
         }
 
         @Override
-        public void execute(MessagingController controller, LegacyAccountDto account) throws MessagingException {
-            controller.processPendingReplace(this, account);
+        public void execute(MessagingController controller, AccountId accountId) throws MessagingException {
+            controller.processPendingReplace(this, accountId);
         }
     }
 
@@ -259,8 +259,8 @@ public class MessagingControllerCommands {
         }
 
         @Override
-        public void execute(MessagingController controller, LegacyAccountDto account) throws MessagingException {
-            controller.processPendingMarkAllAsRead(this, account);
+        public void execute(MessagingController controller, AccountId accountId) throws MessagingException {
+            controller.processPendingMarkAllAsRead(this, accountId);
         }
     }
 
@@ -285,8 +285,8 @@ public class MessagingControllerCommands {
         }
 
         @Override
-        public void execute(MessagingController controller, LegacyAccountDto account) throws MessagingException {
-            controller.processPendingDelete(this, account);
+        public void execute(MessagingController controller, AccountId accountId) throws MessagingException {
+            controller.processPendingDelete(this, accountId);
         }
     }
 
@@ -308,8 +308,8 @@ public class MessagingControllerCommands {
         }
 
         @Override
-        public void execute(MessagingController controller, LegacyAccountDto account) throws MessagingException {
-            controller.processPendingExpunge(this, account);
+        public void execute(MessagingController controller, AccountId accountId) throws MessagingException {
+            controller.processPendingExpunge(this, accountId);
         }
     }
 }
