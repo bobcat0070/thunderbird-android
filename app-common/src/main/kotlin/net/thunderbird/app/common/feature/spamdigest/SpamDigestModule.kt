@@ -1,7 +1,13 @@
 package net.thunderbird.app.common.feature.spamdigest
 
+import androidx.work.WorkerParameters
 import com.fsck.k9.preferences.ExternalGlobalSettings
 import net.thunderbird.app.common.feature.impersonation.LegacyKnownSendersSource
+import net.thunderbird.app.common.feature.impersonation.SharedPreferencesVerifiedSenderDomainStore
+import net.thunderbird.app.common.feature.impersonation.VerifiedSenderDomainScanner
+import net.thunderbird.app.common.feature.impersonation.VerifiedSenderDomainStore
+import net.thunderbird.app.common.feature.impersonation.VerifiedSenderDomainsScheduler
+import net.thunderbird.app.common.feature.impersonation.VerifiedSenderDomainsWorker
 import net.thunderbird.feature.impersonation.KnownSendersSource
 import net.thunderbird.feature.impersonation.internal.featureImpersonationModule
 import net.thunderbird.feature.spamdigest.SpamAlertNotifier
@@ -24,7 +30,18 @@ internal val appCommonFeatureSpamDigestModule = module {
         LegacyKnownSendersSource(
             accountManager = get(),
             recipientIndex = get(),
-            messageStoreManager = get(),
+            verifiedSenderDomainStore = get(),
+        )
+    }
+    single<VerifiedSenderDomainStore> { SharedPreferencesVerifiedSenderDomainStore(context = androidContext()) }
+    factory { VerifiedSenderDomainScanner(accountManager = get(), messageStoreManager = get()) }
+    factory { VerifiedSenderDomainsScheduler(workManager = get(), store = get(), clock = get()) }
+    factory { (parameters: WorkerParameters) ->
+        VerifiedSenderDomainsWorker(
+            scanner = get(),
+            store = get(),
+            context = androidContext(),
+            workerParams = parameters,
         )
     }
 

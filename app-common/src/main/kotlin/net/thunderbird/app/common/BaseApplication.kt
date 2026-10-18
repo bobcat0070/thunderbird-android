@@ -29,6 +29,7 @@ import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 import net.thunderbird.app.common.feature.LoggerLifecycleObserver
+import net.thunderbird.app.common.feature.impersonation.VerifiedSenderDomainsScheduler
 import net.thunderbird.app.common.feature.spamdigest.PendingSpamDigestImport
 import net.thunderbird.app.common.feature.spamdigest.SpamArrivalMessagingListener
 import net.thunderbird.app.common.feature.spamdigest.SpamDigestCatchUpListener
@@ -58,6 +59,7 @@ abstract class BaseApplication : Application(), WorkManagerConfiguration.Provide
     private val workManagerConfigurationProvider: WorkManagerConfigurationProvider by inject()
     private val messageReclassifier: MessageReclassifier by inject()
     private val spamDigestScheduler: SpamDigestScheduler by inject()
+    private val verifiedSenderDomainsScheduler: VerifiedSenderDomainsScheduler by inject()
     private val spamArrivalMessagingListener: SpamArrivalMessagingListener by inject()
     private val spamDigestCatchUpListener: SpamDigestCatchUpListener by inject()
     private val pendingSpamDigestImport: PendingSpamDigestImport by inject()
@@ -112,6 +114,10 @@ abstract class BaseApplication : Application(), WorkManagerConfiguration.Provide
         // restored onto a new device. Each digest schedules the next, so this does nothing on an ordinary launch.
         appCoroutineScope.launch(Dispatchers.IO) {
             spamDigestScheduler.ensureScheduled()
+        }
+
+        appCoroutineScope.launch(Dispatchers.IO) {
+            verifiedSenderDomainsScheduler.ensureScheduled()
         }
 
         // Spam settings imported before the accounts they name are applied once those accounts exist.

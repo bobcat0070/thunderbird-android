@@ -1,6 +1,5 @@
 package net.thunderbird.app.common.feature.impersonation
 
-import app.k9mail.legacy.mailstore.MessageStoreManager
 import com.fsck.k9.mailstore.recipients.RecipientIndex
 import com.fsck.k9.mailstore.recipients.RecipientOrigin
 import net.thunderbird.core.android.account.LegacyAccountManager
@@ -12,14 +11,13 @@ import net.thunderbird.feature.impersonation.KnownSendersSource
  * contacts the account's provider lists), the reader's own identities, and the domains of senders whose mail passed
  * DMARC.
  *
- * Verified domains are read from stored mail outside spam and trash. A spammer passing DMARC for their own throwaway
- * domain proves nothing about it, and counting their domain as known would let them borrow a known person's name
- * from it.
+ * The recipient index is read each time, so someone just written to is known at once. The verified domains are the
+ * ones the nightly scan saved; see [VerifiedSenderDomainScanner] for which mail counts.
  */
 internal class LegacyKnownSendersSource(
     private val accountManager: LegacyAccountManager,
     private val recipientIndex: RecipientIndex,
-    private val messageStoreManager: MessageStoreManager,
+    private val verifiedSenderDomainStore: VerifiedSenderDomainStore,
 ) : KnownSendersSource {
 
     override fun knownSenders(): KnownSenders {
@@ -39,17 +37,7 @@ internal class LegacyKnownSendersSource(
             }
         }
 
-        val verifiedSenderDomains = accounts.flatMapTo(mutableSetOf()) { account ->
-            messageStoreManager.getMessageStore(account.id).getMessages(
-                selection = "messages.sender_authenticated = 1 AND folders.type NOT IN ('spam', 'trash')",
-                selectionArgs = emptyArray(),
-                sortOrder = "messages.id",
-                messageMapper = { message ->
-                    message.fromAddresses.firstOrNull()?.address?.substringAfterLast('@', missingDelimiterValue = "")
-                        ?.lowercase()?.takeIf { it.isNotEmpty() }
-                },
-            )
-        }
+        val verifiedSenderDomains = verifiedSenderDomainStore.domains().orEmpty()
 
         return KnownSenders(
             addressesByName = addressesByName,
