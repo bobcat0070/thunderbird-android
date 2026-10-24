@@ -17,6 +17,14 @@ private const val MINIMUM_NAME_LETTERS = 6
 private const val MINIMUM_NAME_WORDS = 2
 
 /**
+ * How much of a display name is looked at. The name is the sender's to choose and has no length limit, while the
+ * patterns below take time that grows with the square of it - and the domain pattern overflows the stack on a name of
+ * a few thousand `a.` pairs. Real names, even ones carrying an address or a website, fit many times over; a claim
+ * hidden past this point is past where any screen shows the name too.
+ */
+internal const val MAXIMUM_EXAMINED_NAME_LENGTH = 256
+
+/**
  * Domains where anyone can have an address. A known name at one of these is only as trustworthy as the exact
  * address; a known name on a company's own verified domain is how services like GitHub and Google Docs label mail
  * they send on a person's behalf.
@@ -77,7 +85,7 @@ internal fun findImpersonation(senderName: String?, senderAddress: String?, inde
     val address = senderAddress?.trim()?.lowercase()?.takeIf { '@' in it } ?: return null
     val asciiDomain = domainOf(address) ?: return null
     val senderDomain = registrableDomain(asciiDomain)
-    val name = senderName?.trim().orEmpty()
+    val name = senderName?.trim().orEmpty().take(MAXIMUM_EXAMINED_NAME_LENGTH)
 
     return addressInName(name, senderDomain)
         ?: domainInName(name, senderDomain, index)

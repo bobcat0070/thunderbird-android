@@ -131,4 +131,20 @@ class SenderImpersonationTest {
         assertThat(findImpersonation(null, "someone@unknown.example", index)).isNull()
         assertThat(findImpersonation("Name", null, index)).isNull()
     }
+
+    @Test
+    fun `a huge display name should be checked without overflowing the stack`() {
+        val name = "a.".repeat(20_000) + "1"
+
+        assertThat(findImpersonation(name, "news@unknown-shop.example", index)).isNull()
+    }
+
+    @Test
+    fun `a claim within the examined part of a long display name should still be flagged`() {
+        val name = "PayPal.com " + "x".repeat(MAXIMUM_EXAMINED_NAME_LENGTH * 4)
+
+        val result = findImpersonation(name, "billing@secure-billing.example", index)
+
+        assertThat(result).isEqualTo(Impersonation.DomainInName("paypal.com", "secure-billing.example"))
+    }
 }
