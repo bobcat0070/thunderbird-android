@@ -79,6 +79,7 @@ import net.thunderbird.core.android.account.Identity;
 import com.fsck.k9.K9;
 import com.fsck.k9.activity.MessageLoaderHelper.MessageLoaderCallbacks;
 import com.fsck.k9.activity.compose.AttachmentPresenter;
+import com.fsck.k9.activity.compose.AttachmentReminder;
 import com.fsck.k9.activity.compose.AttachmentPresenter.AttachmentMvpView;
 import com.fsck.k9.activity.compose.AttachmentPresenter.WaitingAction;
 import app.k9mail.core.android.common.camera.CameraCaptureHandler;
@@ -186,6 +187,7 @@ public class MessageCompose extends BaseActivity implements OnClickListener,
     private final DatabaseUpgradeInterceptor databaseUpgradeInterceptor = DI.get(DatabaseUpgradeInterceptor.class);
     private static final int DIALOG_CHOOSE_IDENTITY = 3;
     private static final int DIALOG_CONFIRM_DISCARD = 4;
+    private static final int DIALOG_FORGOTTEN_ATTACHMENT = 5;
 
     public static final String ACTION_COMPOSE = "com.fsck.k9.intent.action.COMPOSE";
     public static final String ACTION_REPLY = "com.fsck.k9.intent.action.REPLY";
@@ -902,7 +904,24 @@ public class MessageCompose extends BaseActivity implements OnClickListener,
             return;
         }
 
+        if (looksLikeForgottenAttachment()) {
+            showDialog(DIALOG_FORGOTTEN_ATTACHMENT);
+            return;
+        }
+
         performSendAfterChecks();
+    }
+
+    /**
+     * Whether the text the user wrote says something is attached while nothing is. Only their own words are read:
+     * the quoted message and the signature are kept in other views.
+     */
+    private boolean looksLikeForgottenAttachment() {
+        boolean hasAttachments = !attachmentPresenter.getAttachments().isEmpty()
+                || !attachmentPresenter.getInlineAttachments().isEmpty();
+
+        return !hasAttachments && AttachmentReminder.mentionsAttachment(
+                messageContentView.getText(), getString(R.string.attachment_reminder_keywords));
     }
 
     private void checkToSaveDraftAndSave() {
@@ -1513,6 +1532,16 @@ public class MessageCompose extends BaseActivity implements OnClickListener,
                                     public void onClick(DialogInterface dialog, int which) {
                                     }
                                 })
+                        .create();
+            }
+            case DIALOG_FORGOTTEN_ATTACHMENT: {
+                return new MaterialAlertDialogBuilder(this)
+                        .setTitle(R.string.attachment_reminder_title)
+                        .setMessage(R.string.attachment_reminder_message)
+                        .setPositiveButton(R.string.attachment_reminder_attach,
+                                (dialog, which) -> attachmentPresenter.onClickAddAttachment(recipientPresenter))
+                        .setNegativeButton(R.string.attachment_reminder_send_anyway,
+                                (dialog, which) -> performSendAfterChecks())
                         .create();
             }
         }

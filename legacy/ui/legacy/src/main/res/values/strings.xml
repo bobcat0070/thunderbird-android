@@ -442,6 +442,12 @@
     <string name="link_dialog_nothing_to_strip">No known tracking in this link.</string>
     <!-- %1$s is the host of a click-tracking service, e.g. clicks.mlsend.com -->
     <string name="link_dialog_click_tracker">This link goes through a click-tracking service (<xliff:g id="host">%1$s</xliff:g>) that hides where it leads, so it can\'t be stripped without breaking it.</string>
+    <string name="attachment_reminder_title">Forgot an attachment?</string>
+    <string name="attachment_reminder_message">Your message mentions an attachment, but nothing is attached.</string>
+    <string name="attachment_reminder_attach">Attach file</string>
+    <string name="attachment_reminder_send_anyway">Send anyway</string>
+    <!-- Comma-separated starts of words that say something is attached, matched at the start of a word in any case. "attach" covers attached, attaching, attachment. List the forms your language uses. -->
+    <string name="attachment_reminder_keywords">attach,enclos</string>
     <string name="general_settings_post_remove_action_return_to_list">Return to message list</string>
     <string name="general_settings_post_remove_action_show_previous_message">Show previous message</string>
     <string name="general_settings_post_remove_action_show_next_message">Show next message</string>
