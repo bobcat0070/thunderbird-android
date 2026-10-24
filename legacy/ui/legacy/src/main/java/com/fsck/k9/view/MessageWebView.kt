@@ -3,6 +3,7 @@ package com.fsck.k9.view
 import android.content.Context
 import android.content.pm.PackageManager
 import android.content.res.Resources
+import android.net.Uri
 import android.util.AttributeSet
 import android.webkit.WebView
 import com.fsck.k9.core.BuildConfig
@@ -23,6 +24,7 @@ class MessageWebView : WebView, KoinComponent, ThunderbirdWebViewSettings {
     constructor(context: Context, attrs: AttributeSet?, defStyle: Int) : super(context, attrs, defStyle)
 
     private val webViewClientFactory: WebViewClientFactory by inject()
+    private var linkOpener: K9WebViewClient? = null
 
     override var loadWithOverviewMode: Boolean
         get() = settings.loadWithOverviewMode
@@ -112,7 +114,20 @@ class MessageWebView : WebView, KoinComponent, ThunderbirdWebViewSettings {
         htmlText: String,
     ) {
         val webViewClient = webViewClientFactory.create(attachmentResolver, onPageFinishedListener, htmlText)
+        linkOpener = webViewClient as? K9WebViewClient
         setWebViewClient(webViewClient)
+    }
+
+    /**
+     * Opens a link from the displayed message the way tapping it does, so the long-press menu offers the same
+     * choice of not going, going as it is, or going without its tracking.
+     *
+     * @return `false` when no message is displayed to know the link from, and the caller has to open it itself.
+     */
+    fun openLink(url: String): Boolean {
+        val opener = linkOpener ?: return false
+        opener.confirmAndOpen(context, Uri.parse(url))
+        return true
     }
 
     private fun setHtmlContent(htmlText: String) {

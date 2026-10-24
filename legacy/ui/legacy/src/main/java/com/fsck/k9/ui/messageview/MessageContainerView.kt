@@ -151,8 +151,10 @@ class MessageContainerView(context: Context, attrs: AttributeSet?) :
         val listener = MenuItem.OnMenuItemClickListener { item ->
             when (item.itemId) {
                 MENU_ITEM_LINK_VIEW -> {
-                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse(linkUrl))
-                    startActivityIfAvailable(context, intent)
+                    if ((webView as? MessageWebView)?.openLink(linkUrl) != true) {
+                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(linkUrl))
+                        startActivityIfAvailable(context, intent)
+                    }
                 }
 
                 MENU_ITEM_LINK_SHARE -> {

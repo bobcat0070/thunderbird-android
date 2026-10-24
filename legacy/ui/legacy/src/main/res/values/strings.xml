@@ -429,7 +429,19 @@
     <string name="undo_mail_too_late">It has already been done</string>
     <string name="deceptive_link_title">Check this link</string>
     <string name="deceptive_link_message">The link says <xliff:g id="shown_site">%1$s</xliff:g>, but it opens <xliff:g id="actual_site">%2$s</xliff:g>. Links like this are often used for phishing.</string>
-    <string name="deceptive_link_open_anyway">Open anyway</string>
+    <string name="link_dialog_title">Open this link?</string>
+    <string name="link_dialog_dont_open">Don\'t open</string>
+    <string name="link_dialog_open_as_is">Open as is</string>
+    <string name="link_dialog_strip">Strip and open</string>
+    <!-- Heading above the link with its tracking removed, which "Strip and open" opens -->
+    <string name="link_dialog_stripped_heading">Without tracking</string>
+    <!-- %1$s is the host of a redirect service, e.g. nam12.safelinks.protection.outlook.com -->
+    <string name="link_dialog_skips_redirect">Skips the redirect through <xliff:g id="host">%1$s</xliff:g></string>
+    <!-- %1$s is a comma-separated list of parameter names, e.g. utm_source, fbclid -->
+    <string name="link_dialog_removes">Removes <xliff:g id="parameters">%1$s</xliff:g></string>
+    <string name="link_dialog_nothing_to_strip">No known tracking in this link.</string>
+    <!-- %1$s is the host of a click-tracking service, e.g. clicks.mlsend.com -->
+    <string name="link_dialog_click_tracker">This link goes through a click-tracking service (<xliff:g id="host">%1$s</xliff:g>) that hides where it leads, so it can\'t be stripped without breaking it.</string>
     <string name="general_settings_post_remove_action_return_to_list">Return to message list</string>
     <string name="general_settings_post_remove_action_show_previous_message">Show previous message</string>
     <string name="general_settings_post_remove_action_show_next_message">Show next message</string>
