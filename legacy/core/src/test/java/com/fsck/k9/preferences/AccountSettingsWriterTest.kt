@@ -70,7 +70,7 @@ class AccountSettingsWriterTest : K9RobolectricTest() {
         assertThat(cachedAccount).isNotNull()
         assertThat(cachedAccount?.profile?.name).isEqualTo("Imported")
         assertThat(accountManager.observeAll().first().single().id).isEqualTo(accountId)
-        assertThat(get<StorageProvider>().loadLatestStorage().getStringOrNull("accountUuids").orEmpty())
+        assertThat(get<StorageProvider>().storage.getStringOrNull("accountUuids").orEmpty())
             .contains(accountId.toString())
     }
 
@@ -102,6 +102,7 @@ class AccountSettingsWriterTest : K9RobolectricTest() {
             clock = get(),
             generalSettingsManager = get(),
             serverSettingsDtoSerializer = get(),
+            avatarImageRepository = get(),
             context = get(),
         )
         val account = createValidatedAccount(accountId).copy(
@@ -114,7 +115,7 @@ class AccountSettingsWriterTest : K9RobolectricTest() {
         // Assert
         assertThat(accountManager.findAll()).isEmpty()
         assertThat(accountManager.findById(accountId)).isNull()
-        assertThat(get<StorageProvider>().loadLatestStorage().getStringOrNull("accountUuids")).isNull()
+        assertThat(get<StorageProvider>().storage.getStringOrNull("accountUuids")).isNull()
     }
 
     private fun createValidatedAccount(accountId: AccountId): ValidatedSettings.Account {
@@ -149,8 +150,6 @@ class AccountSettingsWriterTest : K9RobolectricTest() {
 /** Reads from [delegate], but every commit fails without writing anything. */
 private class FailingCommitStorageProvider(private val delegate: StorageProvider) : StorageProvider {
     override val storage: Storage get() = delegate.storage
-
-    override fun loadLatestStorage(): Storage = delegate.loadLatestStorage()
 
     override fun createStorageEditor(): StorageEditor = FailingCommitStorageEditor()
 }

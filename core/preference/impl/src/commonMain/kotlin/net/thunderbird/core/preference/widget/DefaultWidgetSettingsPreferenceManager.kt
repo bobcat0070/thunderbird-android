@@ -35,7 +35,7 @@ class DefaultWidgetSettingsPreferenceManager(
     private val configState: MutableStateFlow<WidgetSettings> = MutableStateFlow(value = loadConfig())
     private val mutex = Mutex()
     private val storage: Storage
-        get() = storageProvider.loadLatestStorage()
+        get() = storageProvider.storage
 
     override fun getConfig(): WidgetSettings = configState.value
     override fun getConfigFlow(): Flow<WidgetSettings> = configState

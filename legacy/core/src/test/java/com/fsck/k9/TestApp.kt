@@ -26,6 +26,7 @@ import net.thunderbird.core.common.inject.factoryListOf
 import net.thunderbird.components.core.logging.testing.TestLogger
 import net.thunderbird.core.logging.DebugLogConfigurator
 import net.thunderbird.core.preference.storage.StoragePersister
+import net.thunderbird.feature.account.avatar.AvatarImageRepository
 import net.thunderbird.feature.mail.folder.api.OutboxFolderManager
 import net.thunderbird.feature.mail.message.list.LocalMessageUidPrefixProvider
 import net.thunderbird.feature.mail.message.reader.api.css.CssClassNameProvider
@@ -86,6 +87,7 @@ val testModule = module {
         // it; an unstubbed flow fails there and the failure lands on whichever test runs next.
         mock { on { observeAll() } doReturn flowOf(emptyList()) }
     }
+    single<AvatarImageRepository> { mock() }
     single<NotificationIconResourceProvider> { TestNotificationIconResourceProvider() }
     single<PlatformConfigProvider> { FakePlatformConfigProvider() }
     single<CssVariableNameProvider> { mock() }

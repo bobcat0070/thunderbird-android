@@ -3,6 +3,7 @@ plugins {
     alias(libs.plugins.dependency.guard)
     alias(libs.plugins.tb.app.badging)
     alias(libs.plugins.tb.app.versioning)
+    alias(libs.plugins.tb.baselineprofile.consumer.app)
 }
 
 val testCoverageEnabled = providers
@@ -186,6 +187,8 @@ dependencies {
     testImplementation(projects.feature.spamdigest.internal)
 
     testImplementation(libs.appauth)
+
+    baselineProfile(projects.appK9mail.benchmarks)
 }
 
 dependencyGuard {

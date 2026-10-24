@@ -35,7 +35,7 @@ class DefaultGravatarSettingsPreferenceManager(
     private val configState: MutableStateFlow<GravatarSettings> = MutableStateFlow(value = loadConfig())
     private val mutex = Mutex()
     private val storage: Storage
-        get() = storageProvider.loadLatestStorage()
+        get() = storageProvider.storage
 
     override fun getConfig(): GravatarSettings = configState.value
     override fun getConfigFlow(): Flow<GravatarSettings> = configState

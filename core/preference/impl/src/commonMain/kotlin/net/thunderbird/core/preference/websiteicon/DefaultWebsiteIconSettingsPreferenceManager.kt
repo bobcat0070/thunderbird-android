@@ -35,7 +35,7 @@ class DefaultWebsiteIconSettingsPreferenceManager(
     private val configState: MutableStateFlow<WebsiteIconSettings> = MutableStateFlow(value = loadConfig())
     private val mutex = Mutex()
     private val storage: Storage
-        get() = storageProvider.loadLatestStorage()
+        get() = storageProvider.storage
 
     override fun getConfig(): WebsiteIconSettings = configState.value
     override fun getConfigFlow(): Flow<WebsiteIconSettings> = configState

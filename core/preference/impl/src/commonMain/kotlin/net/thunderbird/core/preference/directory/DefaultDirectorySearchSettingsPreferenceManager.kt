@@ -35,7 +35,7 @@ class DefaultDirectorySearchSettingsPreferenceManager(
     private val configState: MutableStateFlow<DirectorySearchSettings> = MutableStateFlow(value = loadConfig())
     private val mutex = Mutex()
     private val storage: Storage
-        get() = storageProvider.loadLatestStorage()
+        get() = storageProvider.storage
 
     override fun getConfig(): DirectorySearchSettings = configState.value
     override fun getConfigFlow(): Flow<DirectorySearchSettings> = configState

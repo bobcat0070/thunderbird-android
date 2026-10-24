@@ -38,7 +38,6 @@ import app.k9mail.legacy.ui.folder.FolderNameFormatter
 import com.fsck.k9.ui.R
 import com.fsck.k9.ui.base.extensions.withArguments
 import com.fsck.k9.ui.endtoend.AutocryptKeyTransferActivity
-import com.fsck.k9.ui.managefolders.ManageFoldersActivity
 import com.fsck.k9.ui.settings.onClick
 import com.fsck.k9.ui.settings.oneTimeClickListener
 import com.fsck.k9.ui.settings.remove
@@ -109,6 +108,7 @@ class AccountSettingsFragment : PreferenceFragmentCompat(), ConfirmationDialogFr
 
         initializeGeneralSettings()
         initializeReadingMail()
+        initializeSyncAndNotifications()
         initializeFetchingMail()
         initializeSendingMail()
         initializeSearch()
@@ -192,6 +192,16 @@ class AccountSettingsFragment : PreferenceFragmentCompat(), ConfirmationDialogFr
             FeatureLauncherActivity.launch(
                 context = requireActivity(),
                 target = FeatureLauncherTarget.AccountReadingMailSettings(accountId),
+                launcher = launcherForActivityResult,
+            )
+        }
+    }
+
+    private fun initializeSyncAndNotifications() {
+        findPreference<Preference>(PREFERENCE_SYNC_AND_NOTIFICATIONS)?.onClick {
+            FeatureLauncherActivity.launch(
+                context = requireActivity(),
+                target = FeatureLauncherTarget.AccountSyncAndNotifications(accountId),
                 launcher = launcherForActivityResult,
             )
         }
@@ -454,9 +464,6 @@ class AccountSettingsFragment : PreferenceFragmentCompat(), ConfirmationDialogFr
     }
 
     private fun initializeFolderSettings(accountId: AccountId) {
-        findPreference<Preference>(PREFERENCE_FOLDER_VISIBILITY_AND_SYNC)?.onClick {
-            ManageFoldersActivity.launch(requireActivity(), accountId)
-        }
         findPreference<Preference>(PREFERENCE_FOLDERS)?.let {
             if (!messagingController.supportsFolderSubscriptions(accountId)) {
                 findPreference<Preference>(PREFERENCE_SUBSCRIBED_FOLDERS_ONLY).remove()
@@ -570,8 +577,8 @@ class AccountSettingsFragment : PreferenceFragmentCompat(), ConfirmationDialogFr
         private const val PREFERENCE_GENERAL = "general"
 
         private const val PREFERENCE_READING_MAIL = "reading_mail"
+        private const val PREFERENCE_SYNC_AND_NOTIFICATIONS = "sync_and_notifications"
         private const val PREFERENCE_FETCHING_MAIL = "fetching_mail"
-
         private const val PREFERENCE_SENDING_MAIL = "composing"
         private const val PREFERENCE_SEARCH = "search"
         private const val PREFERENCE_INCOMING_SERVER = "incoming"
@@ -583,8 +590,6 @@ class AccountSettingsFragment : PreferenceFragmentCompat(), ConfirmationDialogFr
         private const val PREFERENCE_OPENPGP_ENABLE = "openpgp_provider"
         private const val PREFERENCE_OPENPGP_KEY = "openpgp_key"
         private const val PREFERENCE_AUTOCRYPT_TRANSFER = "autocrypt_transfer"
-        internal const val PREFERENCE_FOLDERS = "folders"
-        internal const val PREFERENCE_FOLDER_VISIBILITY_AND_SYNC = "visibility_and_syncing"
         private const val PREFERENCE_AUTO_SELECT_FOLDER = "auto_select_folder"
         private const val PREFERENCE_SUBSCRIBED_FOLDERS_ONLY = "subscribed_folders_only"
         private const val PREFERENCE_ARCHIVE_FOLDER = "archive_folder"
@@ -605,9 +610,18 @@ class AccountSettingsFragment : PreferenceFragmentCompat(), ConfirmationDialogFr
         private const val REQUEST_DELETE_ACCOUNT = 1
         private const val TAG_DELETE_ACCOUNT_CONFIRMATION = "delete_account_confirmation"
 
-        fun create(accountUuid: String, rootKey: String?) = AccountSettingsFragment().withArguments(
-            ARG_ACCOUNT_UUID to accountUuid,
-            ARG_PREFERENCE_ROOT to rootKey,
-        )
+        /* TODO:
+            External access required for new notifications, will change over as we migrate
+            As part of #9301, including tickets #11722, #11723, and #11724, these will be migrated
+            to Jetpack compose and MVI. They're public here as a temporary measure to allow launching
+            of these legacy settings via newer settings pages.
+         */
+        const val PREFERENCE_NOTIFICATION_STYLE = "notifications"
+        const val PREFERENCE_FOLDERS = "folders"
+
+        fun create(accountUuid: String, rootKey: String?) = AccountSettingsFragment().withArguments {
+            putString(ARG_ACCOUNT_UUID, accountUuid)
+            putString(ARG_PREFERENCE_ROOT, rootKey)
+        }
     }
 }

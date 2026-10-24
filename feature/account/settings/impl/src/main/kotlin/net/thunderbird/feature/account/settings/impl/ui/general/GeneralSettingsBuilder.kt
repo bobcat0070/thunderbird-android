@@ -25,6 +25,7 @@ import net.thunderbird.feature.account.settings.impl.ui.general.GeneralSettingsC
 import net.thunderbird.feature.account.settings.impl.ui.general.GeneralSettingsContract.State
 import net.thunderbird.feature.account.settings.impl.ui.general.components.AvatarImageSelection
 import net.thunderbird.feature.account.settings.impl.ui.general.components.GeneralSettingsProfileView
+import net.thunderbird.feature.account.storage.profile.AvatarDto
 
 /**
  * Builds the General Settings from [State].
@@ -79,6 +80,8 @@ internal class GeneralSettingsBuilder(
 
         settings += name(name = state.name.value)
         settings += color(color = state.color.value ?: 0)
+
+        settings += manageFolderVisibilityAndSort(onEvent)
 
         return settings.toImmutableList()
     }
@@ -231,7 +234,7 @@ internal class GeneralSettingsBuilder(
                 title = { resources.stringResource(R.string.account_settings_general_avatar_option_image) },
                 value = (avatar as? Avatar.Image) ?: Avatar.Image(
                     accountId = accountId,
-                    uri = "avatar_placeholder_uri",
+                    uri = AvatarDto.PLACEHOLDER_IMAGE_URI,
                 ),
             ),
             SettingValue.SegmentedButton.SegmentedButtonOption(
@@ -252,6 +255,20 @@ internal class GeneralSettingsBuilder(
         is Avatar.Image -> options.first { it.id == AVATAR_IMAGE_ID }
         is Avatar.Icon -> options.first { it.id == AVATAR_ICON_ID }
     }
+
+    private fun manageFolderVisibilityAndSort(onEvent: (Event) -> Unit): Setting =
+        SettingValue.ActionText(
+            id = GeneralSettingId.FOLDER_VISIBILITY_AND_SORT,
+            title = { resources.stringResource(R.string.account_settings_manage_folders) },
+            description = { null },
+            icon = { null },
+            value = resources.stringResource(
+                R.string.account_settings_folder_visibility_and_sort_description,
+            ),
+            onClick = {
+                onEvent(Event.OnManageFoldersSelected)
+            },
+        )
 
     private companion object {
         const val AVATAR_MONOGRAM_ID = "avatar_monogram"

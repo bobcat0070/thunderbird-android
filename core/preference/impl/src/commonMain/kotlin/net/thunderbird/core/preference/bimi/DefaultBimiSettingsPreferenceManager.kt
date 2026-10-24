@@ -35,7 +35,7 @@ class DefaultBimiSettingsPreferenceManager(
     private val configState: MutableStateFlow<BimiSettings> = MutableStateFlow(value = loadConfig())
     private val mutex = Mutex()
     private val storage: Storage
-        get() = storageProvider.loadLatestStorage()
+        get() = storageProvider.storage
 
     override fun getConfig(): BimiSettings = configState.value
     override fun getConfigFlow(): Flow<BimiSettings> = configState
