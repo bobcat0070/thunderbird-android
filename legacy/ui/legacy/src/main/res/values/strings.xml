@@ -429,6 +429,10 @@
     <string name="undo_mail_too_late">It has already been done</string>
     <string name="deceptive_link_title">Check this link</string>
     <string name="deceptive_link_message">The link says <xliff:g id="shown_site">%1$s</xliff:g>, but it opens <xliff:g id="actual_site">%2$s</xliff:g>. Links like this are often used for phishing.</string>
+    <string name="general_settings_link_check_title">Check links before opening</string>
+    <string name="general_settings_link_check_summary">Show where a link goes, with the option to open it without its tracking. Links that name a different site than they open are always warned about.</string>
+    <string name="general_settings_attachment_reminder_title">Warn about forgotten attachments</string>
+    <string name="general_settings_attachment_reminder_summary">Ask before sending a message that mentions an attachment but has none</string>
     <string name="link_dialog_title">Open this link?</string>
     <string name="link_dialog_dont_open">Don\'t open</string>
     <string name="link_dialog_open_as_is">Open as is</string>

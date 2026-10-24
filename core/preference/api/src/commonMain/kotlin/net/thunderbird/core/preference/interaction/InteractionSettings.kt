@@ -23,6 +23,17 @@ const val INTERACTION_SETTINGS_DEFAULT_CONFIRM_MARK_ALL_READ = true
  */
 const val INTERACTION_SETTINGS_DEFAULT_UNDO_SEND_DELAY_SECONDS = 10
 
+/**
+ * Whether tapping a link in a message first shows it, with the choice of not opening it, opening it as it is, or
+ * opening it without its tracking. A link whose text names a different site is warned about either way.
+ */
+const val INTERACTION_SETTINGS_DEFAULT_LINK_CHECK_ENABLED = true
+
+/**
+ * Whether sending a message that says something is attached, with nothing attached, asks first.
+ */
+const val INTERACTION_SETTINGS_DEFAULT_ATTACHMENT_REMINDER_ENABLED = true
+
 data class InteractionSettings(
     val useVolumeKeysForNavigation: Boolean = INTERACTION_SETTINGS_DEFAULT_USE_VOLUME_KEYS_NAVIGATION,
     val messageViewPostRemoveNavigation: String = INTERACTION_SETTINGS_DEFAULT_MESSAGE_VIEW_POST_REMOVE_NAVIGATION,
@@ -36,6 +47,8 @@ data class InteractionSettings(
     val isConfirmDiscardMessage: Boolean = INTERACTION_SETTINGS_DEFAULT_CONFIRM_DISCARD_MESSAGE,
     val isConfirmMarkAllRead: Boolean = INTERACTION_SETTINGS_DEFAULT_CONFIRM_MARK_ALL_READ,
     val undoSendDelaySeconds: Int = INTERACTION_SETTINGS_DEFAULT_UNDO_SEND_DELAY_SECONDS,
+    val isLinkCheckEnabled: Boolean = INTERACTION_SETTINGS_DEFAULT_LINK_CHECK_ENABLED,
+    val isAttachmentReminderEnabled: Boolean = INTERACTION_SETTINGS_DEFAULT_ATTACHMENT_REMINDER_ENABLED,
 )
 
 /**

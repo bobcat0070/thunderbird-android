@@ -16,6 +16,8 @@ enum class InteractionSettingKey(val value: String) {
     ConfirmMarkAllRead("confirmMarkAllRead"),
     MessageViewPostMarkAsRead("messageViewPostMarkAsReadAction"),
     UndoSendDelaySeconds("undoSendDelaySeconds"),
+    LinkCheckEnabled("linkCheckEnabled"),
+    AttachmentReminderEnabled("attachmentReminderEnabled"),
 }
 
 interface InteractionSettingsPreferenceManager : PreferenceManager<InteractionSettings>

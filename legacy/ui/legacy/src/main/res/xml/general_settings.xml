@@ -490,6 +490,20 @@
             app:useSimpleSummaryProvider="true"
             />
 
+        <SwitchPreference
+            android:defaultValue="true"
+            android:key="attachment_reminder_enabled"
+            android:summary="@string/general_settings_attachment_reminder_summary"
+            android:title="@string/general_settings_attachment_reminder_title"
+            />
+
+        <SwitchPreference
+            android:defaultValue="true"
+            android:key="link_check_enabled"
+            android:summary="@string/general_settings_link_check_summary"
+            android:title="@string/general_settings_link_check_title"
+            />
+
         <MultiSelectListPreference
             android:dialogTitle="@string/global_settings_confirm_actions_title"
             android:entries="@array/confirm_action_entries"

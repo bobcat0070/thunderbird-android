@@ -920,7 +920,8 @@ public class MessageCompose extends BaseActivity implements OnClickListener,
         boolean hasAttachments = !attachmentPresenter.getAttachments().isEmpty()
                 || !attachmentPresenter.getInlineAttachments().isEmpty();
 
-        return !hasAttachments && AttachmentReminder.mentionsAttachment(
+        return generalSettingsManager.getConfig().getInteraction().isAttachmentReminderEnabled()
+                && !hasAttachments && AttachmentReminder.mentionsAttachment(
                 messageContentView.getText(), getString(R.string.attachment_reminder_keywords));
     }
 

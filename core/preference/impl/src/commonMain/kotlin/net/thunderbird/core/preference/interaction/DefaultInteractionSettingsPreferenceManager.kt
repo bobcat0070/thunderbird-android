@@ -100,6 +100,14 @@ class DefaultInteractionSettingsPreferenceManager(
             InteractionSettingKey.UndoSendDelaySeconds.value,
             INTERACTION_SETTINGS_DEFAULT_UNDO_SEND_DELAY_SECONDS,
         ),
+        isLinkCheckEnabled = storage.getBoolean(
+            InteractionSettingKey.LinkCheckEnabled.value,
+            INTERACTION_SETTINGS_DEFAULT_LINK_CHECK_ENABLED,
+        ),
+        isAttachmentReminderEnabled = storage.getBoolean(
+            InteractionSettingKey.AttachmentReminderEnabled.value,
+            INTERACTION_SETTINGS_DEFAULT_ATTACHMENT_REMINDER_ENABLED,
+        ),
     )
 
     private fun writeConfig(config: InteractionSettings) {
@@ -137,6 +145,11 @@ class DefaultInteractionSettingsPreferenceManager(
                 )
                 storageEditor.putBoolean(InteractionSettingKey.ConfirmMarkAllRead.value, config.isConfirmMarkAllRead)
                 storageEditor.putInt(InteractionSettingKey.UndoSendDelaySeconds.value, config.undoSendDelaySeconds)
+                storageEditor.putBoolean(InteractionSettingKey.LinkCheckEnabled.value, config.isLinkCheckEnabled)
+                storageEditor.putBoolean(
+                    InteractionSettingKey.AttachmentReminderEnabled.value,
+                    config.isAttachmentReminderEnabled,
+                )
                 storageEditor.commit().also { commited ->
                     logger.verbose(TAG) { "writeConfig: storageEditor.commit() resulted in: $commited" }
                 }

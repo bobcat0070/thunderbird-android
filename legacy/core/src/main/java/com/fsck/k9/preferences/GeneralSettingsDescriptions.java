@@ -52,6 +52,8 @@ import net.thunderbird.core.preference.network.NetworkSettingsKt;
 import net.thunderbird.core.preference.storage.Storage;
 import net.thunderbird.core.preference.display.visualSettings.message.list.UiDensity;
 
+import static net.thunderbird.core.preference.interaction.InteractionSettingsKt.INTERACTION_SETTINGS_DEFAULT_ATTACHMENT_REMINDER_ENABLED;
+import static net.thunderbird.core.preference.interaction.InteractionSettingsKt.INTERACTION_SETTINGS_DEFAULT_LINK_CHECK_ENABLED;
 import static net.thunderbird.core.preference.interaction.InteractionSettingsKt.INTERACTION_SETTINGS_DEFAULT_UNDO_SEND_DELAY_SECONDS;
 import static net.thunderbird.core.preference.bimi.BimiSettingsKt.BIMI_SETTINGS_DEFAULT_IS_ENABLED;
 import static net.thunderbird.core.preference.directory.DirectorySearchSettingsKt.DIRECTORY_SEARCH_SETTINGS_DEFAULT_IS_ENABLED;
@@ -441,6 +443,12 @@ class GeneralSettingsDescriptions {
         ));
         s.put(SPAM_DIGEST_FIELDS_KEY, Settings.versions(
             new V(113, new StringSetting(""))
+        ));
+        s.put("linkCheckEnabled", Settings.versions(
+            new V(115, new BooleanSetting(INTERACTION_SETTINGS_DEFAULT_LINK_CHECK_ENABLED))
+        ));
+        s.put("attachmentReminderEnabled", Settings.versions(
+            new V(115, new BooleanSetting(INTERACTION_SETTINGS_DEFAULT_ATTACHMENT_REMINDER_ENABLED))
         ));
 
         // TODO: Add a way to properly support feature-specific settings.

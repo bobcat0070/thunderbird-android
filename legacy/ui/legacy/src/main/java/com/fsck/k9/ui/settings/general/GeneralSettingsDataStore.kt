@@ -21,6 +21,7 @@ import net.thunderbird.core.preference.notification.NotificationPreference
 import net.thunderbird.core.preference.directory.DirectorySearchSettings
 import net.thunderbird.core.preference.websiteicon.WebsiteIconSettings
 import net.thunderbird.core.preference.display.visualSettings.message.list.UiDensity
+import net.thunderbird.core.preference.interaction.InteractionSettings
 import net.thunderbird.core.preference.interaction.PostMarkAsUnreadNavigation
 import net.thunderbird.core.preference.update
 import net.thunderbird.core.preference.widget.WidgetSettings
@@ -85,6 +86,8 @@ class GeneralSettingsDataStore(
             "sync_debug_logging" -> debuggingSettings.isSyncLoggingEnabled
             "sensitive_logging" -> debuggingSettings.isSensitiveLoggingEnabled
             "volume_navigation" -> interactionSettings.useVolumeKeysForNavigation
+            "link_check_enabled" -> interactionSettings.isLinkCheckEnabled
+            "attachment_reminder_enabled" -> interactionSettings.isAttachmentReminderEnabled
             "enable_telemetry" -> K9.isTelemetryEnabled
             else -> defValue
         }
@@ -145,6 +148,8 @@ class GeneralSettingsDataStore(
             "sync_debug_logging" -> setIsSyncLoggingEnabled(isSyncLoggingEnabled = value)
             "sensitive_logging" -> setIsSensitiveLoggingEnabled(isSensitiveLoggingEnabled = value)
             "volume_navigation" -> setUseVolumeKeysForNavigation(value)
+            "link_check_enabled" -> updateInteractionSettings { it.copy(isLinkCheckEnabled = value) }
+            "attachment_reminder_enabled" -> updateInteractionSettings { it.copy(isAttachmentReminderEnabled = value) }
             "enable_telemetry" -> setTelemetryEnabled(value)
             else -> return
         }
@@ -850,6 +855,13 @@ class GeneralSettingsDataStore(
                     isIncognitoKeyboardEnabled = isIncognitoKeyboardEnabled,
                 ),
             )
+        }
+    }
+
+    private fun updateInteractionSettings(transform: (InteractionSettings) -> InteractionSettings) {
+        skipSaveSettings = true
+        generalSettingsManager.update { settings ->
+            settings.copy(interaction = transform(settings.interaction))
         }
     }
 

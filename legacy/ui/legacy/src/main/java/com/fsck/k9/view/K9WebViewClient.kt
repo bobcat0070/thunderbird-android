@@ -26,6 +26,7 @@ import com.fsck.k9.helper.ClipboardManager
 import com.fsck.k9.mailstore.AttachmentResolver
 import com.fsck.k9.ui.R
 import com.fsck.k9.view.MessageWebView.OnPageFinishedListener
+import net.thunderbird.core.preference.GeneralSettingsManager
 import net.thunderbird.legacy.logging.Log
 
 private const val TAG = "K9WebViewClient"
@@ -36,6 +37,7 @@ private const val TAG = "K9WebViewClient"
 @Suppress("TooManyFunctions")
 class K9WebViewClient(
     private val clipboardManager: ClipboardManager,
+    private val generalSettingsManager: GeneralSettingsManager,
     private val attachmentResolver: AttachmentResolver?,
     private val onPageFinishedListener: OnPageFinishedListener?,
     private val displayedHtml: String? = null,
@@ -85,7 +87,8 @@ class K9WebViewClient(
      * every phishing link looks like - the dialog says so first.
      *
      * Other links, such as `mailto:` and `tel:`, open straight away: they have nothing to strip and do not leave
-     * the device.
+     * the device. So does every web link when the user has turned the link check off - except a deceptive one,
+     * which is warned about either way, as it was before the check existed.
      */
     fun confirmAndOpen(context: Context, uri: Uri) {
         val url = uri.toString()
@@ -96,6 +99,11 @@ class K9WebViewClient(
         }
 
         val shownSite = deceptiveLinks[host]
+        if (shownSite == null && !generalSettingsManager.getConfig().interaction.isLinkCheckEnabled) {
+            openUrl(context, uri)
+            return
+        }
+
         val stripped = stripTracking(url)
 
         val dialog = MaterialAlertDialogBuilder(context)
