@@ -7,7 +7,7 @@ import com.eygraber.uri.toKmpUri
 import com.fsck.k9.Core
 import com.fsck.k9.mailstore.SpecialLocalFoldersCreator
 import java.io.File
-import java.io.IOException
+import kotlin.coroutines.cancellation.CancellationException
 import kotlin.time.Clock
 import kotlin.time.ExperimentalTime
 import net.thunderbird.core.android.account.AccountDefaultsProvider.Companion.UNASSIGNED_ACCOUNT_NUMBER
@@ -39,6 +39,11 @@ import net.thunderbird.feature.notification.VibratePattern
 import net.thunderbird.legacy.logging.Log.logger
 
 private const val TAG = "AccountSettingsWriter"
+
+/**
+ * Base64 takes four characters for every three bytes.
+ */
+private const val MAX_AVATAR_IMAGE_BASE64_LENGTH = (SettingsExporter.MAX_AVATAR_IMAGE_BYTES + 2) / 3 * 4
 
 /**
  * Saves imported account settings through the account manager and defers folder settings until folder creation.
@@ -251,22 +256,40 @@ internal class AccountSettingsWriter(
         return accounts.any { it.profile.name == name }
     }
 
+    /**
+     * The settings file is whatever the user picked, so the image in it is untrusted: it is only taken for an account
+     * whose avatar is an image, only up to [SettingsExporter.MAX_AVATAR_IMAGE_BYTES], and an image that cannot be
+     * read costs the account its picture rather than its import.
+     */
+    @Suppress("TooGenericExceptionCaught", "ReturnCount")
     private suspend fun ValidatedSettings.Account.decodeAvatarImage(accountId: AccountId): String? {
-        val base64 = avatarImage
-        return base64?.let { base64 ->
-            val bytes = Base64.decode(base64, Base64.NO_WRAP)
-            val tempFile = File(context.cacheDir, "avatar_import_$accountId")
-            try {
-                tempFile.writeBytes(bytes)
-                val tempUri = Uri.fromFile(tempFile)
-                val newUri = avatarImageRepository.update(accountId, tempUri.toKmpUri())
-                newUri.toString()
-            } catch (e: IOException) {
-                logger.error(tag = TAG, throwable = e) { "Failed to decode avatar image." }
-                null
-            } finally {
-                tempFile.delete()
-            }
+        val base64 = avatarImage ?: return null
+        if (settings.enum("avatarType", AvatarTypeDto.MONOGRAM) != AvatarTypeDto.IMAGE) return null
+        if (base64.length > MAX_AVATAR_IMAGE_BASE64_LENGTH) {
+            logger.warn(tag = TAG) { "Imported avatar image is too large; skipped." }
+            return null
+        }
+
+        val bytes = try {
+            Base64.decode(base64, Base64.NO_WRAP)
+        } catch (e: IllegalArgumentException) {
+            logger.warn(tag = TAG, throwable = e) { "Imported avatar image is not valid base64; skipped." }
+            return null
+        }
+
+        val tempFile = File(context.cacheDir, "avatar_import_$accountId")
+        return try {
+            tempFile.writeBytes(bytes)
+            val tempUri = Uri.fromFile(tempFile)
+            val newUri = avatarImageRepository.update(accountId, tempUri.toKmpUri())
+            newUri.toString()
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            logger.error(tag = TAG, throwable = e) { "Failed to decode avatar image." }
+            null
+        } finally {
+            tempFile.delete()
         }
     }
 }

@@ -382,8 +382,7 @@ class SettingsImporterTest : K9RobolectricTest() {
     @OptIn(ExperimentalCoroutinesApi::class)
     @Test
     fun `importSettings() should import avatar image`() = runTest(UnconfinedTestDispatcher()) {
-        val tinyAvatar =
-            "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=="
+        val tinyAvatar = TINY_AVATAR
         val newAvatarUri = Uri.parse("file:///data/account_avatars/imported.png")
         whenever { get<AvatarImageRepository>().update(any(), any()) }.thenReturn(newAvatarUri)
 
@@ -503,6 +502,48 @@ class SettingsImporterTest : K9RobolectricTest() {
             assertThat(account.profile.avatar.avatarImageUri).isEqualTo(null)
         }
 
+    @OptIn(ExperimentalCoroutinesApi::class)
+    @Test
+    fun `importSettings() should skip an avatar image that is not base64`() =
+        runTest(UnconfinedTestDispatcher()) {
+            stubAvatarDecoding()
+
+            val accountUuid = UUID.randomUUID().toString()
+            val inputStream = avatarAccountXml(
+                accountUuid = accountUuid,
+                settingsValues = """<value key="avatarType">IMAGE</value>""",
+                avatarImageElement = "<avatar-image>!!! not base64 !!!</avatar-image>",
+            ).byteInputStream()
+
+            val results = settingsImporter.importSettings(inputStream, globalSettings = false, listOf(accountUuid))
+
+            assertThat(results.erroneousAccounts).isEmpty()
+            assertThat(results.importedAccounts).hasSize(1)
+            assertThat(importedAccount(results).profile.avatar.avatarImageUri).isEqualTo(null)
+        }
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    @Test
+    fun `importSettings() should skip an avatar image for a non-image avatar`() =
+        runTest(UnconfinedTestDispatcher()) {
+            stubAvatarDecoding()
+
+            val accountUuid = UUID.randomUUID().toString()
+            val inputStream = avatarAccountXml(
+                accountUuid = accountUuid,
+                settingsValues = """
+                    <value key="avatarType">MONOGRAM</value>
+                    <value key="avatarMonogram">AB</value>
+                """.trimIndent(),
+                avatarImageElement = "<avatar-image>$TINY_AVATAR</avatar-image>",
+            ).byteInputStream()
+
+            val results = settingsImporter.importSettings(inputStream, globalSettings = false, listOf(accountUuid))
+
+            assertThat(results.importedAccounts).hasSize(1)
+            assertThat(importedAccount(results).profile.avatar.avatarImageUri).isEqualTo(null)
+        }
+
     /**
      * Stubs avatar decoding so that if it were (wrongly) triggered, the resulting uri would differ from the
      * expected value, making the test fail instead of silently passing.
@@ -552,4 +593,9 @@ class SettingsImporterTest : K9RobolectricTest() {
           </accounts>
         </k9settings>
         """.trimIndent()
+
+    private companion object {
+        const val TINY_AVATAR =
+            "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=="
+    }
 }

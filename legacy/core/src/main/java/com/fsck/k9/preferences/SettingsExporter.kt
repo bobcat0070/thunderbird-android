@@ -7,6 +7,8 @@ import com.fsck.k9.notification.NotificationSettingsUpdater
 import com.fsck.k9.preferences.ServerTypeConverter.fromServerSettingsType
 import com.fsck.k9.preferences.Settings.InvalidSettingValueException
 import com.fsck.k9.preferences.Settings.SettingsDescription
+import java.io.ByteArrayOutputStream
+import java.io.InputStream
 import java.io.OutputStream
 import java.text.SimpleDateFormat
 import java.util.Calendar
@@ -331,12 +333,16 @@ class SettingsExporter(
 
         val bytes = try {
             contentResolver.openInputStream(uri)?.use { input ->
-                input.readBytes()
+                input.readAtMost(MAX_AVATAR_IMAGE_BYTES)
             }
         } catch (e: IOException) {
             Log.w(TAG, e, "Avatar image could not be exported")
             null
-        }?: return
+        } catch (e: SecurityException) {
+            // A picture picked through another app whose grant has since lapsed: the export goes on without it.
+            Log.w(TAG, e, "Avatar image could not be exported")
+            null
+        } ?: return
 
         val encoded = Base64.encodeToString(bytes, Base64.NO_WRAP)
         serializer.startTag(null, AVATAR_IMAGE_ELEMENT)
@@ -556,6 +562,12 @@ class SettingsExporter(
     }
 
     companion object {
+        /**
+         * The largest avatar image carried in a settings file, either way. A photo picked from the gallery is a few
+         * megabytes; the cap keeps a stray or hostile file from being held in memory twice over during import.
+         */
+        const val MAX_AVATAR_IMAGE_BYTES = 10 * 1024 * 1024
+
         private const val EXPORT_FILENAME_SUFFIX = "k9s"
         private const val EXPORT_FILENAME_MIDDLE_PART = "settings_export"
 
@@ -609,4 +621,20 @@ class SettingsExporter(
             "trashFolderName",
         )
     }
+}
+
+/**
+ * @return the stream's bytes, or `null` when it holds more than [limit] - read only that far, never all of it.
+ */
+private fun InputStream.readAtMost(limit: Int): ByteArray? {
+    val buffer = ByteArrayOutputStream()
+    val chunk = ByteArray(DEFAULT_BUFFER_SIZE)
+    while (true) {
+        val count = read(chunk)
+        if (count == -1) break
+        buffer.write(chunk, 0, count)
+        if (buffer.size() > limit) return null
+    }
+
+    return buffer.toByteArray()
 }
