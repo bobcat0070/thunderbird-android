@@ -57,4 +57,21 @@ class DeceptiveLinksTest {
     fun `the host of a link should ignore credentials and the leading www`() {
         assertThat(hostOf("https://user:pass@WWW.Example.COM:8443/path")).isEqualTo("example.com")
     }
+
+    @Test
+    fun `a link whose text is an address should be offered that address`() {
+        val html = """
+            <a href="https://clicks.mlsend.com/gr/c/abc">costco.com/orders</a>
+            <a href="https://t.example/x">https://www.shop.example/sale?id=1</a>
+            <a href="https://t.example/y">Shop now</a>
+            <a href="mailto:a@example.com">example.com</a>
+        """.trimIndent()
+
+        assertThat(findAddressTexts(html)).isEqualTo(
+            mapOf(
+                "https://clicks.mlsend.com/gr/c/abc" to "https://costco.com/orders",
+                "https://t.example/x" to "https://www.shop.example/sale?id=1",
+            ),
+        )
+    }
 }

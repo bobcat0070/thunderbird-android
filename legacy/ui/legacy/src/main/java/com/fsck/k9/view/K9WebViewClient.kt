@@ -1,5 +1,6 @@
 package com.fsck.k9.view
 
+import com.fsck.k9.message.html.findAddressTexts
 import com.fsck.k9.message.html.findDeceptiveLinks
 import com.fsck.k9.message.html.hostOf
 import android.content.Context
@@ -27,6 +28,7 @@ class K9WebViewClient(
     private val attachmentResolver: AttachmentResolver?,
     private val onPageFinishedListener: OnPageFinishedListener?,
     private val displayedHtml: String? = null,
+    private val senderAddress: String? = null,
 ) : WebViewClient() {
 
     /**
@@ -35,6 +37,13 @@ class K9WebViewClient(
      */
     private val deceptiveLinks: Map<String, String> by lazy {
         displayedHtml?.let(::findDeceptiveLinks).orEmpty()
+    }
+
+    /**
+     * The links whose text is a web address, with that address; see [findAddressTexts].
+     */
+    private val addressTexts: Map<String, String> by lazy {
+        displayedHtml?.let(::findAddressTexts).orEmpty()
     }
 
     @Deprecated("Deprecated in parent class")
@@ -72,9 +81,23 @@ class K9WebViewClient(
      * different site from the one it opens.
      */
     fun confirmAndOpen(context: Context, uri: Uri) {
-        val shownSite = hostOf(uri.toString())?.let { host -> deceptiveLinks[host] }
-        linkConfirmation.confirmAndOpen(context, uri, shownSite)
+        val url = uri.toString()
+        val shownSite = hostOf(url)?.let { host -> deceptiveLinks[host] }
+        linkConfirmation.confirmAndOpen(
+            context = context,
+            uri = uri,
+            shownSite = shownSite,
+            textAddress = addressTextFor(url),
+            senderAddress = senderAddress,
+        )
     }
+
+    /**
+     * The WebView hands over the link as it resolved it, which can differ from the `href` as written by a trailing
+     * slash or entity decoding; both forms are tried.
+     */
+    private fun addressTextFor(url: String): String? =
+        addressTexts[url] ?: addressTexts[url.removeSuffix("/")] ?: addressTexts["$url/"]
 
     override fun shouldInterceptRequest(webView: WebView, request: WebResourceRequest): WebResourceResponse? {
         val uri = request.url

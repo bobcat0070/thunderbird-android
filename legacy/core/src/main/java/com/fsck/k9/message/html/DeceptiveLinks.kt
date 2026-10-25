@@ -37,6 +37,28 @@ fun findDeceptiveLinks(html: String): Map<String, String> {
         .toMap()
 }
 
+private val WEB_SCHEME = Regex("^https?://", RegexOption.IGNORE_CASE)
+
+/**
+ * Finds the links whose text is itself a web address - `costco.com/orders` written over a click-tracking address -
+ * so the reader can be offered the address they were shown rather than the one behind it.
+ *
+ * @return for each link, keyed by its `href` as written, the address its text names, as an `https` link when the
+ *   text gave no scheme. Links whose text is anything else are left out.
+ */
+fun findAddressTexts(html: String): Map<String, String> {
+    return Jsoup.parse(html).select("a[href]")
+        .mapNotNull { anchor ->
+            val href = anchor.attr("href").trim()
+            val text = anchor.text().trim()
+            if (hostOf(href) == null || ADDRESS_TEXT.matchEntire(text) == null) return@mapNotNull null
+
+            val address = if (WEB_SCHEME.containsMatchIn(text)) text else "https://$text"
+            hostOf(address)?.let { href to address }
+        }
+        .toMap()
+}
+
 /**
  * The host a link opens, in the form [findDeceptiveLinks] keys it by, or `null` for anything that is not a web
  * link.

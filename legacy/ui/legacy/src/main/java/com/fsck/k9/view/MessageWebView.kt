@@ -99,12 +99,17 @@ class MessageWebView : WebView, KoinComponent, ThunderbirdWebViewSettings {
         settings.displayZoomControls = !supportsMultiTouch
     }
 
+    /**
+     * @param senderAddress who sent the message being shown, so the link dialog can offer their website.
+     */
+    @JvmOverloads
     fun displayHtmlContentWithInlineAttachments(
         htmlText: String,
         attachmentResolver: AttachmentResolver?,
         onPageFinishedListener: OnPageFinishedListener?,
+        senderAddress: String? = null,
     ) {
-        setWebViewClient(attachmentResolver, onPageFinishedListener, htmlText)
+        setWebViewClient(attachmentResolver, onPageFinishedListener, htmlText, senderAddress)
         setHtmlContent(htmlText)
     }
 
@@ -112,8 +117,10 @@ class MessageWebView : WebView, KoinComponent, ThunderbirdWebViewSettings {
         attachmentResolver: AttachmentResolver?,
         onPageFinishedListener: OnPageFinishedListener?,
         htmlText: String,
+        senderAddress: String?,
     ) {
-        val webViewClient = webViewClientFactory.create(attachmentResolver, onPageFinishedListener, htmlText)
+        val webViewClient =
+            webViewClientFactory.create(attachmentResolver, onPageFinishedListener, htmlText, senderAddress)
         linkOpener = webViewClient as? K9WebViewClient
         setWebViewClient(webViewClient)
     }

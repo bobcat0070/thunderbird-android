@@ -135,6 +135,27 @@ class TrackingLinksTest {
     }
 
     @Test
+    fun `the sender's website should drop the mailing subdomains`() {
+        assertThat(senderWebsite("noreply@email.rocketmoney.com")).isEqualTo("https://rocketmoney.com/")
+        assertThat(senderWebsite("Deals@News.E.Shop.Example")).isEqualTo("https://shop.example/")
+        assertThat(senderWebsite("felix@compugor.com")).isEqualTo("https://compugor.com/")
+        assertThat(senderWebsite("orders@costco.com")).isEqualTo("https://costco.com/")
+    }
+
+    @Test
+    fun `a domain of mailing labels alone should keep two labels`() {
+        assertThat(senderWebsite("x@mail.example")).isEqualTo("https://mail.example/")
+    }
+
+    @Test
+    fun `an address without a usable domain should give no website`() {
+        assertThat(senderWebsite(null)).isNull()
+        assertThat(senderWebsite("nobody")).isNull()
+        assertThat(senderWebsite("someone@localhost")).isNull()
+        assertThat(senderWebsite("someone@bad..example")).isNull()
+    }
+
+    @Test
     fun `a short link should be shown whole`() {
         val url = "https://shop.example/item?id=42"
 

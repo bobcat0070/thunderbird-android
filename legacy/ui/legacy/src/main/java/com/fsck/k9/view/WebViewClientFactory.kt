@@ -11,9 +11,10 @@ internal class WebViewClientFactory {
         attachmentResolver: AttachmentResolver?,
         onPageFinishedListener: OnPageFinishedListener?,
         displayedHtml: String? = null,
+        senderAddress: String? = null,
     ): WebViewClient {
         return getKoin().get(K9WebViewClient::class) {
-            parametersOf(attachmentResolver, onPageFinishedListener, displayedHtml)
+            parametersOf(attachmentResolver, onPageFinishedListener, displayedHtml, senderAddress)
         }
     }
 }

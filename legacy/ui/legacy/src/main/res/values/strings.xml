@@ -459,6 +459,8 @@
     <string name="link_dialog_dont_open">Don\'t open</string>
     <string name="link_dialog_open_as_is">Open as is</string>
     <string name="link_dialog_strip">Strip and open</string>
+    <!-- %1$s is a site, e.g. rocketmoney.com: the one the link's text names, or else the sender's own -->
+    <string name="link_dialog_go_to_instead">Go to <xliff:g id="site">%1$s</xliff:g> instead</string>
     <!-- Heading above the link with its tracking removed, which "Strip and open" opens -->
     <string name="link_dialog_stripped_heading">Without tracking</string>
     <!-- %1$s is the host of a redirect service, e.g. nam12.safelinks.protection.outlook.com -->

@@ -161,6 +161,36 @@ fun clickTrackerHost(url: String): String? {
 }
 
 /**
+ * The first labels of a sender's domain that name the mailing system rather than the organisation, as in
+ * `email.rocketmoney.com` or `news.shop.example`. Dropped to reach the site people actually visit.
+ */
+private val MAIL_SUBDOMAIN_LABELS = setOf(
+    "e", "em", "email", "emails", "mail", "mailer", "mailing", "mg", "mkt", "marketing", "news", "newsletter",
+    "newsletters", "info", "notification", "notifications", "notify", "alerts", "updates", "reply", "send", "bounce",
+    "comms", "communications", "go", "m", "t", "crm", "service",
+)
+
+/**
+ * The website of the organisation an address belongs to, for going there directly instead of through a link from
+ * its mail: `news@email.rocketmoney.com` gives `https://rocketmoney.com/`. Not the page a link would have opened, but
+ * reached without any of its tracking.
+ *
+ * @return the site's address, or `null` when [address] has no usable domain.
+ */
+@Suppress("ReturnCount")
+fun senderWebsite(address: String?): String? {
+    val domain = address?.substringAfterLast('@', missingDelimiterValue = "")?.trim()?.trimEnd('.')?.lowercase()
+        ?.takeIf { it.isNotEmpty() } ?: return null
+
+    var labels = domain.split('.')
+    if (labels.size < 2 || labels.any { it.isEmpty() }) return null
+    while (labels.size > 2 && labels.first() in MAIL_SUBDOMAIN_LABELS) labels = labels.drop(1)
+
+    val site = "https://${labels.joinToString(".")}/"
+    return site.takeIf { hostOf(it) != null }
+}
+
+/**
  * A link as it can be shown in a dialog: as it is when it is short, otherwise its start and end with the middle
  * left out. Tracking links run to a thousand characters of token, and shown whole they push everything else off the
  * screen; the start says where the link goes, and the end tells two otherwise similar links apart.

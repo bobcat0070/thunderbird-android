@@ -8,12 +8,15 @@ import android.net.Uri
 import android.provider.Browser
 import android.text.SpannableStringBuilder
 import android.text.style.StyleSpan
+import android.view.LayoutInflater
+import android.widget.Button
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.core.text.inSpans
 import com.fsck.k9.message.html.StrippedLink
 import com.fsck.k9.message.html.clickTrackerHost
 import com.fsck.k9.message.html.hostOf
+import com.fsck.k9.message.html.senderWebsite
 import com.fsck.k9.message.html.shortenForDisplay
 import com.fsck.k9.message.html.stripTracking
 import com.fsck.k9.ui.R
@@ -40,9 +43,20 @@ class LinkConfirmation(
     /**
      * @param shownSite the site the link's text named, when that is a different site from the one it opens - which
      *   is what nearly every phishing link looks like - or `null`.
+     * @param textAddress the web address the link's text is, when its text is one, e.g. `https://costco.com/orders`
+     *   written over a click tracker.
+     * @param senderAddress the address of whoever sent the message the link is in.
      * @param onClosed called once the link has been opened or the dialog closed, whichever way.
      */
-    fun confirmAndOpen(context: Context, uri: Uri, shownSite: String? = null, onClosed: () -> Unit = {}) {
+    @Suppress("LongParameterList")
+    fun confirmAndOpen(
+        context: Context,
+        uri: Uri,
+        shownSite: String? = null,
+        textAddress: String? = null,
+        senderAddress: String? = null,
+        onClosed: () -> Unit = {},
+    ) {
         val url = uri.toString()
         val host = hostOf(url)
         if (host == null) {
@@ -60,9 +74,15 @@ class LinkConfirmation(
             return
         }
 
+        val alternative = alternative(host, url, textAddress, senderAddress)
+        val alternativeView = alternative?.let {
+            LayoutInflater.from(context).inflate(R.layout.dialog_link_alternative, null)
+        }
+
         val dialog = MaterialAlertDialogBuilder(context)
             .setTitle(if (shownSite != null) R.string.deceptive_link_title else R.string.link_dialog_title)
             .setMessage(dialogMessage(context, uri, shownSite, listed, stripped))
+            .apply { alternativeView?.let(::setView) }
             .setNegativeButton(R.string.link_dialog_dont_open, null)
             .setNeutralButton(R.string.link_dialog_open_as_is) { _, _ -> openUrl(context, uri) }
             .setPositiveButton(R.string.link_dialog_strip) { _, _ ->
@@ -72,6 +92,34 @@ class LinkConfirmation(
             .show()
 
         dialog.getButton(AlertDialog.BUTTON_POSITIVE)?.isEnabled = stripped != null
+        if (alternative != null && alternativeView != null) {
+            alternativeView.findViewById<Button>(R.id.link_alternative).apply {
+                text = context.getString(R.string.link_dialog_go_to_instead, alternative.label)
+                setOnClickListener {
+                    dialog.dismiss()
+                    openUrl(context, Uri.parse(alternative.url))
+                }
+            }
+        }
+    }
+
+    /**
+     * Somewhere to go instead of the link, reached without any of its tracking: the address the link's text names,
+     * when it names one, otherwise the sender's own website. Not offered when it is where the link goes anyway, or
+     * when it is on the threat list.
+     */
+    private fun alternative(host: String, url: String, textAddress: String?, senderAddress: String?): Alternative? {
+        val candidates = listOfNotNull(
+            textAddress?.takeIf { it != url },
+            senderWebsite(senderAddress),
+        )
+
+        return candidates.firstNotNullOfOrNull { candidate ->
+            val candidateHost = hostOf(candidate) ?: return@firstNotNullOfOrNull null
+            val isThreat = domainBlocklist.match(candidateHost)?.kind == BlocklistKind.THREAT
+            val isSameSite = candidate == senderWebsite(senderAddress) && candidateHost == host
+            Alternative(candidate, candidateHost).takeIf { !isThreat && !isSameSite }
+        }
     }
 
     /**
@@ -159,4 +207,6 @@ class LinkConfirmation(
     }
 
     private data class Listing(val match: BlocklistMatch, val isDestination: Boolean)
+
+    private data class Alternative(val url: String, val label: String)
 }

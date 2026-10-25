@@ -86,6 +86,7 @@ class MessageContainerView(context: Context, attrs: AttributeSet?) :
     private val attachments = mutableMapOf<Uri, AttachmentViewInfo>()
     private var attachmentCallback: AttachmentViewCallback? = null
     private var currentAttachmentResolver: AttachmentResolver? = null
+    private var currentSenderAddress: String? = null
 
     @get:JvmName("hasHiddenExternalImages")
     var hasHiddenExternalImages = false
@@ -469,6 +470,7 @@ class MessageContainerView(context: Context, attrs: AttributeSet?) :
         val textToDisplay = messageText
             ?: displayHtml.wrapStatusMessage(context.getString(R.string.webview_empty_message))
 
+        currentSenderAddress = messageViewInfo.message?.from?.firstOrNull()?.address
         displayHtmlContentWithInlineAttachments(
             htmlText = textToDisplay,
             attachmentResolver = messageViewInfo.attachmentResolver,
@@ -489,7 +491,12 @@ class MessageContainerView(context: Context, attrs: AttributeSet?) :
     ) {
         currentHtmlText = htmlText
         currentAttachmentResolver = attachmentResolver
-        messageContentView.displayHtmlContentWithInlineAttachments(htmlText, attachmentResolver, onPageFinishedListener)
+        messageContentView.displayHtmlContentWithInlineAttachments(
+            htmlText,
+            attachmentResolver,
+            onPageFinishedListener,
+            currentSenderAddress,
+        )
     }
 
     private fun refreshDisplayedContent() {
@@ -499,6 +506,7 @@ class MessageContainerView(context: Context, attrs: AttributeSet?) :
             htmlText = htmlText,
             attachmentResolver = currentAttachmentResolver,
             onPageFinishedListener = null,
+            senderAddress = currentSenderAddress,
         )
     }
 
