@@ -21,6 +21,8 @@ import net.thunderbird.feature.account.AccountIdFactory
 import net.thunderbird.feature.account.storage.profile.AvatarDto
 import net.thunderbird.feature.account.storage.profile.AvatarTypeDto
 import net.thunderbird.feature.account.storage.profile.ProfileDto
+import net.thunderbird.feature.blocklist.BlocklistKind
+import net.thunderbird.feature.blocklist.BlocklistMatch
 import net.thunderbird.feature.impersonation.Impersonation
 import org.junit.Test
 import org.mockito.kotlin.doReturn
@@ -72,6 +74,38 @@ class NotificationContentCreatorTest : RobolectricTest() {
         val content = contentCreator.createFromMessage(message, isFromSelf = false)
 
         assertThat(content.preview.toString()).isEqualTo("⚠ Possible impersonation\n$SUBJECT\n$PREVIEW")
+    }
+
+    @Test
+    fun createFromMessage_withSenderOnThreatList_shouldPutTheWarningFirst() {
+        val contentCreator = NotificationContentCreator(
+            resourceProvider,
+            contactRepository,
+            messageListPreferencesManager = mock {
+                on { getConfig() } doReturn DisplayMessageListSettings()
+            },
+            domainBlocklist = { host -> BlocklistMatch(host, BlocklistKind.THREAT, "Threat Intelligence Feeds") },
+        )
+
+        val content = contentCreator.createFromMessage(message, isFromSelf = false)
+
+        assertThat(content.preview.toString()).isEqualTo("⚠ Sender is on a threat list\n$SUBJECT\n$PREVIEW")
+    }
+
+    @Test
+    fun createFromMessage_withSenderOnGeneralBlocklist_shouldNotWarn() {
+        val contentCreator = NotificationContentCreator(
+            resourceProvider,
+            contactRepository,
+            messageListPreferencesManager = mock {
+                on { getConfig() } doReturn DisplayMessageListSettings()
+            },
+            domainBlocklist = { host -> BlocklistMatch(host, BlocklistKind.GENERAL, "Normal") },
+        )
+
+        val content = contentCreator.createFromMessage(message, isFromSelf = false)
+
+        assertThat(content.preview.toString()).isEqualTo("$SUBJECT\n$PREVIEW")
     }
 
     @Test

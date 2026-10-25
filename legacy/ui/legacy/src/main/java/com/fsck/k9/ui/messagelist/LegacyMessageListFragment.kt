@@ -2,6 +2,7 @@ package com.fsck.k9.ui.messagelist
 
 import android.net.Uri
 import com.fsck.k9.ui.base.R as BaseR
+import com.fsck.k9.view.LinkConfirmation
 import com.fsck.k9.ui.unsubscribe.OneClickUnsubscriber
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import net.thunderbird.feature.mail.message.classification.api.MessageClass
@@ -185,6 +186,7 @@ class LegacyMessageListFragment :
     private val recentChangesViewModel: RecentChangesViewModel by viewModel()
 
     private val generalSettingsManager: GeneralSettingsManager by inject()
+    private val linkConfirmation: LinkConfirmation by inject()
     private val pinnedFolderRepository: PinnedFolderRepository by inject()
     private val sortTypeToastProvider: SortTypeToastProvider by inject()
     private val messageListPreferencesManager: MessageListPreferencesManager by inject()
@@ -2307,7 +2309,11 @@ class LegacyMessageListFragment :
                 putExtra(MessageCompose.EXTRA_ACCOUNT, messageReference.accountId.toString())
             }
 
-            is HttpsUnsubscribeUri -> Intent(Intent.ACTION_VIEW, unsubscribeUri.uri)
+            // The sender's own page, so it goes through the same check as a link in the message.
+            is HttpsUnsubscribeUri -> {
+                linkConfirmation.confirmAndOpen(requireContext(), unsubscribeUri.uri)
+                return
+            }
 
             else -> error("Unknown UnsubscribeUri - $unsubscribeUri")
         }

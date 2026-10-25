@@ -12,6 +12,7 @@ internal class FakeSpamDigestStrings : SpamDigestStrings {
     override fun knownSendersHeading(messageCount: Int): String = "From people you know: $messageCount"
     override fun noOtherMessages(): String = "No other spam."
     override fun accountLine(account: String): String = "In: $account"
+    override fun threatListed(domain: String): String = "$domain is on a threat list"
     override fun impersonation(impersonation: Impersonation): String = when (impersonation) {
         is Impersonation.LookalikeDomain -> "${impersonation.senderDomain} looks like ${impersonation.knownDomain}"
         else -> impersonation.toString()

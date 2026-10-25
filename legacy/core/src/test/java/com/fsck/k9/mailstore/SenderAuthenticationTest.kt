@@ -391,4 +391,23 @@ class TrustedAuthenticationServerTest {
         ))
             .isFalse()
     }
+
+    @Test
+    fun `the domains that actually sent a message should be read whether or not they match the From address`() {
+        val headers = listOf(
+            "mx.google.com; spf=pass (google.com: domain of bounce@mail.sender.example) " +
+                "smtp.mailfrom=bounce@mail.sender.example; dkim=pass header.i=@signer.example; " +
+                "dkim=fail header.d=other.example; dmarc=fail header.from=bank.example",
+        )
+
+        assertThat(authenticatedSendingDomains(headers, "mx.google.com"))
+            .containsExactly("mail.sender.example", "signer.example")
+    }
+
+    @Test
+    fun `sending domains from a server that is not the account's own should not be read`() {
+        val headers = listOf("evil.example; spf=pass smtp.mailfrom=sender.example; dkim=pass header.d=signer.example")
+
+        assertThat(authenticatedSendingDomains(headers, "mx.google.com")).isEmpty()
+    }
 }

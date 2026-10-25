@@ -26,13 +26,13 @@ val viewModule = module {
     factory { parameters ->
         K9WebViewClient(
             clipboardManager = get(),
-            generalSettingsManager = get(),
-            domainBlocklist = get(),
+            linkConfirmation = get(),
             attachmentResolver = parameters.values.getOrNull(0) as AttachmentResolver?,
             onPageFinishedListener = parameters.values.getOrNull(1) as OnPageFinishedListener?,
             displayedHtml = parameters.values.getOrNull(2) as String?,
         )
     }
     factory { WebViewClientFactory() }
+    factory { LinkConfirmation(generalSettingsManager = get(), domainBlocklist = get()) }
     factory { UserInputEmailAddressParser() }
 }

@@ -16,6 +16,22 @@ fun blocklistNote(context: Context, match: BlocklistMatch): String = when (match
 }
 
 /**
+ * What to say about a link that goes through a redirect to a site on a blocklist.
+ */
+fun destinationBlocklistNote(context: Context, match: BlocklistMatch): String = when (match.kind) {
+    BlocklistKind.THREAT -> context.getString(R.string.blocklist_link_destination_threat, match.listedDomain)
+    BlocklistKind.GENERAL ->
+        context.getString(R.string.blocklist_link_destination_general, match.listedDomain, match.listName)
+}
+
+/**
+ * What to say when the domain a message was verified as sent through, rather than its From address, is on the
+ * threat list.
+ */
+fun sendingDomainBlocklistNote(context: Context, match: BlocklistMatch): String =
+    context.getString(R.string.blocklist_sending_domain_threat, match.listedDomain)
+
+/**
  * What to say under a sender whose domain is on a blocklist.
  */
 fun senderBlocklistNote(context: Context, match: BlocklistMatch): String = when (match.kind) {

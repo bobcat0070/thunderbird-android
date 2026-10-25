@@ -57,6 +57,9 @@ internal class AndroidSpamDigestStrings(
 
     override fun accountLine(account: String): String = resources.getString(R.string.spam_digest_account_line, account)
 
+    override fun threatListed(domain: String): String =
+        resources.getString(R.string.spam_digest_threat_listed, domain)
+
     override fun impersonation(impersonation: Impersonation): String = when (impersonation) {
         is Impersonation.AddressInName -> resources.getString(
             R.string.spam_digest_impersonation_named_elsewhere,

@@ -52,6 +52,8 @@ public data class SenderCheck(
  * @param isFromKnownSender whether the sender is someone the reader knows - written to, or a contact - and nothing
  *   about the message suggests it only pretends to be from them: no DMARC failure, no impersonation.
  * @param impersonation what the sender appears to be impersonating, if anything.
+ * @param threatListedDomain the domain the sender wrote from, or the message was verified as sent through, when it
+ *   is on the threat blocklist; `null` otherwise.
  */
 public data class SpamMessage(
     val senderName: String?,
@@ -61,6 +63,7 @@ public data class SpamMessage(
     val senderChecks: List<SenderCheck>,
     val isFromKnownSender: Boolean = false,
     val impersonation: Impersonation? = null,
+    val threatListedDomain: String? = null,
 )
 
 /**

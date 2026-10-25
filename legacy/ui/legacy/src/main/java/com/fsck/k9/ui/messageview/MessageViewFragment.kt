@@ -70,6 +70,7 @@ import org.koin.android.ext.android.get
 import org.koin.core.parameter.parametersOf
 import com.fsck.k9.ui.R
 import com.fsck.k9.ui.base.extensions.withArguments
+import com.fsck.k9.view.LinkConfirmation
 import com.fsck.k9.ui.choosefolder.ChooseFolderActivity
 import com.fsck.k9.ui.choosefolder.ChooseFolderResultContract
 import com.fsck.k9.ui.helper.SizeFormatter
@@ -134,6 +135,7 @@ class MessageViewFragment :
     AttachmentViewCallback {
 
     private val themeManager: ThemeManager by inject()
+    private val linkConfirmation: LinkConfirmation by inject()
     private val themeProvider: FeatureThemeProvider by inject()
     private val messageLoaderHelperFactory: MessageLoaderHelperFactory by inject()
     private val accountManager: LegacyAccountManager by inject()
@@ -1305,8 +1307,10 @@ class MessageViewFragment :
                 }
             }
 
+            // The sender's own page, so it goes through the same check as a link in the message.
             is HttpsUnsubscribeUri -> {
-                Intent(Intent.ACTION_VIEW, unsubscribeUri.uri)
+                linkConfirmation.confirmAndOpen(requireContext(), unsubscribeUri.uri)
+                return
             }
 
             else -> error("Unknown UnsubscribeUri - $unsubscribeUri")

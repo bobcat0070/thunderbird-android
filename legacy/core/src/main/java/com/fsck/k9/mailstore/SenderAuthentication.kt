@@ -175,6 +175,28 @@ fun authenticationOutcomes(
 }
 
 /**
+ * The domains the receiving server verified as having sent the message: whichever domain signed it (DKIM) and the
+ * envelope sender's (SPF), when either passed, whether or not they line up with the From address.
+ *
+ * A forged From can name any domain at all, so it says little about who actually sent the mail; these are the
+ * domains the server checked the message really came through. Read from the trusted header only, as in
+ * [hasDmarcPass].
+ *
+ * @return the verified domains, without duplicates, or nothing when no trusted server reported a pass.
+ */
+fun authenticatedSendingDomains(headerValues: List<String>, trustedServerId: String?): List<String> {
+    return trustedSpecs(headerValues, trustedServerId)
+        .filter { spec -> spec.result == PASS }
+        .mapNotNull { spec ->
+            val method = AuthenticationMethod.entries.firstOrNull { it.name.lowercase() == spec.method }
+                ?.takeIf { it != AuthenticationMethod.DMARC }
+            method?.let { spec.authenticatedIdentity(it)?.domainPart() }
+        }
+        .filter { it.contains('.') }
+        .distinct()
+}
+
+/**
  * One `method=result` clause of the header, with the properties that say what it applied to.
  */
 private class MethodSpec(

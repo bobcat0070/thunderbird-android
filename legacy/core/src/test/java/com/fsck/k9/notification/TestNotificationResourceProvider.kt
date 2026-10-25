@@ -64,6 +64,8 @@ class TestNotificationResourceProvider : NotificationResourceProvider {
 
     override fun possibleImpersonation(): String = "Possible impersonation"
 
+    override fun senderOnThreatList(): String = "Sender is on a threat list"
+
     override fun recipientDisplayName(recipientDisplayName: String): String = "To:$recipientDisplayName"
 
     override fun noSender(): String = "No sender"

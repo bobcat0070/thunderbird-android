@@ -8,6 +8,8 @@ import com.fsck.k9.mail.Address
 import com.fsck.k9.mail.Message
 import com.fsck.k9.mailstore.LocalMessage
 import net.thunderbird.core.preference.display.visualSettings.message.list.MessageListPreferencesManager
+import net.thunderbird.feature.blocklist.BlocklistKind
+import net.thunderbird.feature.blocklist.DomainBlocklist
 import net.thunderbird.feature.impersonation.ImpersonationChecker
 
 private const val WARNING_MARK = "\u26A0"
@@ -17,6 +19,7 @@ internal class NotificationContentCreator(
     private val contactRepository: ContactRepository,
     private val messageListPreferencesManager: MessageListPreferencesManager,
     private val impersonationChecker: ImpersonationChecker? = null,
+    private val domainBlocklist: DomainBlocklist? = null,
 ) {
     fun createFromMessage(message: LocalMessage, isFromSelf: Boolean): NotificationContent {
         val sender = getMessageSender(message, isFromSelf)
@@ -25,28 +28,36 @@ internal class NotificationContentCreator(
             messageReference = message.makeMessageReference(),
             sender = sender,
             subject = getMessageSubject(message),
-            preview = withImpersonationWarning(message, getMessagePreview(message)),
+            preview = withSenderWarning(message, getMessagePreview(message)),
             summary = buildMessageSummary(sender.personal, getMessageSubject(message)),
             isSenderAuthenticated = message.isSenderAuthenticated,
         )
     }
 
     /**
-     * Puts a warning first when the sender looks like someone they are not, since a notification is often all of a
-     * message that is read before acting on it. Checked against the address the message came from, not the contact
-     * name the notification may show in its place.
+     * Puts a warning first when the sender looks like someone they are not, or their domain is on the threat
+     * blocklist, since a notification is often all of a message that is read before acting on it. Checked against
+     * the address the message came from, not the contact name the notification may show in its place. The general
+     * blocklist is left out: it holds plenty of ordinary mailing domains, and a notification is no place for a note
+     * that is only information.
      */
-    private fun withImpersonationWarning(message: LocalMessage, preview: CharSequence): CharSequence {
-        val from = message.from?.firstOrNull()
-        from?.let { impersonationChecker?.check(it.personal, it.address) } ?: return preview
+    private fun withSenderWarning(message: LocalMessage, preview: CharSequence): CharSequence {
+        val warning = message.from?.firstOrNull()?.let(::senderWarning) ?: return preview
 
         return SpannableStringBuilder().apply {
             append(WARNING_MARK)
             append(' ')
-            append(resourceProvider.possibleImpersonation())
+            append(warning)
             append('\n')
             append(preview)
         }
+    }
+
+    private fun senderWarning(from: Address): String? = when {
+        impersonationChecker?.check(from.personal, from.address) != null -> resourceProvider.possibleImpersonation()
+        domainBlocklist?.match(from.address.orEmpty())?.kind == BlocklistKind.THREAT ->
+            resourceProvider.senderOnThreatList()
+        else -> null
     }
 
     private fun getMessagePreview(message: LocalMessage): CharSequence {

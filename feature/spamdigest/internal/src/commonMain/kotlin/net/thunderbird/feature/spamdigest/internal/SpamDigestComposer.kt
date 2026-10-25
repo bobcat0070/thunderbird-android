@@ -45,6 +45,7 @@ internal interface SpamDigestStrings {
     fun subjectLine(subject: String): String
     fun accountLine(account: String): String
     fun impersonation(impersonation: Impersonation): String
+    fun threatListed(domain: String): String
     fun checksNotReported(): String
     fun legend(): String
 }
@@ -228,6 +229,9 @@ internal class SpamDigestComposer(
             // same cleaning as everything else they wrote.
             message.impersonation?.let { impersonation ->
                 add("$WARNING_MARK ${strings.impersonation(impersonation).sanitized(MAX_SUBJECT_LENGTH)}")
+            }
+            message.threatListedDomain?.let { domain ->
+                add("$WARNING_MARK ${strings.threatListed(domain).sanitized(MAX_SUBJECT_LENGTH)}")
             }
 
             if (SpamDigestField.SUBJECT in shown) {

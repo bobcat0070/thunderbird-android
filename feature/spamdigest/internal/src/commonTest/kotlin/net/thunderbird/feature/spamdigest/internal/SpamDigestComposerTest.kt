@@ -3,6 +3,7 @@ package net.thunderbird.feature.spamdigest.internal
 import assertk.assertThat
 import assertk.assertions.contains
 import assertk.assertions.isEqualTo
+import assertk.assertions.isTrue
 import kotlin.test.Test
 import kotlin.time.Instant
 import kotlinx.datetime.LocalDate
@@ -127,6 +128,23 @@ class SpamDigestComposerTest {
         val result = testSubject.compose(day, accounts)
 
         assertThat(result.body.contains("-- 2026-10-02 --")).isEqualTo(false)
+    }
+
+    @Test
+    fun `compose should warn about a sender on the threat list`() {
+        val threat = spamMessage(
+            senderName = "Account Security",
+            senderAddress = "alerts@login.bad.example",
+            subject = "Verify",
+        )
+            .copy(threatListedDomain = "bad.example")
+        val accounts = listOf(
+            AccountSpam(work, SpamFolderResult.Read(SpamFolderContents(listOf(threat), isRefreshed = true))),
+        )
+
+        val result = testSubject.compose(day, accounts)
+
+        assertThat(result.body.lines().any { it.trim() == "⚠ bad.example is on a threat list" }).isTrue()
     }
 
     @Test

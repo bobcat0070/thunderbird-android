@@ -441,6 +441,12 @@
     <string name="blocklist_sender_threat">Sent from <xliff:g id="domain">%1$s</xliff:g>, which is on HaGeZi\'s threat list of malware, phishing and scam domains</string>
     <!-- %1$s is the listed domain; %2$s is the list's name: Light, Normal, Pro, Pro++ or Ultimate -->
     <string name="blocklist_sender_general">Sent from <xliff:g id="domain">%1$s</xliff:g>, which is on HaGeZi\'s <xliff:g id="list">%2$s</xliff:g> blocklist</string>
+    <!-- %1$s is the listed domain the message was verified as sent through, which differs from the From address -->
+    <string name="blocklist_sending_domain_threat">Sent through <xliff:g id="domain">%1$s</xliff:g>, which is on HaGeZi\'s threat list of malware, phishing and scam domains</string>
+    <!-- %1$s is the listed domain the link leads to once the redirect it goes through is skipped -->
+    <string name="blocklist_link_destination_threat">⚠ This link leads to <xliff:g id="domain">%1$s</xliff:g>, which is on HaGeZi\'s threat list of malware, phishing and scam sites.</string>
+    <!-- %1$s is the listed domain the link leads to; %2$s is the list\'s name: Light, Normal, Pro, Pro++ or Ultimate -->
+    <string name="blocklist_link_destination_general">This link leads to <xliff:g id="domain">%1$s</xliff:g>, which is on HaGeZi\'s <xliff:g id="list">%2$s</xliff:g> blocklist of ads, trackers and other junk.</string>
     <string name="message_list_sender_on_threat_list">Sender is on a threat blocklist</string>
     <string name="message_list_sender_on_blocklist">Sender is on a blocklist</string>
     <string name="general_settings_domain_blocklist_title">Domain blocklist</string>
@@ -705,6 +711,7 @@
     <string name="one_click_unsubscribe_failed">The sender did not accept the request. Opening their unsubscribe page instead.</string>
     <string name="message_list_possible_impersonation">Possible impersonation</string>
     <string name="notification_possible_impersonation">Possible impersonation</string>
+    <string name="notification_sender_on_threat_list">Sender is on a threat blocklist</string>
     <string name="account_settings_spam_digest_exact_alarm_label">Allow exact alarms</string>
     <string name="account_settings_spam_digest_exact_alarm_summary">Without them Android may send the digest up to an hour late. Tap to allow.</string>
     <string name="account_settings_spam_digest_send_now_label">Send digest now</string>

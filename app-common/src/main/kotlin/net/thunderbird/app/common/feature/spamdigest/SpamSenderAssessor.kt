@@ -5,12 +5,15 @@ import com.fsck.k9.mailstore.AuthenticationMethod
 import com.fsck.k9.mailstore.AuthenticationServerTrust
 import com.fsck.k9.mailstore.KnownContacts
 import com.fsck.k9.mailstore.KnownCorrespondents
+import com.fsck.k9.mailstore.authenticatedSendingDomains
 import com.fsck.k9.mailstore.authenticationOutcomes
 import com.fsck.k9.mailstore.hasDmarcFail
 import com.fsck.k9.mailstore.recipients.RecipientIndex
 import com.fsck.k9.mailstore.recipients.RecipientOrigin
 import com.fsck.k9.mailstore.senderDomainOf
 import kotlin.time.Instant
+import net.thunderbird.feature.blocklist.BlocklistKind
+import net.thunderbird.feature.blocklist.DomainBlocklist
 import net.thunderbird.feature.impersonation.ImpersonationChecker
 import net.thunderbird.feature.spamdigest.SenderCheck
 import net.thunderbird.feature.spamdigest.SenderCheckMethod
@@ -23,7 +26,8 @@ import net.thunderbird.feature.spamdigest.SpamMessage
  * "Known" means written to at least twice, in the address book, or a contact the account's provider lists - the
  * same people the rest of the app treats as correspondents. It is withheld from anything that failed DMARC or
  * impersonates someone, because a forged message from a known name is exactly what a spam folder is for, and
- * listing it as "possibly not spam" would do the forger's work.
+ * listing it as "possibly not spam" would do the forger's work. The same goes for a sender on the threat
+ * blocklist - by the From address, or by a domain the server verified the message really came through.
  */
 internal class SpamSenderAssessor(
     private val authenticationServerTrust: AuthenticationServerTrust,
@@ -31,6 +35,7 @@ internal class SpamSenderAssessor(
     private val knownContacts: KnownContacts,
     private val recipientIndex: RecipientIndex,
     private val impersonationChecker: ImpersonationChecker,
+    private val domainBlocklist: DomainBlocklist,
 ) {
     fun assess(
         accountId: String,
@@ -46,7 +51,9 @@ internal class SpamSenderAssessor(
         val senderChecks = authenticationOutcomes(authenticationResults, domain, trustedServerId)
             .map { outcome -> SenderCheck(outcome.method.toSenderCheckMethod(), outcome.passed) }
         val impersonation = impersonationChecker.check(sender?.personal, address)
-        val isForged = hasDmarcFail(authenticationResults, domain, trustedServerId) || impersonation != null
+        val threatListedDomain = threatListedDomain(address, authenticationResults, trustedServerId)
+        val isForged = hasDmarcFail(authenticationResults, domain, trustedServerId) || impersonation != null ||
+            threatListedDomain != null
 
         return SpamMessage(
             senderName = sender?.personal,
@@ -56,7 +63,19 @@ internal class SpamSenderAssessor(
             senderChecks = senderChecks,
             isFromKnownSender = address != null && !isForged && isKnown(address),
             impersonation = impersonation,
+            threatListedDomain = threatListedDomain,
         )
+    }
+
+    private fun threatListedDomain(
+        address: String?,
+        authenticationResults: List<String>,
+        trustedServerId: String?,
+    ): String? {
+        val candidates = listOfNotNull(address) + authenticatedSendingDomains(authenticationResults, trustedServerId)
+        return candidates.firstNotNullOfOrNull { candidate ->
+            domainBlocklist.match(candidate)?.takeIf { it.kind == BlocklistKind.THREAT }?.listedDomain
+        }
     }
 
     private fun isKnown(address: String): Boolean {

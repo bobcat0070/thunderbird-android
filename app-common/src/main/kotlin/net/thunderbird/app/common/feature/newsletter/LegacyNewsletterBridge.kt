@@ -12,6 +12,7 @@ import com.fsck.k9.helper.MailtoUnsubscribeUri
 import com.fsck.k9.mailstore.MessageRepository
 import com.fsck.k9.search.specialFolderId
 import com.fsck.k9.ui.unsubscribe.OneClickUnsubscriber
+import com.fsck.k9.view.LinkConfirmationActivity
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import net.thunderbird.core.android.account.LegacyAccount
@@ -183,6 +184,7 @@ internal class LegacyNewsletterActions(
     /**
      * Opens the sender's own way out, as the message view does: their page, or an unsubscribe message to write.
      */
+    @Suppress("ReturnCount")
     private suspend fun openUnsubscribe(messageReference: MessageReference): UnsubscribeOutcome {
         val unsubscribeUri = withContext(Dispatchers.IO) {
             runCatching { messageRepository.getUnsubscribeUri(messageReference) }.getOrNull()
@@ -195,7 +197,12 @@ internal class LegacyNewsletterActions(
                 putExtra(MessageCompose.EXTRA_ACCOUNT, messageReference.accountId.toString())
             }
 
-            is HttpsUnsubscribeUri -> Intent(Intent.ACTION_VIEW, unsubscribeUri.uri)
+            // The sender's own page, so it goes through the same check as a link in a message. This screen asks
+            // with the application's context, which cannot show a dialog; the activity shows it instead.
+            is HttpsUnsubscribeUri -> {
+                LinkConfirmationActivity.start(context, unsubscribeUri.uri)
+                return UnsubscribeOutcome.OPENED_ELSEWHERE
+            }
 
             else -> return UnsubscribeOutcome.UNAVAILABLE
         }

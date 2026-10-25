@@ -293,14 +293,31 @@ public class MessageHeader extends LinearLayout implements OnClickListener, OnLo
      * Says when the sender's domain is on the blocklist the user chose. Only said: it neither hides the message nor
      * stops anything in it from working. A threat list match is shown like the impersonation warning; one on the
      * general list, which holds plenty of ordinary mailing domains, more quietly.
+     *
+     * A From address can name any domain, so when it is not listed the domains the server verified the message really
+     * came through are checked too - against the threat list only, since the general lists hold many of the bounce
+     * domains bulk mail is sent from.
      */
-    private void showBlocklistNote(Address fromAddress) {
+    private void showBlocklistNote(Message message, Address fromAddress) {
         blocklistNoteView.setVisibility(View.GONE);
-        if (fromAddress == null || fromAddress.getAddress() == null) {
-            return;
-        }
+        DomainBlocklist blocklist = DI.get(DomainBlocklist.class);
 
-        BlocklistMatch match = DI.get(DomainBlocklist.class).match(fromAddress.getAddress());
+        BlocklistMatch match = null;
+        boolean isFromAddress = true;
+        if (fromAddress != null && fromAddress.getAddress() != null) {
+            match = blocklist.match(fromAddress.getAddress());
+        }
+        if (match == null) {
+            isFromAddress = false;
+            for (String domain : SenderAuthenticationKt.authenticatedSendingDomains(
+                    authenticationResults(message), trustedServerId())) {
+                BlocklistMatch sendingMatch = blocklist.match(domain);
+                if (sendingMatch != null && sendingMatch.getKind() == BlocklistKind.THREAT) {
+                    match = sendingMatch;
+                    break;
+                }
+            }
+        }
         if (match == null) {
             return;
         }
@@ -312,7 +329,9 @@ public class MessageHeader extends LinearLayout implements OnClickListener, OnLo
         blocklistNoteView.setCompoundDrawablesRelativeWithIntrinsicBounds(
                 isThreat ? Icons.Outlined.INSTANCE.getReport() : Icons.Outlined.INSTANCE.getBlock(), 0, 0, 0);
         TextViewCompat.setCompoundDrawableTintList(blocklistNoteView, ColorStateList.valueOf(color));
-        blocklistNoteView.setText(BlocklistNotes.senderBlocklistNote(getContext(), match));
+        blocklistNoteView.setText(isFromAddress
+                ? BlocklistNotes.senderBlocklistNote(getContext(), match)
+                : BlocklistNotes.sendingDomainBlocklistNote(getContext(), match));
         blocklistNoteView.setVisibility(View.VISIBLE);
     }
 
@@ -650,7 +669,7 @@ public class MessageHeader extends LinearLayout implements OnClickListener, OnLo
         // whether sender pictures are switched on.
         showDeliveryAddress(message, account);
         showImpersonationWarning(fromAddress);
-        showBlocklistNote(fromAddress);
+        showBlocklistNote(message, fromAddress);
 
         importance = MessageImportanceKt.getImportance(message);
         List<String> serverCategories = message instanceof LocalMessage

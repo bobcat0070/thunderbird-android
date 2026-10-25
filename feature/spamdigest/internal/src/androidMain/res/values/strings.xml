@@ -24,6 +24,8 @@
         <item quantity="other">Possibly not spam: <xliff:g id="count">%d</xliff:g> messages from people you know</item>
     </plurals>
     <string name="spam_digest_account_line">In: <xliff:g id="account">%s</xliff:g></string>
+    <!-- %1$s is the listed domain -->
+    <string name="spam_digest_threat_listed"><xliff:g id="domain">%1$s</xliff:g> is on HaGeZi\'s threat list of malware, phishing and scam domains</string>
     <string name="spam_digest_impersonation_named_elsewhere">The name shows <xliff:g id="named">%1$s</xliff:g>, but it came from <xliff:g id="domain">%2$s</xliff:g></string>
     <string name="spam_digest_impersonation_lookalike_domain"><xliff:g id="domain">%1$s</xliff:g> is made to look like <xliff:g id="known">%2$s</xliff:g></string>
     <string name="spam_digest_impersonation_mixed_script"><xliff:g id="domain">%s</xliff:g> mixes alphabets to look like another address</string>

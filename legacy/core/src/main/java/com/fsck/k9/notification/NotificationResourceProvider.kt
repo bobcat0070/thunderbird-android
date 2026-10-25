@@ -53,6 +53,7 @@ interface NotificationResourceProvider {
     fun previewEncrypted(): String
     fun noSubject(): String
     fun possibleImpersonation(): String
+    fun senderOnThreatList(): String
     fun recipientDisplayName(recipientDisplayName: String): String
     fun noSender(): String
 

@@ -175,6 +175,13 @@
             />
 
         <activity
+            android:name="com.fsck.k9.view.LinkConfirmationActivity"
+            android:excludeFromRecents="true"
+            android:exported="false"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar"
+            />
+
+        <activity
             android:name="com.fsck.k9.ui.settings.account.AccountSettingsActivity"
             android:label="@string/account_settings_title_fmt"
             />
