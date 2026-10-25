@@ -132,7 +132,9 @@ fun stripTracking(url: String): StrippedLink? {
 
     val (withoutTracking, removed) = removeTrackingParameters(current)
 
-    return if (withoutTracking == original) {
+    // Judged by what was taken out, not by whether the text changed: dropping an empty `?` changes the text and
+    // removes nothing, and offering that as stripped would show the same link twice.
+    return if (removed.isEmpty() && skippedRedirects.isEmpty()) {
         null
     } else {
         StrippedLink(url = withoutTracking, removedParameters = removed, skippedRedirects = skippedRedirects)

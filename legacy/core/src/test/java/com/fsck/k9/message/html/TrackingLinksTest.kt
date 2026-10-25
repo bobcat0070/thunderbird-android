@@ -42,6 +42,13 @@ class TrackingLinksTest {
     }
 
     @Test
+    fun `an empty query should not count as something stripped`() {
+        assertThat(stripTracking("https://network.bazaarvoice.com/r/LVRTzoX6v584sVWo?")).isNull()
+        assertThat(stripTracking("https://a.example/page?#top")).isNull()
+        assertThat(stripTracking("https://a.example/page?&")).isNull()
+    }
+
+    @Test
     fun `links that are not web links should give nothing`() {
         assertThat(stripTracking("mailto:someone@example.com?subject=utm_source")).isNull()
         assertThat(stripTracking("tel:+15551234")).isNull()
