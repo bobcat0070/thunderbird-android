@@ -76,10 +76,11 @@ private val CLICK_TRACKING_LABELS = setOf("click", "clicks", "ctrk", "trk", "lin
 
 /**
  * Paths mailing services count clicks on when they put the tracker on the sender's own domain, as in
- * `ablink.email.example.com/uni/ls/click?upn=...` - SendGrid's `/ls/click`, `/wf/click` and `/ss/c/`, and
- * Mailchimp's `/track/click`.
+ * `ablink.email.example.com/uni/ls/click?upn=...` - SendGrid's `/ls/click`, `/wf/click` and `/ss/c/`, Mailchimp's
+ * `/track/click`, and Mailgun's `/c/` followed by a long opaque token, as in `email.care.example.com/c/eJxMzL1u...`.
  */
-private val CLICK_TRACKING_PATH = Regex("""(?:/ls/click|/wf/click|/track/click)(?:$|[/?])|^/ss/c/""")
+private val CLICK_TRACKING_PATH =
+    Regex("""(?:/ls/click|/wf/click|/track/click)(?:$|[/?])|^/ss/c/|^/c/[A-Za-z0-9_=-]{24,}""")
 
 /**
  * How long a link may be before it is shown shortened; about four lines of a dialog on a phone.
@@ -188,6 +189,33 @@ fun senderWebsite(address: String?): String? {
 
     val site = "https://${labels.joinToString(".")}/"
     return site.takeIf { hostOf(it) != null }
+}
+
+/**
+ * Second-level names that, under a two-letter country code, are part of the public suffix rather than anyone's
+ * domain: `shop.co.uk`, `bank.com.au`. The same rule the impersonation check uses for its registrable domains.
+ */
+private val SECOND_LEVEL_NAMES = setOf("ac", "co", "com", "edu", "gov", "ne", "net", "or", "org")
+private const val COUNTRY_CODE_LENGTH = 2
+
+/**
+ * The website at the root of the sender's domain: `care@email.care.onemedical.com` gives
+ * `https://onemedical.com/`. For senders whose mail comes from a subdomain that is no website of its own, which
+ * [senderWebsite] cannot tell from one that is.
+ *
+ * @return the site's address, or `null` when [address] has no usable domain.
+ */
+fun senderRootWebsite(address: String?): String? {
+    val labels = senderWebsite(address)?.let(::hostOf)?.split('.') ?: return null
+
+    val keep = if (labels.size >= 3 && labels[labels.size - 2] in SECOND_LEVEL_NAMES &&
+        labels.last().length == COUNTRY_CODE_LENGTH
+    ) {
+        3
+    } else {
+        2
+    }
+    return "https://${labels.takeLast(keep).joinToString(".")}/"
 }
 
 /**

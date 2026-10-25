@@ -13,9 +13,11 @@ import android.widget.Button
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.core.text.inSpans
+import androidx.core.view.isVisible
 import com.fsck.k9.message.html.StrippedLink
 import com.fsck.k9.message.html.clickTrackerHost
 import com.fsck.k9.message.html.hostOf
+import com.fsck.k9.message.html.senderRootWebsite
 import com.fsck.k9.message.html.senderWebsite
 import com.fsck.k9.message.html.shortenForDisplay
 import com.fsck.k9.message.html.stripTracking
@@ -74,8 +76,8 @@ class LinkConfirmation(
             return
         }
 
-        val alternative = alternative(host, url, textAddress, senderAddress)
-        val alternativeView = alternative?.let {
+        val alternatives = alternatives(host, url, textAddress, senderAddress)
+        val alternativeView = alternatives.takeIf { it.isNotEmpty() }?.let {
             LayoutInflater.from(context).inflate(R.layout.dialog_link_alternative, null)
         }
 
@@ -92,34 +94,49 @@ class LinkConfirmation(
             .show()
 
         dialog.getButton(AlertDialog.BUTTON_POSITIVE)?.isEnabled = stripped != null
-        if (alternative != null && alternativeView != null) {
-            alternativeView.findViewById<Button>(R.id.link_alternative).apply {
-                text = context.getString(R.string.link_dialog_go_to_instead, alternative.label)
-                setOnClickListener {
-                    dialog.dismiss()
-                    openUrl(context, Uri.parse(alternative.url))
+        if (alternativeView != null) {
+            val buttons = listOf(R.id.link_alternative, R.id.link_alternative_root)
+            buttons.zip(alternatives + listOf(null, null)).forEach { (buttonId, alternative) ->
+                alternativeView.findViewById<Button>(buttonId).apply {
+                    isVisible = alternative != null
+                    alternative ?: return@apply
+                    text = context.getString(R.string.link_dialog_go_to_instead, alternative.label)
+                    setOnClickListener {
+                        dialog.dismiss()
+                        openUrl(context, Uri.parse(alternative.url))
+                    }
                 }
             }
         }
     }
 
     /**
-     * Somewhere to go instead of the link, reached without any of its tracking: the address the link's text names,
-     * when it names one, otherwise the sender's own website. Not offered when it is where the link goes anyway, or
-     * when it is on the threat list.
+     * Places to go instead of the link, reached without any of its tracking. First the address the link's text names,
+     * when it names one, otherwise the sender's own website; then the root of the sender's domain when that is a
+     * different site - mail often comes from a subdomain such as `care.onemedical.com` that is no website of its own.
+     * None is offered when it is where the link goes anyway, or when it is on the threat list.
      */
-    private fun alternative(host: String, url: String, textAddress: String?, senderAddress: String?): Alternative? {
-        val candidates = listOfNotNull(
-            textAddress?.takeIf { it != url },
-            senderWebsite(senderAddress),
-        )
+    private fun alternatives(
+        host: String,
+        url: String,
+        textAddress: String?,
+        senderAddress: String?,
+    ): List<Alternative> {
+        val senderSite = senderWebsite(senderAddress)
+        val first = listOfNotNull(textAddress?.takeIf { it != url }, senderSite)
+            .firstNotNullOfOrNull { candidate ->
+                usableAlternative(candidate)?.takeIf { candidate != senderSite || it.label != host }
+            }
+        val root = senderRootWebsite(senderAddress)?.let { usableAlternative(it) }
+            ?.takeIf { it.label != first?.label && it.label != host }
 
-        return candidates.firstNotNullOfOrNull { candidate ->
-            val candidateHost = hostOf(candidate) ?: return@firstNotNullOfOrNull null
-            val isThreat = domainBlocklist.match(candidateHost)?.kind == BlocklistKind.THREAT
-            val isSameSite = candidate == senderWebsite(senderAddress) && candidateHost == host
-            Alternative(candidate, candidateHost).takeIf { !isThreat && !isSameSite }
-        }
+        return listOfNotNull(first, root)
+    }
+
+    private fun usableAlternative(candidate: String): Alternative? {
+        val candidateHost = hostOf(candidate) ?: return null
+        val isThreat = domainBlocklist.match(candidateHost)?.kind == BlocklistKind.THREAT
+        return Alternative(candidate, candidateHost).takeIf { !isThreat }
     }
 
     /**

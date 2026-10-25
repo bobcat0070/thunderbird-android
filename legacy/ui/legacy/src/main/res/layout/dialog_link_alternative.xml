@@ -1,8 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
-<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
+    android:gravity="end"
+    android:orientation="vertical"
     android:paddingHorizontal="24dp"
     >
 
@@ -11,8 +13,17 @@
         style="@style/Widget.Material3.Button.TextButton"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_gravity="end"
-        tools:text="Go to rocketmoney.com instead"
+        tools:text="Go to care.onemedical.com instead"
         />
 
-</FrameLayout>
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/link_alternative_root"
+        style="@style/Widget.Material3.Button.TextButton"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:visibility="gone"
+        tools:text="Go to onemedical.com instead"
+        tools:visibility="visible"
+        />
+
+</LinearLayout>

@@ -129,9 +129,16 @@ class TrackingLinksTest {
     }
 
     @Test
+    fun `a Mailgun click tracker on the sender's own domain should be recognised`() {
+        assertThat(clickTrackerHost("https://email.care.onemedical.com/c/eJxMzL1uwyAUQOGngGaSWyBZf_gaFq5dEZ"))
+            .isEqualTo("email.care.onemedical.com")
+    }
+
+    @Test
     fun `a path that only resembles a tracking path should not count`() {
         assertThat(clickTrackerHost("https://shop.example/tools/clickers")).isNull()
         assertThat(clickTrackerHost("https://shop.example/blog/ss/c/post")).isNull()
+        assertThat(clickTrackerHost("https://shop.example/c/shoes")).isNull()
     }
 
     @Test
@@ -140,6 +147,15 @@ class TrackingLinksTest {
         assertThat(senderWebsite("Deals@News.E.Shop.Example")).isEqualTo("https://shop.example/")
         assertThat(senderWebsite("felix@compugor.com")).isEqualTo("https://compugor.com/")
         assertThat(senderWebsite("orders@costco.com")).isEqualTo("https://costco.com/")
+    }
+
+    @Test
+    fun `the sender's root website should be the domain they registered`() {
+        assertThat(senderWebsite("care@email.care.onemedical.com")).isEqualTo("https://care.onemedical.com/")
+        assertThat(senderRootWebsite("care@email.care.onemedical.com")).isEqualTo("https://onemedical.com/")
+        assertThat(senderRootWebsite("deals@news.shop.co.uk")).isEqualTo("https://shop.co.uk/")
+        assertThat(senderRootWebsite("x@rocketmoney.com")).isEqualTo("https://rocketmoney.com/")
+        assertThat(senderRootWebsite(null)).isNull()
     }
 
     @Test
