@@ -53,6 +53,8 @@ dependencies {
     implementation(projects.feature.spamdigest.api)
     implementation(projects.feature.spamdigest.internal)
     implementation(projects.feature.impersonation.api)
+    implementation(projects.feature.blocklist.api)
+    implementation(projects.feature.blocklist.internal)
     implementation(projects.feature.impersonation.internal)
     implementation(projects.feature.newsletter.api)
     implementation(projects.feature.newsletter.internal)

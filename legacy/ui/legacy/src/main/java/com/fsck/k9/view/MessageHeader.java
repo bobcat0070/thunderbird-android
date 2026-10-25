@@ -6,6 +6,8 @@ import java.util.List;
 
 import android.content.Context;
 import android.content.res.ColorStateList;
+import androidx.core.widget.TextViewCompat;
+import com.google.android.material.color.MaterialColors;
 import android.text.SpannableStringBuilder;
 import android.text.Spanned;
 import android.text.style.StrikethroughSpan;
@@ -68,6 +70,9 @@ import net.thunderbird.feature.mail.message.reader.api.strategy.ReplyActionStrat
 import com.fsck.k9.mail.MessageImportance;
 import com.fsck.k9.mail.MessageImportanceKt;
 import com.fsck.k9.mailstore.LocalMessage;
+import net.thunderbird.feature.blocklist.BlocklistKind;
+import net.thunderbird.feature.blocklist.BlocklistMatch;
+import net.thunderbird.feature.blocklist.DomainBlocklist;
 import net.thunderbird.feature.impersonation.Impersonation;
 import net.thunderbird.feature.impersonation.ImpersonationChecker;
 import com.fsck.k9.ui.servercategories.MessageLabels;
@@ -107,6 +112,7 @@ public class MessageHeader extends LinearLayout implements OnClickListener, OnLo
 
     private String currentSenderDomain;
     private MaterialTextView impersonationWarningView;
+    private MaterialTextView blocklistNoteView;
     private String currentImpersonationSender;
     private MaterialTextView fromView;
     private ImageView cryptoStatusIcon;
@@ -141,6 +147,7 @@ public class MessageHeader extends LinearLayout implements OnClickListener, OnLo
         contactPictureView = findViewById(R.id.contact_picture);
         markVerificationView = findViewById(R.id.mark_verification);
         impersonationWarningView = findViewById(R.id.impersonation_warning);
+        blocklistNoteView = findViewById(R.id.blocklist_note);
         deliveredToView = findViewById(R.id.delivered_to);
         labelsView = findViewById(R.id.message_labels);
         labelsView.setOnClickListener(this);
@@ -282,6 +289,33 @@ public class MessageHeader extends LinearLayout implements OnClickListener, OnLo
      * Worked out off the main thread, because the first check after a while reads who the reader knows from stored
      * mail, and only shown if the header still shows the same sender by the time the answer arrives.
      */
+    /**
+     * Says when the sender's domain is on the blocklist the user chose. Only said: it neither hides the message nor
+     * stops anything in it from working. A threat list match is shown like the impersonation warning; one on the
+     * general list, which holds plenty of ordinary mailing domains, more quietly.
+     */
+    private void showBlocklistNote(Address fromAddress) {
+        blocklistNoteView.setVisibility(View.GONE);
+        if (fromAddress == null || fromAddress.getAddress() == null) {
+            return;
+        }
+
+        BlocklistMatch match = DI.get(DomainBlocklist.class).match(fromAddress.getAddress());
+        if (match == null) {
+            return;
+        }
+
+        boolean isThreat = match.getKind() == BlocklistKind.THREAT;
+        int color = MaterialColors.getColor(blocklistNoteView,
+                isThreat ? androidx.appcompat.R.attr.colorError : com.google.android.material.R.attr.colorOnSurfaceVariant);
+        blocklistNoteView.setTextColor(color);
+        blocklistNoteView.setCompoundDrawablesRelativeWithIntrinsicBounds(
+                isThreat ? Icons.Outlined.INSTANCE.getReport() : Icons.Outlined.INSTANCE.getBlock(), 0, 0, 0);
+        TextViewCompat.setCompoundDrawableTintList(blocklistNoteView, ColorStateList.valueOf(color));
+        blocklistNoteView.setText(BlocklistNotes.senderBlocklistNote(getContext(), match));
+        blocklistNoteView.setVisibility(View.VISIBLE);
+    }
+
     private void showImpersonationWarning(Address fromAddress) {
         impersonationWarningView.setVisibility(View.GONE);
         currentImpersonationSender = null;
@@ -616,6 +650,7 @@ public class MessageHeader extends LinearLayout implements OnClickListener, OnLo
         // whether sender pictures are switched on.
         showDeliveryAddress(message, account);
         showImpersonationWarning(fromAddress);
+        showBlocklistNote(fromAddress);
 
         importance = MessageImportanceKt.getImportance(message);
         List<String> serverCategories = message instanceof LocalMessage

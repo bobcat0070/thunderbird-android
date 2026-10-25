@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- The tiers are HaGeZi's own list names and are not translated. -->
+    <string-array name="domain_blocklist_entries" translatable="false">
+        <item>@string/general_settings_domain_blocklist_off</item>
+        <item>Light</item>
+        <item>Normal</item>
+        <item>Pro</item>
+        <item>Pro++</item>
+        <item>Ultimate</item>
+    </string-array>
+    <string-array name="domain_blocklist_values" translatable="false">
+        <item>OFF</item>
+        <item>LIGHT</item>
+        <item>NORMAL</item>
+        <item>PRO</item>
+        <item>PRO_PLUS</item>
+        <item>ULTIMATE</item>
+    </string-array>
+</resources>

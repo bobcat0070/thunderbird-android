@@ -32,6 +32,7 @@ dependencies {
     implementation(projects.feature.notification.api)
     implementation(projects.feature.spamdigest.api)
     implementation(projects.feature.impersonation.api)
+    implementation(projects.feature.blocklist.api)
     // TODO: Remove AccountOauth dependency
     implementation(projects.feature.account.oauth)
     implementation(projects.feature.account.avatar.api)

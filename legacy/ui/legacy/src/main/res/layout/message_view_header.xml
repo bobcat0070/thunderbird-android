@@ -186,6 +186,24 @@
             />
 
         <com.google.android.material.textview.MaterialTextView
+            android:id="@+id/blocklist_note"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="16dp"
+            android:layout_marginTop="2dp"
+            android:layout_marginEnd="8dp"
+            android:drawablePadding="4dp"
+            android:maxLines="3"
+            android:textAppearance="?attr/textAppearanceLabelMedium"
+            android:visibility="gone"
+            app:layout_constraintEnd_toStartOf="@+id/menu_primary_action"
+            app:layout_constraintStart_toEndOf="@id/contact_picture"
+            app:layout_constraintTop_toBottomOf="@+id/impersonation_warning"
+            tools:text="Sent from tracker.example, which is on HaGeZi's Normal blocklist"
+            tools:visibility="visible"
+            />
+
+        <com.google.android.material.textview.MaterialTextView
             android:id="@+id/delivered_to"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
@@ -197,7 +215,7 @@
             android:visibility="gone"
             app:layout_constraintEnd_toStartOf="@+id/menu_primary_action"
             app:layout_constraintStart_toEndOf="@id/contact_picture"
-            app:layout_constraintTop_toBottomOf="@+id/impersonation_warning"
+            app:layout_constraintTop_toBottomOf="@+id/blocklist_note"
             tools:text="to felix+shopping@example.com"
             tools:visibility="visible"
             />

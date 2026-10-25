@@ -32,6 +32,7 @@ import com.google.android.material.textview.MaterialTextView
 import java.util.Locale
 import kotlin.math.max
 import net.thunderbird.core.preference.display.visualSettings.message.list.UiDensity
+import net.thunderbird.feature.blocklist.BlocklistKind
 import net.thunderbird.feature.mail.message.list.R as MessageListR
 import com.fsck.k9.mail.MessageImportance
 import com.fsck.k9.ui.servercategories.ServerCategoryChipSpan
@@ -168,7 +169,7 @@ class MessageViewHolder(
             attachmentView.isVisible = hasAttachments
             attachmentView.setColorFilter(foregroundColor)
 
-            bindImportance(importance, isPossibleImpersonation, foregroundColor)
+            bindImportance(importance, isPossibleImpersonation, senderBlocklistKind, foregroundColor)
 
             val statusHolder = buildStatusHolder(isForwarded, isAnswered)
             if (statusHolder != null) {
@@ -249,16 +250,38 @@ class MessageViewHolder(
     }
 
     /**
-     * The slot beside the date shows the strongest signal: a possible impersonation outranks the sender's own claim of
-     * importance.
+     * The slot beside the date shows the strongest signal: a possible impersonation, then a sender on the threat
+     * blocklist, outrank the sender's own claim of importance; a sender on the general blocklist, which holds plenty
+     * of ordinary mailing domains, only shows when nothing else does.
      */
-    private fun bindImportance(importance: MessageImportance, isPossibleImpersonation: Boolean, foregroundColor: Int) {
+    @Suppress("ReturnCount")
+    private fun bindImportance(
+        importance: MessageImportance,
+        isPossibleImpersonation: Boolean,
+        senderBlocklistKind: BlocklistKind?,
+        foregroundColor: Int,
+    ) {
+        val errorColor = MaterialColors.getColor(importanceView, androidx.appcompat.R.attr.colorError)
         if (isPossibleImpersonation) {
             importanceView.setImageResource(Icons.Outlined.Warning)
-            importanceView.setColorFilter(
-                MaterialColors.getColor(importanceView, androidx.appcompat.R.attr.colorError),
-            )
+            importanceView.setColorFilter(errorColor)
             importanceView.contentDescription = res.getString(R.string.message_list_possible_impersonation)
+            importanceView.isVisible = true
+            return
+        }
+
+        if (senderBlocklistKind == BlocklistKind.THREAT) {
+            importanceView.setImageResource(Icons.Outlined.Report)
+            importanceView.setColorFilter(errorColor)
+            importanceView.contentDescription = res.getString(R.string.message_list_sender_on_threat_list)
+            importanceView.isVisible = true
+            return
+        }
+
+        if (senderBlocklistKind == BlocklistKind.GENERAL && importance == MessageImportance.NORMAL) {
+            importanceView.setImageResource(Icons.Outlined.Block)
+            importanceView.setColorFilter(foregroundColor)
+            importanceView.contentDescription = res.getString(R.string.message_list_sender_on_blocklist)
             importanceView.isVisible = true
             return
         }

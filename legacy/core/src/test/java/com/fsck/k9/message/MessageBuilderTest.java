@@ -42,6 +42,7 @@ import net.thunderbird.core.preference.display.DisplaySettings;
 import net.thunderbird.core.preference.interaction.InteractionSettings;
 import net.thunderbird.core.preference.network.NetworkSettings;
 import net.thunderbird.core.preference.notification.NotificationPreference;
+import net.thunderbird.core.preference.blocklist.DomainBlocklistSettings;
 import net.thunderbird.core.preference.bimi.BimiSettings;
 import net.thunderbird.core.preference.gravatar.GravatarSettings;
 import net.thunderbird.core.preference.websiteicon.WebsiteIconSettings;
@@ -232,7 +233,8 @@ public class MessageBuilderTest extends RobolectricTest {
                 new WebsiteIconSettings(),
                 new DebuggingSettings(true,false,false),
                 new InteractionSettings(),
-                new DirectorySearchSettings()
+                new DirectorySearchSettings(),
+                new DomainBlocklistSettings()
             );
         }
 

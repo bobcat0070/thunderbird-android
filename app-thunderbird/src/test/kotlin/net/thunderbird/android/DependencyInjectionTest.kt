@@ -27,6 +27,7 @@ import com.fsck.k9.view.MessageWebView
 import kotlin.test.Test
 import net.openid.appauth.AppAuthConfiguration
 import net.thunderbird.app.common.feature.account.AccountRemoverWorker
+import net.thunderbird.app.common.feature.blocklist.DomainBlocklistUpdateWorker
 import net.thunderbird.app.common.feature.impersonation.VerifiedSenderDomainsWorker
 import net.thunderbird.core.common.mail.html.HtmlSettings
 import net.thunderbird.core.configstore.ConfigId
@@ -83,6 +84,7 @@ class DependencyInjectionTest {
                 definition<SpamDigestWorker>(WorkerParameters::class),
                 definition<SyncDebugWorker>(WorkerParameters::class),
                 definition<VerifiedSenderDomainsWorker>(WorkerParameters::class),
+                definition<DomainBlocklistUpdateWorker>(WorkerParameters::class),
                 definition<OpenPgpApiManager>(LifecycleOwner::class),
                 definition<SetupArchiveFolderDialogContract.ViewModel>(SetupArchiveFolderDialogContract.State::class),
                 definition<ThundermailContract.ViewModel>(ThundermailContract.State::class),

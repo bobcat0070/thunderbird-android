@@ -16,6 +16,7 @@ import net.thunderbird.core.common.mail.Flag
 import net.thunderbird.core.featureflag.FeatureFlagProvider
 import net.thunderbird.core.featureflag.keys.GeneratedFeatureFlagKey
 import net.thunderbird.core.preference.display.visualSettings.message.list.MessageListPreferencesManager
+import net.thunderbird.feature.blocklist.DomainBlocklist
 import net.thunderbird.feature.impersonation.ImpersonationChecker
 import net.thunderbird.feature.mail.folder.api.OutboxFolderManager
 import net.thunderbird.feature.search.legacy.LocalMessageSearch
@@ -37,6 +38,7 @@ class MessageListLoader(
     private val contactLetterBitmapCreator: ContactLetterBitmapCreator,
     private val impersonationChecker: ImpersonationChecker,
     private val mailActionHold: MailActionHold,
+    private val domainBlocklist: DomainBlocklist? = null,
 ) {
 
     /**
@@ -91,6 +93,7 @@ class MessageListLoader(
                     featureFlagProvider.provide(GeneratedFeatureFlagKey.ENABLE_MESSAGE_LIST_NEW_STATE).isEnabled()
             },
             impersonationChecker = impersonationChecker,
+            domainBlocklist = domainBlocklist,
         )
 
         return when {

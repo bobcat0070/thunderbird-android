@@ -17,4 +17,5 @@ enum class PreferenceScope {
     BIMI,
     WEBSITE_ICON,
     DIRECTORY_SEARCH,
+    DOMAIN_BLOCKLIST,
 }

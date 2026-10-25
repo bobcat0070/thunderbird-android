@@ -28,6 +28,7 @@ import net.thunderbird.core.preference.interaction.InteractionSettingsPreference
 import net.thunderbird.core.preference.network.NetworkSettingsPreferenceManager
 import net.thunderbird.core.preference.notification.NotificationPreferenceManager
 import net.thunderbird.core.preference.bimi.BimiSettingsPreferenceManager
+import net.thunderbird.core.preference.blocklist.DomainBlocklistSettingsPreferenceManager
 import net.thunderbird.core.preference.directory.DirectorySearchSettingsPreferenceManager
 import net.thunderbird.core.preference.websiteicon.WebsiteIconSettingsPreferenceManager
 import net.thunderbird.core.preference.gravatar.GravatarSettingsPreferenceManager
@@ -68,6 +69,7 @@ internal class DefaultGeneralSettingsManager(
     private val bimiSettingsPreferenceManager: BimiSettingsPreferenceManager,
     private val websiteIconSettingsPreferenceManager: WebsiteIconSettingsPreferenceManager,
     private val directorySearchSettingsPreferenceManager: DirectorySearchSettingsPreferenceManager,
+    private val domainBlocklistSettingsPreferenceManager: DomainBlocklistSettingsPreferenceManager,
     private val backgroundDispatcher: CoroutineDispatcher = Dispatchers.IO,
     private val platformConfigProvider: PlatformConfigProvider,
     private val logger: Logger,
@@ -150,6 +152,9 @@ internal class DefaultGeneralSettingsManager(
         .combine(directorySearchSettingsPreferenceManager.getConfigFlow()) { generalSettings, directorySettings ->
             generalSettings.copy(directorySearch = directorySettings)
         }
+        .combine(domainBlocklistSettingsPreferenceManager.getConfigFlow()) { generalSettings, blocklistSettings ->
+            generalSettings.copy(domainBlocklist = blocklistSettings)
+        }
         .stateIn(
             scope = coroutineScope,
             started = SharingStarted.WhileSubscribed(),
@@ -209,6 +214,7 @@ internal class DefaultGeneralSettingsManager(
                 bimiSettingsPreferenceManager.save(config.bimi)
                 websiteIconSettingsPreferenceManager.save(config.websiteIcon)
                 directorySearchSettingsPreferenceManager.save(config.directorySearch)
+                domainBlocklistSettingsPreferenceManager.save(config.domainBlocklist)
             }
         }
     }

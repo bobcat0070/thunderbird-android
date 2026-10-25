@@ -504,6 +504,23 @@
             android:title="@string/general_settings_link_check_title"
             />
 
+        <ListPreference
+            android:defaultValue="NORMAL"
+            android:dialogTitle="@string/general_settings_domain_blocklist_title"
+            android:entries="@array/domain_blocklist_entries"
+            android:entryValues="@array/domain_blocklist_values"
+            android:key="domain_blocklist_tier"
+            android:summary="@string/general_settings_domain_blocklist_summary"
+            android:title="@string/general_settings_domain_blocklist_title"
+            />
+
+        <SwitchPreference
+            android:defaultValue="true"
+            android:key="domain_blocklist_threats"
+            android:summary="@string/general_settings_domain_blocklist_threats_summary"
+            android:title="@string/general_settings_domain_blocklist_threats_title"
+            />
+
         <MultiSelectListPreference
             android:dialogTitle="@string/global_settings_confirm_actions_title"
             android:entries="@array/confirm_action_entries"

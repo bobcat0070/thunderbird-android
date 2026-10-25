@@ -200,6 +200,8 @@ class ForkSettingsExportTest : K9RobolectricTest() {
             "undoSendDelaySeconds" to "30",
             "linkCheckEnabled" to "false",
             "attachmentReminderEnabled" to "false",
+            "domainBlocklistTier" to "PRO",
+            "domainBlocklistThreatListEnabled" to "false",
             VIEW_CATEGORY_GROUPING_KEY to "unified_sent=GROUPED",
             "notifyPersonal" to "false",
             "notifyNotifications" to "false",

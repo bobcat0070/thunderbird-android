@@ -26,9 +26,11 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 import net.thunderbird.app.common.feature.LoggerLifecycleObserver
+import net.thunderbird.app.common.feature.blocklist.DomainBlocklistScheduler
 import net.thunderbird.app.common.feature.impersonation.VerifiedSenderDomainsScheduler
 import net.thunderbird.app.common.feature.spamdigest.PendingSpamDigestImport
 import net.thunderbird.app.common.feature.spamdigest.SpamArrivalMessagingListener
@@ -36,7 +38,9 @@ import net.thunderbird.app.common.feature.spamdigest.SpamDigestCatchUpListener
 import net.thunderbird.components.core.logging.Logger
 import net.thunderbird.components.core.logging.file.FileLogSink
 import net.thunderbird.core.android.account.LegacyAccountManager
+import net.thunderbird.core.preference.GeneralSettingsManager
 import net.thunderbird.core.ui.theme.manager.ThemeManager
+import net.thunderbird.feature.blocklist.internal.DefaultBlocklistUpdater
 import net.thunderbird.feature.navigation.drawer.api.NavigationDrawerExternalContract.PinnedFolderRepository
 import net.thunderbird.feature.spamdigest.SpamDigestScheduler
 import net.thunderbird.legacy.logging.Log
@@ -60,6 +64,9 @@ abstract class BaseApplication : Application(), WorkManagerConfiguration.Provide
     private val messageReclassifier: MessageReclassifier by inject()
     private val spamDigestScheduler: SpamDigestScheduler by inject()
     private val verifiedSenderDomainsScheduler: VerifiedSenderDomainsScheduler by inject()
+    private val domainBlocklistUpdater: DefaultBlocklistUpdater by inject()
+    private val domainBlocklistScheduler: DomainBlocklistScheduler by inject()
+    private val generalSettingsManager: GeneralSettingsManager by inject()
     private val spamArrivalMessagingListener: SpamArrivalMessagingListener by inject()
     private val spamDigestCatchUpListener: SpamDigestCatchUpListener by inject()
     private val pendingSpamDigestImport: PendingSpamDigestImport by inject()
@@ -119,6 +126,23 @@ abstract class BaseApplication : Application(), WorkManagerConfiguration.Provide
         appCoroutineScope.launch(Dispatchers.IO) {
             verifiedSenderDomainsScheduler.ensureScheduled()
         }
+
+        // Blocklists already on the device are put to use at once; missing or old ones are fetched in the
+        // background. A change of tier or threat list is acted on straight away.
+        appCoroutineScope.launch(Dispatchers.IO) {
+            domainBlocklistUpdater.loadFromDevice()
+            domainBlocklistScheduler.ensureScheduled()
+        }
+        generalSettingsManager.getConfigFlow()
+            .map { it.domainBlocklist }
+            .distinctUntilChanged()
+            .drop(1)
+            .onEach {
+                domainBlocklistUpdater.loadFromDevice()
+                domainBlocklistScheduler.updateNow()
+            }
+            .flowOn(Dispatchers.IO)
+            .launchIn(appCoroutineScope)
 
         // Spam settings imported before the accounts they name are applied once those accounts exist.
         accountManager.observeAll()

@@ -40,8 +40,8 @@ public class Settings {
     // The fork's own settings took 112 and 113 before upstream used 112 for its messageFormatAuto upgrade, so
     // upstream's 112 runs here as 114. Fork exports at 112 and 113 still carry messageFormatAuto; files from
     // upstream builds at 112 no longer do, and the upgrade leaves them alone. 115 added the fork's link check and
-    // attachment reminder switches.
-    public static final int VERSION = 115;
+    // attachment reminder switches, 116 the domain blocklist tier and threat list.
+    public static final int VERSION = 116;
 
     static Map<String, Object> validate(int version, Map<String, TreeMap<Integer, SettingsDescription<?>>> settings,
             Map<String, String> importedSettings, boolean useDefaultValues) {

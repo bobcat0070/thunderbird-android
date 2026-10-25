@@ -195,6 +195,11 @@ include(
 )
 
 include(
+    ":feature:blocklist:api",
+    ":feature:blocklist:internal",
+)
+
+include(
     ":feature:newsletter:api",
     ":feature:newsletter:internal",
 )

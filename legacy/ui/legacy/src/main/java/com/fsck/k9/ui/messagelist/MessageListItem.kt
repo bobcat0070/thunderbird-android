@@ -1,6 +1,7 @@
 package com.fsck.k9.ui.messagelist
 
 import androidx.annotation.ColorInt
+import net.thunderbird.feature.blocklist.BlocklistKind
 import app.k9mail.legacy.message.controller.MessageReference
 import com.fsck.k9.mail.Address
 import net.thunderbird.core.android.account.LegacyAccount
@@ -42,6 +43,10 @@ data class MessageListItem(
      * Whether the sender looks like someone they are not; see [net.thunderbird.feature.impersonation.Impersonation].
      */
     val isPossibleImpersonation: Boolean = false,
+    /**
+     * Which blocklist the sender's domain is on, if any; see [net.thunderbird.feature.blocklist.DomainBlocklist].
+     */
+    val senderBlocklistKind: BlocklistKind? = null,
     /**
      * The folder the message is in, named only when the list holds mail from more than one folder; see
      * [withFolderNames].

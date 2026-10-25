@@ -36,6 +36,8 @@ import net.thunderbird.core.android.account.SortType;
 import net.thunderbird.core.common.action.SwipeAction;
 import net.thunderbird.core.preference.AnimationPreference;
 import net.thunderbird.core.preference.AppTheme;
+import net.thunderbird.core.preference.blocklist.DomainBlocklistSettingsKt;
+import net.thunderbird.core.preference.blocklist.DomainBlocklistTier;
 import net.thunderbird.core.preference.BackgroundOps;
 import net.thunderbird.core.preference.GeneralSettingsManager;
 import net.thunderbird.core.preference.BodyContentType;
@@ -56,6 +58,7 @@ import static net.thunderbird.core.preference.interaction.InteractionSettingsKt.
 import static net.thunderbird.core.preference.interaction.InteractionSettingsKt.INTERACTION_SETTINGS_DEFAULT_LINK_CHECK_ENABLED;
 import static net.thunderbird.core.preference.interaction.InteractionSettingsKt.INTERACTION_SETTINGS_DEFAULT_UNDO_SEND_DELAY_SECONDS;
 import static net.thunderbird.core.preference.bimi.BimiSettingsKt.BIMI_SETTINGS_DEFAULT_IS_ENABLED;
+import static net.thunderbird.core.preference.blocklist.DomainBlocklistSettingsKt.DOMAIN_BLOCKLIST_SETTINGS_DEFAULT_IS_THREAT_LIST_ENABLED;
 import static net.thunderbird.core.preference.directory.DirectorySearchSettingsKt.DIRECTORY_SEARCH_SETTINGS_DEFAULT_IS_ENABLED;
 import static net.thunderbird.core.preference.display.visualSettings.DisplayVisualSettingsKt.DISPLAY_SETTINGS_DEFAULT_MESSAGE_VIEW_SENDER_AUTHENTICATION_VISIBLE;
 import static net.thunderbird.core.preference.display.visualSettings.message.list.DisplayMessageListSettingsKt.MESSAGE_LIST_SETTINGS_DEFAULT_IS_CATEGORY_GROUPING_ENABLED;
@@ -449,6 +452,13 @@ class GeneralSettingsDescriptions {
         ));
         s.put("attachmentReminderEnabled", Settings.versions(
             new V(115, new BooleanSetting(INTERACTION_SETTINGS_DEFAULT_ATTACHMENT_REMINDER_ENABLED))
+        ));
+        s.put("domainBlocklistTier", Settings.versions(
+            new V(116, new EnumSetting<>(DomainBlocklistTier.class,
+                DomainBlocklistSettingsKt.getDOMAIN_BLOCKLIST_SETTINGS_DEFAULT_TIER()))
+        ));
+        s.put("domainBlocklistThreatListEnabled", Settings.versions(
+            new V(116, new BooleanSetting(DOMAIN_BLOCKLIST_SETTINGS_DEFAULT_IS_THREAT_LIST_ENABLED))
         ));
 
         // TODO: Add a way to properly support feature-specific settings.

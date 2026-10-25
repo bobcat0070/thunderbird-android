@@ -2,6 +2,7 @@ package net.thunderbird.core.preference
 
 import net.thunderbird.core.common.appConfig.PlatformConfigProvider
 import net.thunderbird.core.preference.bimi.BimiSettings
+import net.thunderbird.core.preference.blocklist.DomainBlocklistSettings
 import net.thunderbird.core.preference.debugging.DebuggingSettings
 import net.thunderbird.core.preference.directory.DirectorySearchSettings
 import net.thunderbird.core.preference.display.DisplaySettings
@@ -36,6 +37,7 @@ data class GeneralSettings(
     // Last on purpose: these settings are also constructed positionally from Java tests, so a field added in
     // the middle breaks them for no reason anybody reading the diff would guess.
     val directorySearch: DirectorySearchSettings = DirectorySearchSettings(),
+    val domainBlocklist: DomainBlocklistSettings = DomainBlocklistSettings(),
 )
 
 enum class BackgroundSync {

@@ -21,6 +21,8 @@ import net.thunderbird.core.preference.notification.NotificationPreference
 import net.thunderbird.core.preference.directory.DirectorySearchSettings
 import net.thunderbird.core.preference.websiteicon.WebsiteIconSettings
 import net.thunderbird.core.preference.display.visualSettings.message.list.UiDensity
+import net.thunderbird.core.preference.blocklist.DomainBlocklistSettings
+import net.thunderbird.core.preference.blocklist.DomainBlocklistTier
 import net.thunderbird.core.preference.interaction.InteractionSettings
 import net.thunderbird.core.preference.interaction.PostMarkAsUnreadNavigation
 import net.thunderbird.core.preference.update
@@ -88,6 +90,7 @@ class GeneralSettingsDataStore(
             "volume_navigation" -> interactionSettings.useVolumeKeysForNavigation
             "link_check_enabled" -> interactionSettings.isLinkCheckEnabled
             "attachment_reminder_enabled" -> interactionSettings.isAttachmentReminderEnabled
+            "domain_blocklist_threats" -> config.domainBlocklist.isThreatListEnabled
             "enable_telemetry" -> K9.isTelemetryEnabled
             else -> defValue
         }
@@ -150,6 +153,7 @@ class GeneralSettingsDataStore(
             "volume_navigation" -> setUseVolumeKeysForNavigation(value)
             "link_check_enabled" -> updateInteractionSettings { it.copy(isLinkCheckEnabled = value) }
             "attachment_reminder_enabled" -> updateInteractionSettings { it.copy(isAttachmentReminderEnabled = value) }
+            "domain_blocklist_threats" -> updateDomainBlocklistSettings { it.copy(isThreatListEnabled = value) }
             "enable_telemetry" -> setTelemetryEnabled(value)
             else -> return
         }
@@ -218,6 +222,7 @@ class GeneralSettingsDataStore(
             "post_remove_navigation" -> interactionSettings.messageViewPostRemoveNavigation
             "post_mark_as_unread_navigation" -> interactionSettings.messageViewPostMarkAsUnreadNavigation.name
             "undo_send_delay" -> interactionSettings.undoSendDelaySeconds.toString()
+            "domain_blocklist_tier" -> config.domainBlocklist.tier.name
             else -> defValue
         }
     }
@@ -263,6 +268,9 @@ class GeneralSettingsDataStore(
             "post_remove_navigation" -> setMessageViewPostRemoveNavigation(value)
             "post_mark_as_unread_navigation" -> setMessageViewPostMarkAsUnreadNavigation(value)
             "undo_send_delay" -> setUndoSendDelaySeconds(value.toIntOrNull() ?: 0)
+            "domain_blocklist_tier" -> DomainBlocklistTier.entries.firstOrNull { it.name == value }?.let { tier ->
+                updateDomainBlocklistSettings { it.copy(tier = tier) }
+            }
             else -> return
         }
 
@@ -855,6 +863,13 @@ class GeneralSettingsDataStore(
                     isIncognitoKeyboardEnabled = isIncognitoKeyboardEnabled,
                 ),
             )
+        }
+    }
+
+    private fun updateDomainBlocklistSettings(transform: (DomainBlocklistSettings) -> DomainBlocklistSettings) {
+        skipSaveSettings = true
+        generalSettingsManager.update { settings ->
+            settings.copy(domainBlocklist = transform(settings.domainBlocklist))
         }
     }
 

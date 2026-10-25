@@ -27,6 +27,7 @@ val messageListUiModule = module {
             contactLetterBitmapCreator = get(),
             impersonationChecker = get(),
             mailActionHold = get(),
+            domainBlocklist = get(),
         )
     }
     factory {

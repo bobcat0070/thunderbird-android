@@ -8,6 +8,7 @@ import com.fsck.k9.helper.MessageHelper
 import com.fsck.k9.ui.helper.DisplayAddressHelper
 import net.thunderbird.core.android.account.LegacyAccount
 import net.thunderbird.core.preference.display.visualSettings.message.list.MessageListPreferencesManager
+import net.thunderbird.feature.blocklist.DomainBlocklist
 import net.thunderbird.feature.impersonation.ImpersonationChecker
 import net.thunderbird.feature.mail.folder.api.OutboxFolderManager
 
@@ -18,6 +19,7 @@ class MessageListItemMapper(
     private val outboxFolderManager: OutboxFolderManager,
     private val contactLetterBitmapCreator: ContactLetterBitmapCreator?,
     private val impersonationChecker: ImpersonationChecker? = null,
+    private val domainBlocklist: DomainBlocklist? = null,
 ) : MessageMapper<MessageListItem> {
 
     override fun map(message: MessageDetailsAccessor): MessageListItem {
@@ -72,6 +74,8 @@ class MessageListItemMapper(
             // Only for a sender: the recipients of sent mail are who the user chose to write to.
             isPossibleImpersonation = !showRecipients && displayAddress != null &&
                 impersonationChecker?.check(displayAddress.personal, displayAddress.address) != null,
+            senderBlocklistKind = displayAddress?.address?.takeIf { !showRecipients }
+                ?.let { address -> domainBlocklist?.match(address)?.kind },
         )
     }
 

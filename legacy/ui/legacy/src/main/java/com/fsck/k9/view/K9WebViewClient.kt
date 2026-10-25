@@ -28,6 +28,9 @@ import com.fsck.k9.mailstore.AttachmentResolver
 import com.fsck.k9.ui.R
 import com.fsck.k9.view.MessageWebView.OnPageFinishedListener
 import net.thunderbird.core.preference.GeneralSettingsManager
+import net.thunderbird.feature.blocklist.BlocklistKind
+import net.thunderbird.feature.blocklist.BlocklistMatch
+import net.thunderbird.feature.blocklist.DomainBlocklist
 import net.thunderbird.legacy.logging.Log
 
 private const val TAG = "K9WebViewClient"
@@ -39,6 +42,7 @@ private const val TAG = "K9WebViewClient"
 class K9WebViewClient(
     private val clipboardManager: ClipboardManager,
     private val generalSettingsManager: GeneralSettingsManager,
+    private val domainBlocklist: DomainBlocklist,
     private val attachmentResolver: AttachmentResolver?,
     private val onPageFinishedListener: OnPageFinishedListener?,
     private val displayedHtml: String? = null,
@@ -89,7 +93,8 @@ class K9WebViewClient(
      *
      * Other links, such as `mailto:` and `tel:`, open straight away: they have nothing to strip and do not leave
      * the device. So does every web link when the user has turned the link check off - except a deceptive one,
-     * which is warned about either way, as it was before the check existed.
+     * which is warned about either way, as it was before the check existed, and one on the threat blocklist.
+     * Being on a blocklist is only ever said, never a reason to refuse the link.
      */
     fun confirmAndOpen(context: Context, uri: Uri) {
         val url = uri.toString()
@@ -100,7 +105,9 @@ class K9WebViewClient(
         }
 
         val shownSite = deceptiveLinks[host]
-        if (shownSite == null && !generalSettingsManager.getConfig().interaction.isLinkCheckEnabled) {
+        val listed = domainBlocklist.match(host)
+        val mustWarn = shownSite != null || listed?.kind == BlocklistKind.THREAT
+        if (!mustWarn && !generalSettingsManager.getConfig().interaction.isLinkCheckEnabled) {
             openUrl(context, uri)
             return
         }
@@ -109,7 +116,7 @@ class K9WebViewClient(
 
         val dialog = MaterialAlertDialogBuilder(context)
             .setTitle(if (shownSite != null) R.string.deceptive_link_title else R.string.link_dialog_title)
-            .setMessage(linkDialogMessage(context, uri, shownSite, stripped))
+            .setMessage(linkDialogMessage(context, uri, shownSite, listed, stripped))
             .setNegativeButton(R.string.link_dialog_dont_open, null)
             .setNeutralButton(R.string.link_dialog_open_as_is) { _, _ -> openUrl(context, uri) }
             .setPositiveButton(R.string.link_dialog_strip) { _, _ ->
@@ -124,6 +131,7 @@ class K9WebViewClient(
         context: Context,
         uri: Uri,
         shownSite: String?,
+        listed: BlocklistMatch?,
         stripped: StrippedLink?,
     ): CharSequence {
         return SpannableStringBuilder().apply {
@@ -136,6 +144,11 @@ class K9WebViewClient(
             append("\n")
             append(shortenForDisplay(uri.toString()))
             append("\n\n")
+
+            listed?.let { match ->
+                append(blocklistNote(context, match))
+                append("\n\n")
+            }
 
             if (stripped == null) {
                 val tracker = clickTrackerHost(uri.toString())

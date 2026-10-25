@@ -433,6 +433,22 @@
     <string name="general_settings_link_check_summary">Show where a link goes, with the option to open it without its tracking. Links that name a different site than they open are always warned about.</string>
     <string name="general_settings_attachment_reminder_title">Warn about forgotten attachments</string>
     <string name="general_settings_attachment_reminder_summary">Ask before sending a message that mentions an attachment but has none</string>
+    <!-- %1$s is the listed domain, e.g. phish.example -->
+    <string name="blocklist_link_threat">⚠ <xliff:g id="domain">%1$s</xliff:g> is on HaGeZi\'s threat list of malware, phishing and scam sites.</string>
+    <!-- %1$s is the listed domain; %2$s is the list's name: Light, Normal, Pro, Pro++ or Ultimate -->
+    <string name="blocklist_link_general"><xliff:g id="domain">%1$s</xliff:g> is on HaGeZi\'s <xliff:g id="list">%2$s</xliff:g> blocklist of ads, trackers and other junk.</string>
+    <!-- %1$s is the listed domain the sender's address is at or under -->
+    <string name="blocklist_sender_threat">Sent from <xliff:g id="domain">%1$s</xliff:g>, which is on HaGeZi\'s threat list of malware, phishing and scam domains</string>
+    <!-- %1$s is the listed domain; %2$s is the list's name: Light, Normal, Pro, Pro++ or Ultimate -->
+    <string name="blocklist_sender_general">Sent from <xliff:g id="domain">%1$s</xliff:g>, which is on HaGeZi\'s <xliff:g id="list">%2$s</xliff:g> blocklist</string>
+    <string name="message_list_sender_on_threat_list">Sender is on a threat blocklist</string>
+    <string name="message_list_sender_on_blocklist">Sender is on a blocklist</string>
+    <string name="general_settings_domain_blocklist_title">Domain blocklist</string>
+    <!-- %s is the chosen list: Off, Light, Normal, Pro, Pro++ or Ultimate -->
+    <string name="general_settings_domain_blocklist_summary">%s. Shows a note beside senders and links whose domain is on this HaGeZi DNS blocklist; nothing is blocked. The list is downloaded about once a day on Wi-Fi, and every check happens on this device.</string>
+    <string name="general_settings_domain_blocklist_off">Off</string>
+    <string name="general_settings_domain_blocklist_threats_title">Threat list</string>
+    <string name="general_settings_domain_blocklist_threats_summary">Also check HaGeZi\'s threat intelligence feeds of malware, phishing and scam domains, and warn more strongly about those</string>
     <string name="link_dialog_title">Open this link?</string>
     <string name="link_dialog_dont_open">Don\'t open</string>
     <string name="link_dialog_open_as_is">Open as is</string>
