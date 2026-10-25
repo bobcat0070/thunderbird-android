@@ -9,6 +9,7 @@ import com.fsck.k9.backend.BackendManager
 import com.fsck.k9.controller.ControllerExtension
 import com.fsck.k9.crypto.EncryptionExtractor
 import com.fsck.k9.notification.NotificationActionCreator
+import com.fsck.k9.notification.NotificationChannelManager
 import com.fsck.k9.notification.NotificationResourceProvider
 import com.fsck.k9.notification.NotificationStrategy
 import com.fsck.k9.notification.TestNotificationIconResourceProvider
@@ -83,10 +84,15 @@ val testModule = module {
     single { mock<WorkManager>() }
     single<OutboxFolderManager> { FakeOutboxFolderManager() }
     single<LegacyAccountManager> {
-        // NotificationChannelManager watches the accounts on a scope of its own, which outlives the test that started
-        // it; an unstubbed flow fails there and the failure lands on whichever test runs next.
+        // Kept stubbed for anything else that watches the accounts on a scope of its own, which outlives the test that
+        // started it; an unstubbed flow fails there and the failure lands on whichever test runs next.
         mock { on { observeAll() } doReturn flowOf(emptyList()) }
     }
+    // The real one starts watching the accounts on a background thread as soon as it is created. That call on the
+    // shared account manager mock can land between a test's `whenever(accountManager.findById(...))` and its
+    // `thenReturn`, which Mockito then attaches to the wrong call - K9BackendFolderTest failed in CI that way with
+    // "Account not found". No test here needs real notification channels.
+    single<NotificationChannelManager> { mock() }
     single<AvatarImageRepository> { mock() }
     single<NotificationIconResourceProvider> { TestNotificationIconResourceProvider() }
     single<PlatformConfigProvider> { FakePlatformConfigProvider() }
