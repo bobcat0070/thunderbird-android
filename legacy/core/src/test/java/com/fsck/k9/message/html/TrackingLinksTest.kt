@@ -3,6 +3,7 @@ package com.fsck.k9.message.html
 import assertk.assertThat
 import assertk.assertions.isEqualTo
 import assertk.assertions.isNull
+import assertk.assertions.isTrue
 import java.net.URLEncoder
 import kotlin.test.Test
 
@@ -109,6 +110,40 @@ class TrackingLinksTest {
         assertThat(clickTrackerHost("https://writer.substack.com/redirect/2/eyJ1IjoxfQ"))
             .isEqualTo("writer.substack.com")
         assertThat(clickTrackerHost("https://writer.substack.com/p/a-post")).isNull()
+    }
+
+    @Test
+    fun `a click tracker on the sender's own domain should be recognised by its path`() {
+        assertThat(clickTrackerHost("https://ablink.email.rocketmoney.com/uni/ls/click?upn=u001.Wbl4MBulID6vB"))
+            .isEqualTo("ablink.email.rocketmoney.com")
+        assertThat(clickTrackerHost("https://url1234.shop.example/ls/click?upn=abc")).isEqualTo("url1234.shop.example")
+        assertThat(clickTrackerHost("https://em.shop.example/wf/click?upn=abc")).isEqualTo("em.shop.example")
+        assertThat(clickTrackerHost("https://news.shop.example/ss/c/u001.abc/4ab/xyz")).isEqualTo("news.shop.example")
+    }
+
+    @Test
+    fun `a path that only resembles a tracking path should not count`() {
+        assertThat(clickTrackerHost("https://shop.example/tools/clickers")).isNull()
+        assertThat(clickTrackerHost("https://shop.example/blog/ss/c/post")).isNull()
+    }
+
+    @Test
+    fun `a short link should be shown whole`() {
+        val url = "https://shop.example/item?id=42"
+
+        assertThat(shortenForDisplay(url)).isEqualTo(url)
+    }
+
+    @Test
+    fun `a long link should be shown by its start and end`() {
+        val url = "https://ablink.email.rocketmoney.com/uni/ls/click?upn=" + "x".repeat(1000) + "-END_OF_TOKEN"
+
+        val shown = shortenForDisplay(url)
+
+        assertThat(shown.length).isEqualTo(160)
+        assertThat(shown.startsWith("https://ablink.email.rocketmoney.com/uni/ls/click?upn=")).isTrue()
+        assertThat(shown.endsWith("-END_OF_TOKEN")).isTrue()
+        assertThat(shown.contains("…")).isTrue()
     }
 
     @Test

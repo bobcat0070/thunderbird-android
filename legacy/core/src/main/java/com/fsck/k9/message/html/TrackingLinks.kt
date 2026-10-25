@@ -74,6 +74,23 @@ private val CLICK_TRACKING_DOMAINS = setOf(
  */
 private val CLICK_TRACKING_LABELS = setOf("click", "clicks", "ctrk", "trk", "links")
 
+/**
+ * Paths mailing services count clicks on when they put the tracker on the sender's own domain, as in
+ * `ablink.email.example.com/uni/ls/click?upn=...` - SendGrid's `/ls/click`, `/wf/click` and `/ss/c/`, and
+ * Mailchimp's `/track/click`.
+ */
+private val CLICK_TRACKING_PATH = Regex("""(?:/ls/click|/wf/click|/track/click)(?:$|[/?])|^/ss/c/""")
+
+/**
+ * How long a link may be before it is shown shortened; about four lines of a dialog on a phone.
+ */
+private const val MAX_DISPLAYED_LINK_LENGTH = 160
+
+/**
+ * How much of the end of a shortened link is kept, so a link that differs only at the end still looks different.
+ */
+private const val DISPLAYED_LINK_TAIL_LENGTH = 32
+
 private val WEB_LINK = Regex("""^https?://""", RegexOption.IGNORE_CASE)
 private val PATH = Regex("""^https?://[^/?#]*(/[^?#]*)?""", RegexOption.IGNORE_CASE)
 
@@ -134,10 +151,23 @@ fun clickTrackerHost(url: String): String? {
     val labels = host.split('.')
     val isKnownService = labels.indices.any { start -> labels.drop(start).joinToString(".") in CLICK_TRACKING_DOMAINS }
     val isTrackingSubdomain = labels.size > 2 && labels.first() in CLICK_TRACKING_LABELS
-    val isSubstackRedirect = host.endsWith("substack.com") && PATH.find(url)?.groupValues?.get(1)
-        ?.startsWith("/redirect/") == true
+    val path = PATH.find(url)?.groupValues?.get(1).orEmpty()
+    val isSubstackRedirect = host.endsWith("substack.com") && path.startsWith("/redirect/")
+    val isTrackingPath = CLICK_TRACKING_PATH.containsMatchIn(path)
 
-    return host.takeIf { isKnownService || isTrackingSubdomain || isSubstackRedirect }
+    return host.takeIf { isKnownService || isTrackingSubdomain || isSubstackRedirect || isTrackingPath }
+}
+
+/**
+ * A link as it can be shown in a dialog: as it is when it is short, otherwise its start and end with the middle
+ * left out. Tracking links run to a thousand characters of token, and shown whole they push everything else off the
+ * screen; the start says where the link goes, and the end tells two otherwise similar links apart.
+ */
+fun shortenForDisplay(url: String): String {
+    if (url.length <= MAX_DISPLAYED_LINK_LENGTH) return url
+
+    val head = url.take(MAX_DISPLAYED_LINK_LENGTH - DISPLAYED_LINK_TAIL_LENGTH - 1)
+    return head + "…" + url.takeLast(DISPLAYED_LINK_TAIL_LENGTH)
 }
 
 /**

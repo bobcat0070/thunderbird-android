@@ -4,6 +4,7 @@ import com.fsck.k9.message.html.StrippedLink
 import com.fsck.k9.message.html.clickTrackerHost
 import com.fsck.k9.message.html.findDeceptiveLinks
 import com.fsck.k9.message.html.hostOf
+import com.fsck.k9.message.html.shortenForDisplay
 import com.fsck.k9.message.html.stripTracking
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import android.content.ActivityNotFoundException
@@ -131,7 +132,9 @@ class K9WebViewClient(
                 append("\n\n")
             }
 
-            append(uri.toString())
+            inSpans(StyleSpan(Typeface.BOLD)) { append(uri.host.orEmpty()) }
+            append("\n")
+            append(shortenForDisplay(uri.toString()))
             append("\n\n")
 
             if (stripped == null) {
@@ -148,7 +151,7 @@ class K9WebViewClient(
 
             inSpans(StyleSpan(Typeface.BOLD)) { append(context.getString(R.string.link_dialog_stripped_heading)) }
             append("\n")
-            append(stripped.url)
+            append(shortenForDisplay(stripped.url))
             stripped.skippedRedirects.forEach { host ->
                 append("\n")
                 append(context.getString(R.string.link_dialog_skips_redirect, host))
