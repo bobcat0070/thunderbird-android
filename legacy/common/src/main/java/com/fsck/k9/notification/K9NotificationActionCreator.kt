@@ -222,6 +222,13 @@ internal class K9NotificationActionCreator(
         return PendingIntentCompat.getService(context, 0, intent, FLAG_UPDATE_CURRENT, false)!!
     }
 
+    override fun createCopyCodePendingIntent(messageReference: MessageReference, code: String): PendingIntent {
+        val intent = NotificationActionIntents.createCopyCodeIntent(context, messageReference, code).apply {
+            data = Uri.parse("data:,copy-code/${messageReference.toIdentityString()}")
+        }
+        return PendingIntentCompat.getService(context, 0, intent, FLAG_UPDATE_CURRENT, false)!!
+    }
+
     private fun createMessageListIntent(accountId: AccountId): Intent {
         val folderId = defaultFolderProvider.getDefaultFolder(accountId)
         val search = LocalMessageSearch().apply {

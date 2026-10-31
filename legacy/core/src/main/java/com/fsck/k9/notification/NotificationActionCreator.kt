@@ -51,4 +51,6 @@ interface NotificationActionCreator {
     fun createMarkMessageAsSpamPendingIntent(messageReference: MessageReference): PendingIntent
 
     fun createMarkMessageAsStarPendingIntent(messageReference: MessageReference): PendingIntent
+
+    fun createCopyCodePendingIntent(messageReference: MessageReference, code: String): PendingIntent
 }

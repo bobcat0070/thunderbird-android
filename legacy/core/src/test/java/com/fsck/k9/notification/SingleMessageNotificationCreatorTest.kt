@@ -23,7 +23,9 @@ import org.junit.Test
 import org.mockito.kotlin.any
 import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.eq
+import org.mockito.kotlin.inOrder
 import org.mockito.kotlin.mock
+import org.mockito.kotlin.never
 import org.mockito.kotlin.verify
 
 class SingleMessageNotificationCreatorTest : RobolectricTest() {
@@ -102,6 +104,32 @@ class SingleMessageNotificationCreatorTest : RobolectricTest() {
     }
 
     @Test
+    fun `create notification offers the verification code before the other actions`() {
+        testSubject.createSingleNotification(
+            baseNotificationData = createBaseNotificationData(),
+            singleNotificationData = createSingleNotificationData(
+                verificationCode = "482913",
+                actions = listOf(NotificationAction.Reply),
+            ),
+        )
+
+        inOrder(builder) {
+            verify(builder).addAction(eq(resourceProvider.iconCopy), eq("Copy 482913"), any())
+            verify(builder).addAction(eq(resourceProvider.iconReply), eq("Reply"), any())
+        }
+    }
+
+    @Test
+    fun `create notification without a verification code offers no copy action`() {
+        testSubject.createSingleNotification(
+            baseNotificationData = createBaseNotificationData(),
+            singleNotificationData = createSingleNotificationData(),
+        )
+
+        verify(builder, never()).addAction(eq(resourceProvider.iconCopy), any(), any())
+    }
+
+    @Test
     fun `create notification posts notification synchronously`() {
         val notificationHelper = createNotificationHelper()
         testSubject = SingleMessageNotificationCreator(
@@ -132,6 +160,8 @@ class SingleMessageNotificationCreatorTest : RobolectricTest() {
         return mock {
             on { createViewMessagePendingIntent(any()) } doReturn pendingIntent
             on { createDismissMessagePendingIntent(any()) } doReturn pendingIntent
+            on { createReplyPendingIntent(any()) } doReturn pendingIntent
+            on { createCopyCodePendingIntent(any(), any()) } doReturn pendingIntent
         }
     }
 
@@ -152,7 +182,11 @@ class SingleMessageNotificationCreatorTest : RobolectricTest() {
         )
     }
 
-    private fun createSingleNotificationData(isSenderAuthenticated: Boolean = false): SingleNotificationData {
+    private fun createSingleNotificationData(
+        isSenderAuthenticated: Boolean = false,
+        verificationCode: String? = null,
+        actions: List<NotificationAction> = emptyList(),
+    ): SingleNotificationData {
         return SingleNotificationData(
             notificationId = 23,
             isSilent = true,
@@ -164,8 +198,9 @@ class SingleMessageNotificationCreatorTest : RobolectricTest() {
                 preview = "Preview",
                 summary = "Summary",
                 isSenderAuthenticated = isSenderAuthenticated,
+                verificationCode = verificationCode,
             ),
-            actions = emptyList(),
+            actions = actions,
             wearActions = emptyList(),
             addLockScreenNotification = false,
         )

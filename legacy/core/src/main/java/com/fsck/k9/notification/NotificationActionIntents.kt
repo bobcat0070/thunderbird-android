@@ -12,11 +12,22 @@ internal const val ACTION_ARCHIVE = "ACTION_ARCHIVE"
 internal const val ACTION_SPAM = "ACTION_SPAM"
 internal const val ACTION_STAR = "ACTION_STAR"
 internal const val ACTION_DISMISS = "ACTION_DISMISS"
+internal const val ACTION_COPY_CODE = "ACTION_COPY_CODE"
 internal const val EXTRA_ACCOUNT_UUID = "accountUuid"
 internal const val EXTRA_MESSAGE_REFERENCE = "messageReference"
 internal const val EXTRA_MESSAGE_REFERENCES = "messageReferences"
+internal const val EXTRA_CODE = "code"
 
 object NotificationActionIntents {
+    fun createCopyCodeIntent(context: Context, messageReference: MessageReference, code: String): Intent {
+        return Intent(context, NotificationActionService::class.java).apply {
+            action = ACTION_COPY_CODE
+            putExtra(EXTRA_ACCOUNT_UUID, messageReference.accountId.toString())
+            putExtra(EXTRA_MESSAGE_REFERENCE, messageReference.toIdentityString())
+            putExtra(EXTRA_CODE, code)
+        }
+    }
+
     fun createMarkMessageAsReadIntent(context: Context, messageReference: MessageReference): Intent {
         return Intent(context, NotificationActionService::class.java).apply {
             action = ACTION_MARK_AS_READ

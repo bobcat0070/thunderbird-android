@@ -266,6 +266,11 @@
     <string name="notification_action_archive">Archive</string>
     <string name="notification_action_archive_all">Archive All</string>
     <string name="notification_action_spam">Spam</string>
+    <!-- A notification button that copies a sign-in code from the message, as in "Copy 482913" -->
+    <string name="notification_action_copy_code">Copy <xliff:g id="code">%s</xliff:g></string>
+    <string name="notification_code_copied">Code copied</string>
+    <!-- A line under the sender in an open message; tapping it copies the sign-in code, as in "Copy code 482913" -->
+    <string name="message_view_copy_code">Copy code <xliff:g id="code">%s</xliff:g></string>
     <string name="notification_certificate_error_public">Certificate error</string>
     <string name="notification_certificate_error_title">Certificate error for <xliff:g id="account">%s</xliff:g></string>
     <string name="notification_certificate_error_text">Check your server settings</string>

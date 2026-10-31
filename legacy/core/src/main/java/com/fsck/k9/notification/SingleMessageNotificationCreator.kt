@@ -85,6 +85,9 @@ internal class SingleMessageNotificationCreator(
     }
 
     private fun NotificationBuilder.setDeviceActions(notificationData: SingleNotificationData) = apply {
+        // First, because Android shows only the first three actions and the code is why the notification is open.
+        notificationData.content.verificationCode?.let { code -> addCopyCodeAction(notificationData, code) }
+
         val actions = notificationData.actions
         for (action in actions) {
             when (action) {
@@ -96,6 +99,15 @@ internal class SingleMessageNotificationCreator(
                 NotificationAction.Star -> addStarAction(notificationData)
             }
         }
+    }
+
+    private fun NotificationBuilder.addCopyCodeAction(notificationData: SingleNotificationData, code: String) {
+        val icon = resourceProvider.iconCopy
+        val title = resourceProvider.actionCopyCode(code)
+        val messageReference = notificationData.content.messageReference
+        val action = actionCreator.createCopyCodePendingIntent(messageReference, code)
+
+        addAction(icon, title, action)
     }
 
     private fun NotificationBuilder.addReplyAction(notificationData: SingleNotificationData) {

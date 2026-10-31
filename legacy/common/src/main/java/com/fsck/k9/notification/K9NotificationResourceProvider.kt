@@ -15,6 +15,7 @@ class K9NotificationResourceProvider(private val context: Context) : Notificatio
     override val iconArchive: Int = Icons.Outlined.Archive
     override val iconMarkAsSpam: Int = Icons.Outlined.Report
     override val iconStar: Int = Icons.Outlined.Star
+    override val iconCopy: Int = Icons.Outlined.ContentCopy
     override val iconNewMail: Int = Icons.Outlined.MarkEmailUnread
     override val iconSendingMail: Int = Icons.Outlined.Sync
     override val iconCheckingMail: Int = Icons.Outlined.Sync
@@ -115,4 +116,8 @@ class K9NotificationResourceProvider(private val context: Context) : Notificatio
     override fun actionArchiveAll(): String = context.getString(R.string.notification_action_archive_all)
 
     override fun actionMarkAsSpam(): String = context.getString(R.string.notification_action_spam)
+
+    override fun actionCopyCode(code: String): String = context.getString(R.string.notification_action_copy_code, code)
+
+    override fun codeCopied(): String = context.getString(R.string.notification_code_copied)
 }

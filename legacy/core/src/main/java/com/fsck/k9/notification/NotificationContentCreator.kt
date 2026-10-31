@@ -6,6 +6,7 @@ import app.k9mail.legacy.message.extractors.PreviewResult.PreviewType
 import com.fsck.k9.helper.MessageHelper
 import com.fsck.k9.mail.Address
 import com.fsck.k9.mail.Message
+import com.fsck.k9.message.extractors.findVerificationCode
 import com.fsck.k9.mailstore.LocalMessage
 import net.thunderbird.core.preference.display.visualSettings.message.list.MessageListPreferencesManager
 import net.thunderbird.feature.blocklist.BlocklistKind
@@ -23,15 +24,22 @@ internal class NotificationContentCreator(
 ) {
     fun createFromMessage(message: LocalMessage, isFromSelf: Boolean): NotificationContent {
         val sender = getMessageSender(message, isFromSelf)
+        val senderWarning = message.from?.firstOrNull()?.let(::senderWarning)
 
         return NotificationContent(
             messageReference = message.makeMessageReference(),
             sender = sender,
             subject = getMessageSubject(message),
-            preview = withSenderWarning(message, getMessagePreview(message)),
+            preview = withSenderWarning(senderWarning, getMessagePreview(message)),
             summary = buildMessageSummary(sender.personal, getMessageSubject(message)),
             isSenderAuthenticated = message.isSenderAuthenticated,
+            verificationCode = if (senderWarning == null) getVerificationCode(message) else null,
         )
+    }
+
+    private fun getVerificationCode(message: LocalMessage): String? {
+        val preview = message.preview.takeIf { message.previewType == PreviewType.TEXT }
+        return findVerificationCode(message.subject, preview)
     }
 
     /**
@@ -41,8 +49,8 @@ internal class NotificationContentCreator(
      * blocklist is left out: it holds plenty of ordinary mailing domains, and a notification is no place for a note
      * that is only information.
      */
-    private fun withSenderWarning(message: LocalMessage, preview: CharSequence): CharSequence {
-        val warning = message.from?.firstOrNull()?.let(::senderWarning) ?: return preview
+    private fun withSenderWarning(warning: String?, preview: CharSequence): CharSequence {
+        if (warning == null) return preview
 
         return SpannableStringBuilder().apply {
             append(WARNING_MARK)

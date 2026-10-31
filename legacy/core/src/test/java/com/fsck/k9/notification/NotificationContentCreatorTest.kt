@@ -6,6 +6,7 @@ import app.k9mail.legacy.message.extractors.PreviewResult.PreviewType
 import assertk.assertThat
 import assertk.assertions.isEqualTo
 import assertk.assertions.isFalse
+import assertk.assertions.isNull
 import assertk.assertions.isTrue
 import com.fsck.k9.mail.Address
 import com.fsck.k9.mail.AuthType
@@ -74,6 +75,79 @@ class NotificationContentCreatorTest : RobolectricTest() {
         val content = contentCreator.createFromMessage(message, isFromSelf = false)
 
         assertThat(content.preview.toString()).isEqualTo("⚠ Possible impersonation\n$SUBJECT\n$PREVIEW")
+    }
+
+    @Test
+    fun createFromMessage_withVerificationCode_shouldOfferIt() {
+        val contentCreator = createNotificationContentCreator()
+        val message = mock<LocalMessage> {
+            on { makeMessageReference() } doReturn messageReference
+            on { previewType } doReturn PreviewType.TEXT
+            on { preview } doReturn "Use this code to sign in: 482913. It expires in 10 minutes."
+            on { subject } doReturn "Sign in to Example"
+            on { from } doReturn arrayOf(Address(SENDER_ADDRESS, SENDER_NAME))
+        }
+
+        val content = contentCreator.createFromMessage(message, isFromSelf = false)
+
+        assertThat(content.verificationCode).isEqualTo("482913")
+    }
+
+    @Test
+    fun createFromMessage_withoutVerificationCode_shouldOfferNone() {
+        val contentCreator = createNotificationContentCreator()
+
+        val content = contentCreator.createFromMessage(message, isFromSelf = false)
+
+        assertThat(content.verificationCode).isNull()
+    }
+
+    @Test
+    fun createFromMessage_withVerificationCodeFromPossibleImpersonation_shouldNotOfferIt() {
+        val contentCreator = NotificationContentCreator(
+            resourceProvider,
+            contactRepository,
+            messageListPreferencesManager = mock {
+                on { getConfig() } doReturn DisplayMessageListSettings()
+            },
+            impersonationChecker = { name, address ->
+                Impersonation.KnownName(name.orEmpty(), address.orEmpty())
+            },
+        )
+        val message = mock<LocalMessage> {
+            on { makeMessageReference() } doReturn messageReference
+            on { previewType } doReturn PreviewType.TEXT
+            on { preview } doReturn PREVIEW
+            on { subject } doReturn "Your verification code is 482913"
+            on { from } doReturn arrayOf(Address(SENDER_ADDRESS, SENDER_NAME))
+        }
+
+        val content = contentCreator.createFromMessage(message, isFromSelf = false)
+
+        assertThat(content.verificationCode).isNull()
+    }
+
+    @Test
+    fun createFromMessage_withVerificationCodeFromThreatListedSender_shouldNotOfferIt() {
+        val contentCreator = NotificationContentCreator(
+            resourceProvider,
+            contactRepository,
+            messageListPreferencesManager = mock {
+                on { getConfig() } doReturn DisplayMessageListSettings()
+            },
+            domainBlocklist = { host -> BlocklistMatch(host, BlocklistKind.THREAT, "Threat Intelligence Feeds") },
+        )
+        val message = mock<LocalMessage> {
+            on { makeMessageReference() } doReturn messageReference
+            on { previewType } doReturn PreviewType.TEXT
+            on { preview } doReturn PREVIEW
+            on { subject } doReturn "Your verification code is 482913"
+            on { from } doReturn arrayOf(Address(SENDER_ADDRESS, SENDER_NAME))
+        }
+
+        val content = contentCreator.createFromMessage(message, isFromSelf = false)
+
+        assertThat(content.verificationCode).isNull()
     }
 
     @Test

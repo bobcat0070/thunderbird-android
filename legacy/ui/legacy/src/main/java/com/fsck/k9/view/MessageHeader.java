@@ -8,6 +8,7 @@ import android.content.Context;
 import android.content.res.ColorStateList;
 import androidx.core.widget.TextViewCompat;
 import com.google.android.material.color.MaterialColors;
+import android.os.Build;
 import android.text.SpannableStringBuilder;
 import android.text.Spanned;
 import android.text.style.StrikethroughSpan;
@@ -30,6 +31,7 @@ import androidx.appcompat.widget.PopupMenu;
 import androidx.appcompat.widget.TooltipCompat;
 import app.k9mail.core.ui.legacy.designsystem.atom.icon.Icons;
 import app.k9mail.legacy.di.DI;
+import app.k9mail.legacy.message.extractors.PreviewResult.PreviewType;
 import com.fsck.k9.FontSizes;
 import com.fsck.k9.K9;
 import com.fsck.k9.activity.misc.ContactPicture;
@@ -70,6 +72,7 @@ import net.thunderbird.feature.mail.message.reader.api.strategy.ReplyActionStrat
 import com.fsck.k9.mail.MessageImportance;
 import com.fsck.k9.mail.MessageImportanceKt;
 import com.fsck.k9.mailstore.LocalMessage;
+import com.fsck.k9.message.extractors.VerificationCodesKt;
 import net.thunderbird.feature.blocklist.BlocklistKind;
 import net.thunderbird.feature.blocklist.BlocklistMatch;
 import net.thunderbird.feature.blocklist.DomainBlocklist;
@@ -113,6 +116,7 @@ public class MessageHeader extends LinearLayout implements OnClickListener, OnLo
     private String currentSenderDomain;
     private MaterialTextView impersonationWarningView;
     private MaterialTextView blocklistNoteView;
+    private MaterialTextView verificationCodeView;
     private String currentImpersonationSender;
     private MaterialTextView fromView;
     private ImageView cryptoStatusIcon;
@@ -148,6 +152,7 @@ public class MessageHeader extends LinearLayout implements OnClickListener, OnLo
         markVerificationView = findViewById(R.id.mark_verification);
         impersonationWarningView = findViewById(R.id.impersonation_warning);
         blocklistNoteView = findViewById(R.id.blocklist_note);
+        verificationCodeView = findViewById(R.id.verification_code);
         deliveredToView = findViewById(R.id.delivered_to);
         labelsView = findViewById(R.id.message_labels);
         labelsView.setOnClickListener(this);
@@ -297,8 +302,10 @@ public class MessageHeader extends LinearLayout implements OnClickListener, OnLo
      * A From address can name any domain, so when it is not listed the domains the server verified the message really
      * came through are checked too - against the threat list only, since the general lists hold many of the bounce
      * domains bulk mail is sent from.
+     *
+     * @return whether the sender or a domain the message came through is on the threat list.
      */
-    private void showBlocklistNote(Message message, Address fromAddress) {
+    private boolean showBlocklistNote(Message message, Address fromAddress) {
         blocklistNoteView.setVisibility(View.GONE);
         DomainBlocklist blocklist = DI.get(DomainBlocklist.class);
 
@@ -319,7 +326,7 @@ public class MessageHeader extends LinearLayout implements OnClickListener, OnLo
             }
         }
         if (match == null) {
-            return;
+            return false;
         }
 
         boolean isThreat = match.getKind() == BlocklistKind.THREAT;
@@ -333,10 +340,18 @@ public class MessageHeader extends LinearLayout implements OnClickListener, OnLo
                 ? BlocklistNotes.senderBlocklistNote(getContext(), match)
                 : BlocklistNotes.sendingDomainBlocklistNote(getContext(), match));
         blocklistNoteView.setVisibility(View.VISIBLE);
+        return isThreat;
     }
 
-    private void showImpersonationWarning(Address fromAddress) {
+    /**
+     * Also offers the message's one-time code for copying, once the sender is found not to impersonate anyone: a
+     * lookalike's code is not something to have one tap from being pasted.
+     *
+     * @param verificationCode the message's code, or {@code null} when it has none or its sender is threat-listed.
+     */
+    private void showImpersonationWarning(Address fromAddress, String verificationCode) {
         impersonationWarningView.setVisibility(View.GONE);
+        verificationCodeView.setVisibility(View.GONE);
         currentImpersonationSender = null;
 
         if (fromAddress == null || fromAddress.getAddress() == null) {
@@ -351,6 +366,13 @@ public class MessageHeader extends LinearLayout implements OnClickListener, OnLo
         markVerificationExecutor.execute(() -> {
             Impersonation impersonation = DI.get(ImpersonationChecker.class).check(name, address);
             if (impersonation == null) {
+                if (verificationCode != null) {
+                    post(() -> {
+                        if (sender.equals(currentImpersonationSender)) {
+                            showVerificationCode(verificationCode);
+                        }
+                    });
+                }
                 return;
             }
 
@@ -362,6 +384,27 @@ public class MessageHeader extends LinearLayout implements OnClickListener, OnLo
                 }
             });
         });
+    }
+
+    private static String findVerificationCode(Message message) {
+        String preview = null;
+        if (message instanceof LocalMessage && ((LocalMessage) message).getPreviewType() == PreviewType.TEXT) {
+            preview = ((LocalMessage) message).getPreview();
+        }
+        return VerificationCodesKt.findVerificationCode(message.getSubject(), preview);
+    }
+
+    private void showVerificationCode(String code) {
+        Context context = getContext();
+        verificationCodeView.setText(context.getString(R.string.message_view_copy_code, code));
+        verificationCodeView.setOnClickListener(view -> {
+            DI.get(ClipboardManager.class).setSensitiveText(context.getString(R.string.notification_code_copied), code);
+            // Android 13 and later confirm the copy themselves.
+            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
+                Toast.makeText(context, R.string.notification_code_copied, Toast.LENGTH_SHORT).show();
+            }
+        });
+        verificationCodeView.setVisibility(View.VISIBLE);
     }
 
     private String impersonationWarning(Impersonation impersonation) {
@@ -668,8 +711,8 @@ public class MessageHeader extends LinearLayout implements OnClickListener, OnLo
         // Outside the contact-picture branch above: which address a message arrived on has nothing to do with
         // whether sender pictures are switched on.
         showDeliveryAddress(message, account);
-        showImpersonationWarning(fromAddress);
-        showBlocklistNote(message, fromAddress);
+        boolean isThreatListed = showBlocklistNote(message, fromAddress);
+        showImpersonationWarning(fromAddress, isThreatListed ? null : findVerificationCode(message));
 
         importance = MessageImportanceKt.getImportance(message);
         List<String> serverCategories = message instanceof LocalMessage

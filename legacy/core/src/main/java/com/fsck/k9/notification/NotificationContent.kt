@@ -16,4 +16,10 @@ internal data class NotificationContent(
      * sender is presented before the reader has opened anything.
      */
     val isSenderAuthenticated: Boolean = false,
+
+    /**
+     * The one-time code the message carries, offered as a copy action. Left out for a message whose sender is
+     * flagged, so a lookalike's code is never one tap from being pasted somewhere.
+     */
+    val verificationCode: String? = null,
 )
