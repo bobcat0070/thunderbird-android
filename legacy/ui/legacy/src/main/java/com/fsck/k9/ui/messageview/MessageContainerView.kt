@@ -43,7 +43,9 @@ import com.fsck.k9.mail.Part
 import com.fsck.k9.mailstore.AttachmentResolver
 import com.fsck.k9.mailstore.AttachmentViewInfo
 import com.fsck.k9.mailstore.MessageViewInfo
+import com.fsck.k9.message.html.BlockedTrackingImages
 import com.fsck.k9.message.html.DisplayHtml
+import com.fsck.k9.message.html.blockTrackingImages
 import com.fsck.k9.ui.R
 import com.fsck.k9.view.MessageWebView
 import com.fsck.k9.view.MessageWebView.OnPageFinishedListener
@@ -53,6 +55,7 @@ import net.thunderbird.core.android.contact.ContactIntentHelper
 import net.thunderbird.components.ui.bolt.theme.BoltTheme
 import net.thunderbird.core.ui.contract.mvi.observeWithoutEffect
 import net.thunderbird.core.ui.theme.api.FeatureThemeProvider
+import net.thunderbird.feature.blocklist.DomainBlocklist
 import net.thunderbird.feature.mail.message.reader.api.domain.mapper.AttachmentViewInfoMapper
 import net.thunderbird.feature.mail.message.reader.api.ui.MessageReaderViewContract
 import net.thunderbird.feature.mail.message.reader.api.ui.component.organism.AttachmentCard
@@ -71,6 +74,7 @@ class MessageContainerView(context: Context, attrs: AttributeSet?) :
     private val linkTextHandler: LinkTextHandler by inject()
     private val featureThemeProvider: FeatureThemeProvider by inject()
     private val attachmentViewInfoMapper: AttachmentViewInfoMapper<Part> by inject()
+    private val domainBlocklist: DomainBlocklist by inject()
 
     private lateinit var layoutInflater: LayoutInflater
 
@@ -91,6 +95,17 @@ class MessageContainerView(context: Context, attrs: AttributeSet?) :
     @get:JvmName("hasHiddenExternalImages")
     var hasHiddenExternalImages = false
         private set
+
+    /**
+     * The tracking images kept from loading in the message shown, or `null` when it has none or they were asked for.
+     */
+    var blockedTrackingImages: BlockedTrackingImages? = null
+        private set
+
+    /**
+     * The message as it was sent, trackers and all, for when the reader asks for its trackers.
+     */
+    private var unblockedHtmlText: String? = null
 
     public override fun onFinishInflate() {
         super.onFinishInflate()
@@ -433,11 +448,24 @@ class MessageContainerView(context: Context, attrs: AttributeSet?) :
         refreshDisplayedContent()
     }
 
+    /**
+     * Shows the message as it was sent, with its images and the trackers among them, for a message that does not
+     * look right without them.
+     */
+    fun showTrackers() {
+        val htmlText = unblockedHtmlText ?: return
+        blockedTrackingImages = null
+        currentHtmlText = htmlText
+        setLoadPictures(true)
+        refreshDisplayedContent()
+    }
+
     fun displayMessageViewContainer(
         messageViewInfo: MessageViewInfo,
         renderPlainFormat: Boolean,
         onRenderingFinishedListener: OnRenderingFinishedListener,
         loadPictures: Boolean,
+        loadTrackers: Boolean,
         hideUnsignedTextDivider: Boolean,
         attachmentCallback: AttachmentViewCallback?,
         messageReaderViewModel: MessageReaderViewContract.ViewModel<Part>,
@@ -446,10 +474,22 @@ class MessageContainerView(context: Context, attrs: AttributeSet?) :
 
         resetView()
 
-        val messageText = if (!renderPlainFormat) {
+        val sentText = if (!renderPlainFormat) {
             messageViewInfo.text
         } else {
             displayHtml.wrapMessageContent(messageViewInfo.textPlainFormatted)
+        }
+
+        // Before the check for external images below, so a message whose only remote images are trackers does not
+        // offer to show images that would load nothing.
+        unblockedHtmlText = sentText
+        blockedTrackingImages = null
+        val messageText = if (sentText != null && !renderPlainFormat && !loadTrackers) {
+            val blocked = blockTrackingImages(sentText, domainBlocklist)
+            blockedTrackingImages = blocked.takeIf { it.trackers.isNotEmpty() }
+            blocked.html
+        } else {
+            sentText
         }
 
         // Register attachments so inline images (CIDs) can be resolved

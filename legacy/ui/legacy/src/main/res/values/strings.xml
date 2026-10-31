@@ -364,6 +364,15 @@
 
     <!-- Text of the button that is displayed below the message header when the message body references one or more remote images -->
     <string name="message_view_show_remote_images_action">Show remote images</string>
+    <!-- A note above an open message. The second value lists who runs the trackers, as in "Mailchimp, SendGrid" -->
+    <plurals name="message_view_trackers_blocked">
+        <item quantity="one">Blocked a tracker from <xliff:g id="services">%2$s</xliff:g></item>
+        <item quantity="other">Blocked <xliff:g id="count">%1$d</xliff:g> trackers from <xliff:g id="services">%2$s</xliff:g></item>
+    </plurals>
+    <!-- Ends a list of tracking services that was cut short, as in "Mailchimp, SendGrid, HubSpot and others" -->
+    <string name="message_view_trackers_more_services"><xliff:g id="services">%s</xliff:g> and others</string>
+    <!-- Loads a message's trackers, for a message that looks broken without them -->
+    <string name="message_view_show_trackers_action">Load trackers</string>
 
     <string name="message_view_no_viewer">Unable to find viewer for <xliff:g id="mimetype">%s</xliff:g>.</string>
     <string name="message_view_download_remainder">Download complete message</string>

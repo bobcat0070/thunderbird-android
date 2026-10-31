@@ -42,29 +42,73 @@ the 'message view theme' setting).
                 >
 
                 <LinearLayout
-                    android:layout_width="wrap_content"
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_gravity="center_horizontal"
-                    android:orientation="horizontal"
+                    android:orientation="vertical"
                     >
 
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/show_pictures"
-                        style="?attr/materialButtonOutlinedStyle"
+                    <LinearLayout
+                        android:id="@+id/show_pictures_row"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="@string/message_view_show_remote_images_action"
-                        app:icon="@drawable/ic_image"
-                        />
+                        android:layout_gravity="center_horizontal"
+                        android:orientation="horizontal"
+                        >
 
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/always_show_pictures"
-                        style="?attr/materialButtonOutlinedStyle"
-                        android:layout_width="wrap_content"
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/show_pictures"
+                            style="?attr/materialButtonOutlinedStyle"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@string/message_view_show_remote_images_action"
+                            app:icon="@drawable/ic_image"
+                            />
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/always_show_pictures"
+                            style="?attr/materialButtonOutlinedStyle"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="8dp"
+                            android:text="@string/message_view_always_show_remote_images_action"
+                            />
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:id="@+id/trackers_row"
+                        android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginStart="8dp"
-                        android:text="@string/message_view_always_show_remote_images_action"
-                        />
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal"
+                        android:paddingHorizontal="16dp"
+                        android:visibility="gone"
+                        tools:visibility="visible"
+                        >
+
+                        <com.google.android.material.textview.MaterialTextView
+                            android:id="@+id/trackers_note"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:drawablePadding="4dp"
+                            android:maxLines="2"
+                            android:ellipsize="end"
+                            android:textAppearance="?attr/textAppearanceLabelMedium"
+                            android:textColor="?attr/colorOnSurfaceVariant"
+                            app:drawableStartCompat="@drawable/ic_block"
+                            app:drawableTint="?attr/colorOnSurfaceVariant"
+                            tools:text="Blocked 3 trackers from Mailchimp, SendGrid"
+                            />
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/show_trackers"
+                            style="@style/Widget.Material3.Button.TextButton"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="8dp"
+                            android:text="@string/message_view_show_trackers_action"
+                            />
+                    </LinearLayout>
                 </LinearLayout>
 
             </FrameLayout>

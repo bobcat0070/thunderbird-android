@@ -27,6 +27,7 @@ import com.fsck.k9.mailstore.hasDmarcPass
 import com.fsck.k9.mailstore.senderDomainOf
 import com.fsck.k9.ui.R
 import com.fsck.k9.ui.helper.SizeFormatter
+import com.fsck.k9.message.html.BlockedTrackingImages
 import com.fsck.k9.ui.messageview.MessageContainerView.OnRenderingFinishedListener
 import com.fsck.k9.view.MessageHeader
 import com.fsck.k9.view.ThemeUtils
@@ -43,6 +44,11 @@ import net.thunderbird.core.ui.animation.manager.AnimationManager
 import net.thunderbird.feature.mail.message.reader.api.ui.MessageReaderViewContract
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
+
+/**
+ * How many of the services behind a message's trackers are named before the rest are summed up.
+ */
+private const val MAX_TRACKER_SERVICES_SHOWN = 3
 
 class MessageTopView(
     context: Context,
@@ -70,6 +76,10 @@ class MessageTopView(
     private lateinit var extraHeaderContainer: View
     private lateinit var showPicturesButton: MaterialButton
     private lateinit var alwaysShowPicturesButton: MaterialButton
+    private lateinit var showPicturesRow: View
+    private lateinit var trackersRow: View
+    private lateinit var trackersNote: MaterialTextView
+    private lateinit var showTrackersButton: MaterialButton
 
     /**
      * The sender of the message currently on screen, so the "Always" button knows who it is trusting.
@@ -83,6 +93,7 @@ class MessageTopView(
      */
     private var isShowingDownload = false
     private var showPicturesButtonClicked = false
+    private var showTrackersButtonClicked = false
     var renderPlainFormat = false
 
     private var showAccountIndicator = false
@@ -109,6 +120,10 @@ class MessageTopView(
         extraHeaderContainer = findViewById(R.id.extra_header_container)
         showPicturesButton = findViewById(R.id.show_pictures)
         alwaysShowPicturesButton = findViewById(R.id.always_show_pictures)
+        showPicturesRow = findViewById(R.id.show_pictures_row)
+        trackersRow = findViewById(R.id.trackers_row)
+        trackersNote = findViewById(R.id.trackers_note)
+        showTrackersButton = findViewById(R.id.show_trackers)
         setShowPicturesButtonListener()
 
         containerView = findViewById(R.id.message_container)
@@ -130,6 +145,17 @@ class MessageTopView(
 
         alwaysShowPicturesButton.setOnClickListener {
             currentSenderAddress?.let { senderAddress -> onAlwaysShowPictures?.invoke(senderAddress) }
+        }
+
+        showTrackersButton.setOnClickListener {
+            val messageContainerViewCandidate = containerView.getChildAt(0)
+            if (messageContainerViewCandidate is MessageContainerView) {
+                messageContainerViewCandidate.showTrackers()
+            }
+            showTrackersButtonClicked = true
+            showPicturesButtonClicked = true
+            hideShowPicturesButton()
+            hideTrackersNote()
         }
     }
 
@@ -179,6 +205,7 @@ class MessageTopView(
                 }
             },
             loadPictures,
+            showTrackersButtonClicked,
             hideUnsignedTextDivider,
             attachmentCallback,
             messageReaderViewModel,
@@ -190,6 +217,13 @@ class MessageTopView(
             showShowPicturesButton()
         } else {
             hideShowPicturesButton()
+        }
+
+        val blockedTrackingImages = view.blockedTrackingImages
+        if (blockedTrackingImages != null) {
+            showTrackersNote(blockedTrackingImages)
+        } else {
+            hideTrackersNote()
         }
 
         updateAttachmentSummary(messageViewInfo)
@@ -347,11 +381,41 @@ class MessageTopView(
     }
 
     private fun showShowPicturesButton() {
-        extraHeaderContainer.visibility = VISIBLE
+        showPicturesRow.visibility = VISIBLE
+        updateExtraHeaderContainer()
     }
 
     private fun hideShowPicturesButton() {
-        extraHeaderContainer.visibility = GONE
+        showPicturesRow.visibility = GONE
+        updateExtraHeaderContainer()
+    }
+
+    /**
+     * Names who the blocked trackers report to, the three found most often, so the note stays one or two lines.
+     */
+    private fun showTrackersNote(blockedTrackingImages: BlockedTrackingImages) {
+        val services = blockedTrackingImages.services
+        val shownServices = services.take(MAX_TRACKER_SERVICES_SHOWN).joinToString(", ")
+        val serviceList = if (services.size > MAX_TRACKER_SERVICES_SHOWN) {
+            context.getString(R.string.message_view_trackers_more_services, shownServices)
+        } else {
+            shownServices
+        }
+        val count = blockedTrackingImages.trackers.size
+        trackersNote.text =
+            resources.getQuantityString(R.plurals.message_view_trackers_blocked, count, count, serviceList)
+        trackersRow.visibility = VISIBLE
+        updateExtraHeaderContainer()
+    }
+
+    private fun hideTrackersNote() {
+        trackersRow.visibility = GONE
+        updateExtraHeaderContainer()
+    }
+
+    private fun updateExtraHeaderContainer() {
+        val hasContent = showPicturesRow.visibility == VISIBLE || trackersRow.visibility == VISIBLE
+        extraHeaderContainer.visibility = if (hasContent) VISIBLE else GONE
     }
 
     private fun shouldAutomaticallyLoadPictures(
@@ -482,6 +546,7 @@ class MessageTopView(
         val superState = super.onSaveInstanceState()
         val savedState = SavedState(superState)
         savedState.showPicturesButtonClicked = showPicturesButtonClicked
+        savedState.showTrackersButtonClicked = showTrackersButtonClicked
         return savedState
     }
 
@@ -489,6 +554,7 @@ class MessageTopView(
         val savedState = state as SavedState
         super.onRestoreInstanceState(savedState.superState)
         showPicturesButtonClicked = savedState.showPicturesButtonClicked
+        showTrackersButtonClicked = savedState.showTrackersButtonClicked
     }
 
     fun refreshAttachmentThumbnail(attachment: AttachmentViewInfo) {
@@ -500,16 +566,19 @@ class MessageTopView(
 
     private class SavedState : BaseSavedState {
         var showPicturesButtonClicked = false
+        var showTrackersButtonClicked = false
 
         constructor(superState: Parcelable?) : super(superState)
 
         private constructor(`in`: Parcel) : super(`in`) {
             showPicturesButtonClicked = `in`.readInt() != 0
+            showTrackersButtonClicked = `in`.readInt() != 0
         }
 
         override fun writeToParcel(out: Parcel, flags: Int) {
             super.writeToParcel(out, flags)
             out.writeInt(if (showPicturesButtonClicked) 1 else 0)
+            out.writeInt(if (showTrackersButtonClicked) 1 else 0)
         }
 
         companion object {
