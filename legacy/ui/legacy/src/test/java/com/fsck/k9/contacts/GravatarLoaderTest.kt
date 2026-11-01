@@ -3,6 +3,7 @@ package com.fsck.k9.contacts
 import androidx.test.core.app.ApplicationProvider
 import assertk.assertThat
 import assertk.assertions.isEqualTo
+import assertk.assertions.isLessThan
 import assertk.assertions.isNotNull
 import assertk.assertions.isNull
 import mockwebserver3.MockResponse
@@ -132,6 +133,22 @@ class GravatarLoaderTest : RobolectricTest() {
     }
 
     @Test
+    fun `should stop reading a body of undeclared length at the limit`() {
+        val tooLarge = Buffer().write(onePixelPng()).write(ByteArray(8 * 1024 * 1024))
+        server.enqueue(MockResponse.Builder().chunkedBody(tooLarge, 64 * 1024).build())
+        val readCounter = ReadCountingInterceptor()
+        val testSubject = loaderFor(
+            GravatarSettings(isEnabled = true),
+            httpClient = OkHttpClient.Builder().addInterceptor(readCounter).build(),
+        )
+
+        val result = testSubject.loadGravatar("sam@example.com", size = 80)
+
+        assertThat(result).isNull()
+        assertThat(readCounter.bytesRead).isLessThan(2L * 1024 * 1024)
+    }
+
+    @Test
     fun `should return nothing for a blank address`() {
         val testSubject = loaderFor(GravatarSettings(isEnabled = true))
 
@@ -141,7 +158,7 @@ class GravatarLoaderTest : RobolectricTest() {
         assertThat(server.requestCount).isEqualTo(0)
     }
 
-    private fun loaderFor(settings: GravatarSettings): GravatarLoader {
+    private fun loaderFor(settings: GravatarSettings, httpClient: OkHttpClient = OkHttpClient()): GravatarLoader {
         val generalSettingsManager = mock<GeneralSettingsManager>()
         val generalSettings = mock<GeneralSettings>()
         whenever(generalSettings.gravatar).thenReturn(settings)
@@ -149,7 +166,7 @@ class GravatarLoaderTest : RobolectricTest() {
 
         return GravatarLoader(
             generalSettingsManager = generalSettingsManager,
-            httpClient = OkHttpClient(),
+            httpClient = httpClient,
             cache = AvatarCache(ApplicationProvider.getApplicationContext(), currentTimeMillis = { now }),
             logger = TestLogger(),
             baseUrl = server.url("/avatar/").toString(),

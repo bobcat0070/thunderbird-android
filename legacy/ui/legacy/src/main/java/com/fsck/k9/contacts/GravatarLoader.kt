@@ -30,6 +30,12 @@ private const val TAG = "GravatarLoader"
 private const val HTTP_NOT_FOUND = 404
 
 /**
+ * Far above any avatar at the sizes asked for, and the most a response is read to, so a broken or hijacked
+ * response cannot stream into memory without end.
+ */
+private const val MAX_PICTURE_BYTES = 1024 * 1024
+
+/**
  * Identifies the app rather than the HTTP library, which is what a well-behaved client does.
  */
 private const val USER_AGENT = "Thunderbird-Android"
@@ -128,8 +134,10 @@ class GravatarLoader(
                     null
                 }
 
+                response.body.contentLength() > MAX_PICTURE_BYTES -> null
+
                 else -> {
-                    val bytes = response.body.bytes()
+                    val bytes = response.body.byteStream().readAtMost(MAX_PICTURE_BYTES) ?: return@use null
                     cache.put(CACHE_PREFIX + address, bytes)
                     decode(bytes)
                 }

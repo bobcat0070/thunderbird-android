@@ -47,7 +47,8 @@ class CachingUrlFetcher(
             if (!response.isSuccessful || response.body.contentLength() > MAX_BYTES) {
                 null
             } else {
-                response.body.bytes().takeIf { it.size <= MAX_BYTES }
+                // Read no further than the cap: a body of undeclared length would otherwise be read whole first.
+                response.body.byteStream().readAtMost(MAX_BYTES)
             }
         }
     }
