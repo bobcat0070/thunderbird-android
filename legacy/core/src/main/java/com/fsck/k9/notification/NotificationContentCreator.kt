@@ -7,6 +7,7 @@ import com.fsck.k9.helper.MessageHelper
 import com.fsck.k9.mail.Address
 import com.fsck.k9.mail.Message
 import com.fsck.k9.message.extractors.findVerificationCode
+import com.fsck.k9.message.html.hostOf
 import com.fsck.k9.mailstore.LocalMessage
 import net.thunderbird.core.preference.display.visualSettings.message.list.MessageListPreferencesManager
 import net.thunderbird.feature.blocklist.BlocklistKind
@@ -21,6 +22,7 @@ internal class NotificationContentCreator(
     private val messageListPreferencesManager: MessageListPreferencesManager,
     private val impersonationChecker: ImpersonationChecker? = null,
     private val domainBlocklist: DomainBlocklist? = null,
+    private val signInLinkReader: SignInLinkReader? = null,
 ) {
     fun createFromMessage(message: LocalMessage, isFromSelf: Boolean): NotificationContent {
         val sender = getMessageSender(message, isFromSelf)
@@ -34,7 +36,18 @@ internal class NotificationContentCreator(
             summary = buildMessageSummary(sender.personal, getMessageSubject(message)),
             isSenderAuthenticated = message.isSenderAuthenticated,
             verificationCode = if (senderWarning == null) getVerificationCode(message) else null,
+            signInLink = if (senderWarning == null) getSignInLink(message) else null,
         )
+    }
+
+    /**
+     * A link to a threat-listed site is not offered, whoever sent it: the link check would warn about it, but a
+     * notification button is no place to start from.
+     */
+    private fun getSignInLink(message: LocalMessage): String? {
+        val link = signInLinkReader?.read(message)
+        val host = link?.let(::hostOf)
+        return link.takeIf { host != null && domainBlocklist?.match(host)?.kind != BlocklistKind.THREAT }
     }
 
     private fun getVerificationCode(message: LocalMessage): String? {

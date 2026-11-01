@@ -12,6 +12,7 @@ class TestNotificationResourceProvider : NotificationResourceProvider {
     override val iconMarkAsSpam: Int = 15
     override val iconStar: Int = 16
     override val iconCopy: Int = 17
+    override val iconOpenLink: Int = 18
     override val iconNewMail: Int = 5
     override val iconSendingMail: Int = 6
     override val iconCheckingMail: Int = 7
@@ -105,4 +106,6 @@ class TestNotificationResourceProvider : NotificationResourceProvider {
     override fun actionCopyCode(code: String): String = "Copy $code"
 
     override fun codeCopied(): String = "Code copied"
+
+    override fun actionOpenSignInLink(): String = "Open sign-in link"
 }

@@ -60,6 +60,7 @@ object Icons {
         val Info = R.drawable.ic_info
         val Key = R.drawable.ic_key
         val Link = R.drawable.ic_link
+        val LocalShipping = R.drawable.ic_local_shipping
         val Lock = R.drawable.ic_lock
         val Login = R.drawable.ic_login
         val Mail = R.drawable.ic_mail

@@ -271,6 +271,12 @@
     <string name="notification_code_copied">Code copied</string>
     <!-- A line under the sender in an open message; tapping it copies the sign-in code, as in "Copy code 482913" -->
     <string name="message_view_copy_code">Copy code <xliff:g id="code">%s</xliff:g></string>
+    <!-- Notification action that opens the link a sign-in or address confirmation mail carries -->
+    <string name="notification_action_open_sign_in_link">Open sign-in link</string>
+    <!-- Line under the sender of a sign-in or address confirmation mail, opening the link it carries -->
+    <string name="message_view_open_sign_in_link">Open sign-in link</string>
+    <!-- Line under the sender of a shipping mail, opening the carrier's own tracking page. Example: "Track UPS package 1Z999AA10123456784" -->
+    <string name="message_view_track_package">Track <xliff:g id="carrier">%1$s</xliff:g> package <xliff:g id="number">%2$s</xliff:g></string>
     <string name="notification_certificate_error_public">Certificate error</string>
     <string name="notification_certificate_error_title">Certificate error for <xliff:g id="account">%s</xliff:g></string>
     <string name="notification_certificate_error_text">Check your server settings</string>

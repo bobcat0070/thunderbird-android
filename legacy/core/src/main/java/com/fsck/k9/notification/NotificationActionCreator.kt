@@ -53,4 +53,6 @@ interface NotificationActionCreator {
     fun createMarkMessageAsStarPendingIntent(messageReference: MessageReference): PendingIntent
 
     fun createCopyCodePendingIntent(messageReference: MessageReference, code: String): PendingIntent
+
+    fun createOpenSignInLinkPendingIntent(messageReference: MessageReference, link: String): PendingIntent
 }

@@ -22,4 +22,11 @@ internal data class NotificationContent(
      * flagged, so a lookalike's code is never one tap from being pasted somewhere.
      */
     val verificationCode: String? = null,
+
+    /**
+     * The link that signs the reader in or confirms their address, offered as an action that opens it through the
+     * link check. Left out, like [verificationCode], for a message whose sender is flagged, and for a link to a
+     * threat-listed site.
+     */
+    val signInLink: String? = null,
 )

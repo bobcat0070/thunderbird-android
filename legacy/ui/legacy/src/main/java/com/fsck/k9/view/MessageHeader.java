@@ -8,12 +8,14 @@ import android.content.Context;
 import android.content.res.ColorStateList;
 import androidx.core.widget.TextViewCompat;
 import com.google.android.material.color.MaterialColors;
+import android.net.Uri;
 import android.os.Build;
 import android.text.SpannableStringBuilder;
 import android.text.Spanned;
 import android.text.style.StrikethroughSpan;
 import android.util.AttributeSet;
 import android.view.View;
+import kotlin.Unit;
 import android.view.View.OnClickListener;
 import android.view.View.OnLongClickListener;
 import android.widget.ImageView;
@@ -72,7 +74,11 @@ import net.thunderbird.feature.mail.message.reader.api.strategy.ReplyActionStrat
 import com.fsck.k9.mail.MessageImportance;
 import com.fsck.k9.mail.MessageImportanceKt;
 import com.fsck.k9.mailstore.LocalMessage;
+import com.fsck.k9.message.extractors.SignInLinksKt;
+import com.fsck.k9.message.extractors.TrackingNumber;
+import com.fsck.k9.message.extractors.TrackingNumbersKt;
 import com.fsck.k9.message.extractors.VerificationCodesKt;
+import com.fsck.k9.message.html.DeceptiveLinksKt;
 import net.thunderbird.feature.blocklist.BlocklistKind;
 import net.thunderbird.feature.blocklist.BlocklistMatch;
 import net.thunderbird.feature.blocklist.DomainBlocklist;
@@ -117,7 +123,17 @@ public class MessageHeader extends LinearLayout implements OnClickListener, OnLo
     private MaterialTextView impersonationWarningView;
     private MaterialTextView blocklistNoteView;
     private MaterialTextView verificationCodeView;
+    private MaterialTextView signInLinkView;
+    private MaterialTextView trackingNumberView;
     private String currentImpersonationSender;
+    /** Whether the sender was checked and found not to impersonate anyone or be threat-listed. */
+    private boolean isSenderCleared;
+    private String currentSenderAddress;
+    private boolean isSenderThreatListed;
+    /** The sign-in link in the message shown, offered once the sender is cleared. */
+    private String signInLink;
+    /** The message whose body is being read for links, so a late answer for another one is dropped. */
+    private Message bodyLinksMessage;
     private MaterialTextView fromView;
     private ImageView cryptoStatusIcon;
     private RecipientNamesView recipientNamesView;
@@ -153,6 +169,8 @@ public class MessageHeader extends LinearLayout implements OnClickListener, OnLo
         impersonationWarningView = findViewById(R.id.impersonation_warning);
         blocklistNoteView = findViewById(R.id.blocklist_note);
         verificationCodeView = findViewById(R.id.verification_code);
+        signInLinkView = findViewById(R.id.sign_in_link);
+        trackingNumberView = findViewById(R.id.tracking_number);
         deliveredToView = findViewById(R.id.delivered_to);
         labelsView = findViewById(R.id.message_labels);
         labelsView.setOnClickListener(this);
@@ -352,7 +370,10 @@ public class MessageHeader extends LinearLayout implements OnClickListener, OnLo
     private void showImpersonationWarning(Address fromAddress, String verificationCode) {
         impersonationWarningView.setVisibility(View.GONE);
         verificationCodeView.setVisibility(View.GONE);
+        signInLinkView.setVisibility(View.GONE);
         currentImpersonationSender = null;
+        currentSenderAddress = null;
+        isSenderCleared = false;
 
         if (fromAddress == null || fromAddress.getAddress() == null) {
             return;
@@ -362,17 +383,20 @@ public class MessageHeader extends LinearLayout implements OnClickListener, OnLo
         String name = fromAddress.getPersonal();
         String sender = name + "\n" + address;
         currentImpersonationSender = sender;
+        currentSenderAddress = address;
 
         markVerificationExecutor.execute(() -> {
             Impersonation impersonation = DI.get(ImpersonationChecker.class).check(name, address);
             if (impersonation == null) {
-                if (verificationCode != null) {
-                    post(() -> {
-                        if (sender.equals(currentImpersonationSender)) {
+                post(() -> {
+                    if (sender.equals(currentImpersonationSender)) {
+                        if (verificationCode != null) {
                             showVerificationCode(verificationCode);
                         }
-                    });
-                }
+                        isSenderCleared = true;
+                        updateSignInLinkView();
+                    }
+                });
                 return;
             }
 
@@ -405,6 +429,73 @@ public class MessageHeader extends LinearLayout implements OnClickListener, OnLo
             }
         });
         verificationCodeView.setVisibility(View.VISIBLE);
+    }
+
+    /**
+     * Reads the shown message's body for a sign-in link and a parcel tracking number, off the main thread, and
+     * offers what it finds under the sender. Called once the body has been loaded, which the header itself is
+     * shown before.
+     *
+     * The sign-in link waits for the sender to be cleared, like the code; the tracking number goes to the
+     * carrier's own page, built here, so it is offered whoever sent the mail.
+     */
+    public void showBodyLinks(Message message) {
+        bodyLinksMessage = message;
+        signInLink = null;
+        signInLinkView.setVisibility(View.GONE);
+        trackingNumberView.setVisibility(View.GONE);
+
+        markVerificationExecutor.execute(() -> {
+            String link = SignInLinksKt.findSignInLink(message, message.getSubject());
+            TrackingNumber trackingNumber = TrackingNumbersKt.findTrackingNumber(message, message.getSubject());
+            String linkHost = link != null ? DeceptiveLinksKt.hostOf(link) : null;
+            boolean isThreatListedLink = linkHost != null && isThreatListed(linkHost);
+            String offeredLink = linkHost != null && !isThreatListedLink ? link : null;
+
+            post(() -> {
+                if (message != bodyLinksMessage) {
+                    return;
+                }
+                signInLink = offeredLink;
+                updateSignInLinkView();
+                showTrackingNumber(trackingNumber);
+            });
+        });
+    }
+
+    private static boolean isThreatListed(String host) {
+        BlocklistMatch match = DI.get(DomainBlocklist.class).match(host);
+        return match != null && match.getKind() == BlocklistKind.THREAT;
+    }
+
+    private void updateSignInLinkView() {
+        if (signInLink == null || !isSenderCleared || isSenderThreatListed) {
+            signInLinkView.setVisibility(View.GONE);
+            return;
+        }
+
+        String link = signInLink;
+        String senderAddress = currentSenderAddress;
+        signInLinkView.setText(R.string.message_view_open_sign_in_link);
+        signInLinkView.setOnClickListener(view -> openThroughLinkCheck(link, senderAddress));
+        signInLinkView.setVisibility(View.VISIBLE);
+    }
+
+    private void showTrackingNumber(TrackingNumber trackingNumber) {
+        if (trackingNumber == null) {
+            trackingNumberView.setVisibility(View.GONE);
+            return;
+        }
+
+        trackingNumberView.setText(getContext().getString(R.string.message_view_track_package,
+            trackingNumber.getCarrier().getDisplayName(), trackingNumber.getNumber()));
+        trackingNumberView.setOnClickListener(view -> openThroughLinkCheck(trackingNumber.getUrl(), null));
+        trackingNumberView.setVisibility(View.VISIBLE);
+    }
+
+    private void openThroughLinkCheck(String link, String senderAddress) {
+        DI.get(LinkConfirmation.class).confirmAndOpen(getContext(), Uri.parse(link), null, null, senderAddress,
+            () -> Unit.INSTANCE);
     }
 
     private String impersonationWarning(Impersonation impersonation) {
@@ -712,6 +803,7 @@ public class MessageHeader extends LinearLayout implements OnClickListener, OnLo
         // whether sender pictures are switched on.
         showDeliveryAddress(message, account);
         boolean isThreatListed = showBlocklistNote(message, fromAddress);
+        isSenderThreatListed = isThreatListed;
         showImpersonationWarning(fromAddress, isThreatListed ? null : findVerificationCode(message));
 
         importance = MessageImportanceKt.getImportance(message);

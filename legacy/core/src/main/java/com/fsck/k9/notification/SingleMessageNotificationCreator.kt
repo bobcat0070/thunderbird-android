@@ -87,6 +87,7 @@ internal class SingleMessageNotificationCreator(
     private fun NotificationBuilder.setDeviceActions(notificationData: SingleNotificationData) = apply {
         // First, because Android shows only the first three actions and the code is why the notification is open.
         notificationData.content.verificationCode?.let { code -> addCopyCodeAction(notificationData, code) }
+        notificationData.content.signInLink?.let { link -> addOpenSignInLinkAction(notificationData, link) }
 
         val actions = notificationData.actions
         for (action in actions) {
@@ -106,6 +107,15 @@ internal class SingleMessageNotificationCreator(
         val title = resourceProvider.actionCopyCode(code)
         val messageReference = notificationData.content.messageReference
         val action = actionCreator.createCopyCodePendingIntent(messageReference, code)
+
+        addAction(icon, title, action)
+    }
+
+    private fun NotificationBuilder.addOpenSignInLinkAction(notificationData: SingleNotificationData, link: String) {
+        val icon = resourceProvider.iconOpenLink
+        val title = resourceProvider.actionOpenSignInLink()
+        val messageReference = notificationData.content.messageReference
+        val action = actionCreator.createOpenSignInLinkPendingIntent(messageReference, link)
 
         addAction(icon, title, action)
     }

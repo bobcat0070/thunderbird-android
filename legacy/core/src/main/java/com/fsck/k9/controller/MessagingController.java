@@ -77,6 +77,7 @@ import com.fsck.k9.mailstore.LocalMessage;
 import com.fsck.k9.mailstore.LocalStore;
 import com.fsck.k9.mailstore.LocalStoreProvider;
 import com.fsck.k9.mailstore.recipients.RecipientIndex;
+import com.fsck.k9.message.extractors.SignInLinksKt;
 import com.fsck.k9.mailstore.MessageListCache;
 import com.fsck.k9.mailstore.OutboxState;
 import com.fsck.k9.mailstore.OutboxStateRepository;
@@ -3381,6 +3382,7 @@ public class MessagingController implements MessagingControllerRegistry, Messagi
             LocalFolder localFolder = message.getFolder();
             if (!suppressNotifications &&
                 notificationStrategy.shouldNotifyForMessage(accountId, localFolder, message, isOldMessage)) {
+                message = withSignInMailBody(folderServerId, messageServerId, message);
                 // Notify with the localMessage so that we don't have to recalculate the content preview.
                 boolean silent = notificationState.wasNotified();
                 notificationController.addNewMailNotification(accountId, message, silent);
@@ -3454,6 +3456,29 @@ public class MessagingController implements MessagingControllerRegistry, Messagi
             long folderId = getFolderId(accountId, folderServerId);
             for (MessagingListener messagingListener : getListeners(listener)) {
                 messagingListener.folderStatusChanged(accountId, folderId);
+            }
+        }
+
+        /**
+         * Downloads the body of a sign-in mail that arrived without one - as Microsoft 365 mail does, its envelope
+         * alone being synchronized - so that its notification can offer the sign-in link. Only done for mail about
+         * to be notified of, and given up on quietly: the notification goes out either way.
+         */
+        private LocalMessage withSignInMailBody(String folderServerId, String messageServerId,
+            LocalMessage message) {
+            if (!SignInLinksKt.looksLikeSignInMail(message.getSubject()) ||
+                message.isSet(Flag.X_DOWNLOADED_FULL) || message.isSet(Flag.X_DOWNLOADED_PARTIAL)) {
+                return message;
+            }
+
+            try {
+                Backend backend = getBackend(accountId);
+                MessagingControllerWrapperKt.downloadCompleteMessageBlocking(
+                    backend, Dispatchers.getIO(), folderServerId, messageServerId);
+                return loadMessage(folderServerId, messageServerId);
+            } catch (Exception e) {
+                Log.w(TAG, e, "Couldn't download the body of a new sign-in mail");
+                return message;
             }
         }
 

@@ -113,8 +113,10 @@ val coreNotificationModule = module {
             messageListPreferencesManager = get(),
             impersonationChecker = get(),
             domainBlocklist = get(),
+            signInLinkReader = get(),
         )
     }
+    factory<SignInLinkReader> { StoredBodySignInLinkReader() }
     factory { BaseNotificationDataCreator() }
     factory {
         SingleMessageNotificationDataCreator(

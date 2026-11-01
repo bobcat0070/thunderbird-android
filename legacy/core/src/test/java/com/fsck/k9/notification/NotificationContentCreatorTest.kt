@@ -24,7 +24,9 @@ import net.thunderbird.feature.account.storage.profile.AvatarTypeDto
 import net.thunderbird.feature.account.storage.profile.ProfileDto
 import net.thunderbird.feature.blocklist.BlocklistKind
 import net.thunderbird.feature.blocklist.BlocklistMatch
+import net.thunderbird.feature.blocklist.DomainBlocklist
 import net.thunderbird.feature.impersonation.Impersonation
+import net.thunderbird.feature.impersonation.ImpersonationChecker
 import org.junit.Test
 import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.mock
@@ -148,6 +150,43 @@ class NotificationContentCreatorTest : RobolectricTest() {
         val content = contentCreator.createFromMessage(message, isFromSelf = false)
 
         assertThat(content.verificationCode).isNull()
+    }
+
+    @Test
+    fun createFromMessage_withSignInLink_shouldOfferIt() {
+        val contentCreator = createNotificationContentCreator(
+            signInLinkReader = { "https://app.example/login?token=abc" },
+        )
+
+        val content = contentCreator.createFromMessage(message, isFromSelf = false)
+
+        assertThat(content.signInLink).isEqualTo("https://app.example/login?token=abc")
+    }
+
+    @Test
+    fun createFromMessage_withSignInLinkFromPossibleImpersonation_shouldNotOfferIt() {
+        val contentCreator = createNotificationContentCreator(
+            impersonationChecker = { name, address -> Impersonation.KnownName(name.orEmpty(), address.orEmpty()) },
+            signInLinkReader = { "https://app.example/login?token=abc" },
+        )
+
+        val content = contentCreator.createFromMessage(message, isFromSelf = false)
+
+        assertThat(content.signInLink).isNull()
+    }
+
+    @Test
+    fun createFromMessage_withSignInLinkToThreatListedSite_shouldNotOfferIt() {
+        val contentCreator = createNotificationContentCreator(
+            domainBlocklist = { host ->
+                BlocklistMatch(host, BlocklistKind.THREAT, "Threat feeds").takeIf { host == "evil.example" }
+            },
+            signInLinkReader = { "https://evil.example/login" },
+        )
+
+        val content = contentCreator.createFromMessage(message, isFromSelf = false)
+
+        assertThat(content.signInLink).isNull()
     }
 
     @Test
@@ -285,13 +324,20 @@ class NotificationContentCreatorTest : RobolectricTest() {
         assertThat(content.summary.toString()).isEqualTo("No sender (No subject)")
     }
 
-    private fun createNotificationContentCreator(): NotificationContentCreator {
+    private fun createNotificationContentCreator(
+        impersonationChecker: ImpersonationChecker? = null,
+        domainBlocklist: DomainBlocklist? = null,
+        signInLinkReader: SignInLinkReader? = null,
+    ): NotificationContentCreator {
         return NotificationContentCreator(
             resourceProvider,
             contactRepository,
             messageListPreferencesManager = mock {
                 on { getConfig() } doReturn DisplayMessageListSettings()
             },
+            impersonationChecker = impersonationChecker,
+            domainBlocklist = domainBlocklist,
+            signInLinkReader = signInLinkReader,
         )
     }
 

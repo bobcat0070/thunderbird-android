@@ -35,10 +35,13 @@ class LinkConfirmationActivity : Activity() {
 
     companion object {
         fun start(context: Context, uri: Uri) {
-            val intent = Intent(context, LinkConfirmationActivity::class.java)
+            context.startActivity(createIntent(context, uri))
+        }
+
+        fun createIntent(context: Context, uri: Uri): Intent {
+            return Intent(context, LinkConfirmationActivity::class.java)
                 .setData(uri)
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            context.startActivity(intent)
         }
     }
 }

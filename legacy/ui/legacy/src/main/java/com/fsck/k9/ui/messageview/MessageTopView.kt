@@ -181,6 +181,7 @@ class MessageTopView(
 
     fun showMessage(account: LegacyAccount, messageViewInfo: MessageViewInfo) {
         resetAndPrepareMessageView(messageViewInfo)
+        messageHeaderView.showBodyLinks(messageViewInfo.message)
 
         currentSenderAddress = getSenderEmailAddress(messageViewInfo.message)?.address
         val showPicturesSetting = account.showPictures

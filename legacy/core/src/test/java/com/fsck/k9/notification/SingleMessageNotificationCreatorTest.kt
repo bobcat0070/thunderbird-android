@@ -130,6 +130,32 @@ class SingleMessageNotificationCreatorTest : RobolectricTest() {
     }
 
     @Test
+    fun `create notification offers the sign-in link before the other actions`() {
+        testSubject.createSingleNotification(
+            baseNotificationData = createBaseNotificationData(),
+            singleNotificationData = createSingleNotificationData(
+                signInLink = "https://app.example/login?token=abc",
+                actions = listOf(NotificationAction.Reply),
+            ),
+        )
+
+        inOrder(builder) {
+            verify(builder).addAction(eq(resourceProvider.iconOpenLink), eq("Open sign-in link"), any())
+            verify(builder).addAction(eq(resourceProvider.iconReply), eq("Reply"), any())
+        }
+    }
+
+    @Test
+    fun `create notification without a sign-in link offers no link action`() {
+        testSubject.createSingleNotification(
+            baseNotificationData = createBaseNotificationData(),
+            singleNotificationData = createSingleNotificationData(),
+        )
+
+        verify(builder, never()).addAction(eq(resourceProvider.iconOpenLink), any(), any())
+    }
+
+    @Test
     fun `create notification posts notification synchronously`() {
         val notificationHelper = createNotificationHelper()
         testSubject = SingleMessageNotificationCreator(
@@ -162,6 +188,7 @@ class SingleMessageNotificationCreatorTest : RobolectricTest() {
             on { createDismissMessagePendingIntent(any()) } doReturn pendingIntent
             on { createReplyPendingIntent(any()) } doReturn pendingIntent
             on { createCopyCodePendingIntent(any(), any()) } doReturn pendingIntent
+            on { createOpenSignInLinkPendingIntent(any(), any()) } doReturn pendingIntent
         }
     }
 
@@ -185,6 +212,7 @@ class SingleMessageNotificationCreatorTest : RobolectricTest() {
     private fun createSingleNotificationData(
         isSenderAuthenticated: Boolean = false,
         verificationCode: String? = null,
+        signInLink: String? = null,
         actions: List<NotificationAction> = emptyList(),
     ): SingleNotificationData {
         return SingleNotificationData(
@@ -199,6 +227,7 @@ class SingleMessageNotificationCreatorTest : RobolectricTest() {
                 summary = "Summary",
                 isSenderAuthenticated = isSenderAuthenticated,
                 verificationCode = verificationCode,
+                signInLink = signInLink,
             ),
             actions = actions,
             wearActions = emptyList(),

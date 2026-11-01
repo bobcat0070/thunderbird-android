@@ -15,6 +15,7 @@ import com.fsck.k9.activity.MessageHomeActivity
 import com.fsck.k9.activity.compose.MessageActions
 import com.fsck.k9.ui.messagelist.DefaultFolderProvider
 import com.fsck.k9.ui.notification.DeleteConfirmationActivity
+import com.fsck.k9.view.LinkConfirmationActivity
 import net.thunderbird.core.android.account.LegacyAccount
 import net.thunderbird.core.preference.GeneralSettingsManager
 import net.thunderbird.feature.account.AccountId
@@ -227,6 +228,15 @@ internal class K9NotificationActionCreator(
             data = Uri.parse("data:,copy-code/${messageReference.toIdentityString()}")
         }
         return PendingIntentCompat.getService(context, 0, intent, FLAG_UPDATE_CURRENT, false)!!
+    }
+
+    /**
+     * Opens the link through the same check as a link tapped in the message. The link itself is the intent's data,
+     * which also keeps each notification's action apart from every other's.
+     */
+    override fun createOpenSignInLinkPendingIntent(messageReference: MessageReference, link: String): PendingIntent {
+        val intent = LinkConfirmationActivity.createIntent(context, Uri.parse(link))
+        return PendingIntentCompat.getActivity(context, 0, intent, FLAG_UPDATE_CURRENT, false)!!
     }
 
     private fun createMessageListIntent(accountId: AccountId): Intent {
