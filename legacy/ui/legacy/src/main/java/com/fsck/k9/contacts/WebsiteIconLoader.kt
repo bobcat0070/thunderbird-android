@@ -286,19 +286,3 @@ private fun ByteArray.sha256(): String {
 
     return digest.joinToString(separator = "") { byte -> "%02x".format(byte) }
 }
-
-/**
- * @return the stream's bytes, or `null` when it holds more than [limit].
- */
-private fun java.io.InputStream.readAtMost(limit: Int): ByteArray? {
-    val buffer = ByteArray(limit + 1)
-    var read = 0
-
-    while (read < buffer.size) {
-        val count = read(buffer, read, buffer.size - read)
-        if (count == -1) break
-        read += count
-    }
-
-    return if (read > limit) null else buffer.copyOf(read)
-}
