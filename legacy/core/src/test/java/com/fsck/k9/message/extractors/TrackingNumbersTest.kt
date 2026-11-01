@@ -1,6 +1,7 @@
 package com.fsck.k9.message.extractors
 
 import assertk.assertThat
+import assertk.assertions.containsExactly
 import assertk.assertions.isEqualTo
 import assertk.assertions.isNull
 import com.fsck.k9.mail.testing.message.buildMessage
@@ -52,6 +53,17 @@ class TrackingNumbersTest {
         val text = "USPS tracking 9400100000000000000013, and the UPS part 1Z999AA10123456784"
 
         assertThat(findTrackingNumberInText(text)?.carrier).isEqualTo(Carrier.USPS)
+    }
+
+    @Test
+    fun `every number in a mail should be found once, in order`() {
+        val text = "Your order shipped in two packages. UPS 1Z999AA10123456784 and USPS 9400100000000000000013. " +
+            "Track 1Z999AA10123456784 any time."
+
+        assertThat(findTrackingNumbersInText(text)).containsExactly(
+            TrackingNumber(Carrier.UPS, "1Z999AA10123456784"),
+            TrackingNumber(Carrier.USPS, "9400100000000000000013"),
+        )
     }
 
     @Test

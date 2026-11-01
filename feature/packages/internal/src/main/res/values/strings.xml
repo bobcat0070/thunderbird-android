@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+    <string name="packages_title">Packages</string>
+    <!-- Shown when no shipping mail names a tracking number. The number is how many days back mail is read. -->
+    <string name="packages_empty">No packages on the way. Tracking numbers in shipping mail from the last <xliff:g id="days">%d</xliff:g> days show up here.</string>
+    <string name="packages_section_on_the_way">On the way</string>
+    <string name="packages_section_delivered">Delivered recently</string>
+    <!-- A parcel's carrier and tracking number. Example: "UPS · 1Z999AA10123456784" -->
+    <string name="packages_carrier_and_number"><xliff:g id="carrier">%1$s</xliff:g> · <xliff:g id="number">%2$s</xliff:g></string>
+    <string name="packages_status_on_its_way">On its way</string>
+    <string name="packages_status_out_for_delivery">Out for delivery</string>
+    <string name="packages_status_delivered">Delivered</string>
+    <string name="packages_status_problem">Delayed or needs attention</string>
+    <!-- The carrier's status with when it expects to deliver. Example: "In Transit · expected 2026-11-03" -->
+    <string name="packages_status_with_expected"><xliff:g id="status">%1$s</xliff:g> · expected <xliff:g id="date">%2$s</xliff:g></string>
+    <!-- Example: "Live status from UPS" -->
+    <string name="packages_live_from">Live status from <xliff:g id="carrier">%s</xliff:g></string>
+    <string name="packages_live_unavailable"><xliff:g id="carrier">%s</xliff:g> could not be asked for live status; this is what the mail says.</string>
+    <string name="packages_live_not_asked">Status from the mail. Pull down to ask the carrier.</string>
+    <string name="packages_status_from_mail">Status from the mail</string>
+    <!-- Button that opens the carrier's tracking page. Example: "Track on UPS" -->
+    <string name="packages_track_on">Track on <xliff:g id="carrier">%s</xliff:g></string>
+    <string name="packages_search_all_mail">Search all mail</string>
+    <string name="packages_mark_delivered">Mark delivered</string>
+    <string name="packages_mark_not_delivered">Not delivered yet</string>
+    <string name="packages_remove">Remove</string>
+    <string name="packages_removed">Package removed from the list</string>
+    <plurals name="packages_mails_about">
+        <item quantity="one"><xliff:g id="count">%d</xliff:g> mail about this package</item>
+        <item quantity="other"><xliff:g id="count">%d</xliff:g> mails about this package</item>
+    </plurals>
+    <!-- Above the list, when some shipping-looking mail is known only by its envelope, as Microsoft 365 mail is until it is opened -->
+    <plurals name="packages_mails_not_downloaded">
+        <item quantity="one"><xliff:g id="count">%d</xliff:g> shipping mail hasn\'t been downloaded, so its tracking numbers aren\'t listed.</item>
+        <item quantity="other"><xliff:g id="count">%d</xliff:g> shipping mails haven\'t been downloaded, so their tracking numbers aren\'t listed.</item>
+    </plurals>
+    <plurals name="packages_download_mails">
+        <item quantity="one">Download <xliff:g id="count">%d</xliff:g> mail</item>
+        <item quantity="other">Download <xliff:g id="count">%d</xliff:g> mails</item>
+    </plurals>
+    <string name="packages_downloading">Downloading <xliff:g id="done">%1$d</xliff:g> of <xliff:g id="total">%2$d</xliff:g></string>
+    <plurals name="packages_downloaded">
+        <item quantity="one"><xliff:g id="count">%d</xliff:g> mail downloaded</item>
+        <item quantity="other"><xliff:g id="count">%d</xliff:g> mails downloaded</item>
+    </plurals>
+
+    <string name="packages_carrier_accounts_title">Carrier tracking accounts</string>
+    <string name="packages_carrier_accounts_intro">Optional. With your own developer credentials for a carrier\'s tracking API, Packages asks that carrier where your parcels are each time you open it or pull it down. Only the tracking number is sent, and only to the carrier that ships the parcel. Without credentials, the status comes from your mail alone.</string>
+    <!-- Where to get credentials. Example: "Create an app at developer.ups.com with access to the Tracking API" -->
+    <string name="packages_carrier_portal">Create an app at <xliff:g id="portal">%s</xliff:g> with access to the Tracking API, then enter its client ID and secret.</string>
+    <string name="packages_carrier_saved_state">Credentials saved. Enter new ones to replace them.</string>
+    <string name="packages_carrier_client_id">Client ID</string>
+    <string name="packages_carrier_client_secret">Client secret</string>
+    <string name="packages_carrier_save">Save</string>
+    <string name="packages_carrier_forget">Forget</string>
+    <string name="packages_carrier_saved"><xliff:g id="carrier">%s</xliff:g> credentials saved</string>
+    <string name="packages_carrier_forgotten"><xliff:g id="carrier">%s</xliff:g> credentials removed</string>
+</resources>

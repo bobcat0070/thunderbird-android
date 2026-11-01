@@ -1,3 +1,5 @@
+@file:Suppress("TooManyFunctions")
+
 package com.fsck.k9.message.extractors
 
 import com.fsck.k9.mail.Part
@@ -100,15 +102,27 @@ private const val UPS_LETTER_OFFSET = 63
  *
  * @return the number, or `null` when the mail has none.
  */
-fun findTrackingNumber(message: Part, subject: String?): TrackingNumber? {
+fun findTrackingNumber(message: Part, subject: String?): TrackingNumber? =
+    findTrackingNumbers(message, subject).firstOrNull()
+
+/**
+ * Finds every parcel tracking number in a shipping mail, in the order they appear, each once; an order that ships in
+ * several parcels names a number for each. The same checks apply as for [findTrackingNumber].
+ */
+fun findTrackingNumbers(message: Part, subject: String?): List<TrackingNumber> {
     val text = buildString {
         subject?.let { append(it).append('\n') }
-        messageText(message)?.let { append(it) }
+        messagePlainText(message)?.let { append(it) }
     }
-    return findTrackingNumberInText(text)
+    return findTrackingNumbersInText(text)
 }
 
-private fun messageText(message: Part): String? {
+/**
+ * The message's text as a reader sees it: its plain-text part, or its HTML part turned into text.
+ *
+ * @return the text, or `null` when the message has neither, or its body has not been downloaded.
+ */
+fun messagePlainText(message: Part): String? {
     MimeUtility.findFirstPartByMimeType(message, "text/plain")
         ?.let(MessageExtractor::getTextFromPart)
         ?.let { return it }
@@ -118,28 +132,34 @@ private fun messageText(message: Part): String? {
         ?.let(HtmlConverter::htmlToText)
 }
 
-internal fun findTrackingNumberInText(fullText: String): TrackingNumber? {
-    val text = fullText.take(MAX_TEXT_LENGTH)
-    if (!SHIPPING_WORD.containsMatchIn(text)) return null
+internal fun findTrackingNumberInText(fullText: String): TrackingNumber? =
+    findTrackingNumbersInText(fullText).firstOrNull()
 
-    return listOfNotNull(
-        firstMatch(text, UPS_NUMBER, Carrier.UPS, ::isValidUps),
-        firstMatch(text, USPS_NUMBER, Carrier.USPS, ::isValidUsps),
-        firstMatch(text, USPS_INTERNATIONAL_NUMBER, Carrier.USPS, ::isValidS10),
-        firstMatch(text, FEDEX_NUMBER, Carrier.FEDEX, ::isValidFedex, FEDEX_WORD),
-        firstMatch(text, DHL_NUMBER, Carrier.DHL, ::isValidDhl, DHL_WORD),
-    ).minByOrNull { (_, position) -> position }?.first
+fun findTrackingNumbersInText(fullText: String): List<TrackingNumber> {
+    val text = fullText.take(MAX_TEXT_LENGTH)
+    if (!SHIPPING_WORD.containsMatchIn(text)) return emptyList()
+
+    return listOf(
+        matches(text, UPS_NUMBER, Carrier.UPS, ::isValidUps),
+        matches(text, USPS_NUMBER, Carrier.USPS, ::isValidUsps),
+        matches(text, USPS_INTERNATIONAL_NUMBER, Carrier.USPS, ::isValidS10),
+        matches(text, FEDEX_NUMBER, Carrier.FEDEX, ::isValidFedex, FEDEX_WORD),
+        matches(text, DHL_NUMBER, Carrier.DHL, ::isValidDhl, DHL_WORD),
+    ).flatten()
+        .sortedBy { (_, position) -> position }
+        .map { (trackingNumber, _) -> trackingNumber }
+        .distinct()
 }
 
-private fun firstMatch(
+private fun matches(
     text: String,
     pattern: Regex,
     carrier: Carrier,
     isValid: (String) -> Boolean,
     carrierWord: Regex? = null,
-): Pair<TrackingNumber, Int>? {
+): List<Pair<TrackingNumber, Int>> {
     val carrierWords = carrierWord?.findAll(text)?.map { it.range }?.toList()
-    if (carrierWords != null && carrierWords.isEmpty()) return null
+    if (carrierWords != null && carrierWords.isEmpty()) return emptyList()
 
     return pattern.findAll(text)
         .filter { match ->
@@ -147,8 +167,9 @@ private fun firstMatch(
                 carrierWords.any { word -> distanceBetween(word, match.range) <= MAX_CARRIER_DISTANCE }
         }
         .map { match -> match.value.filterNot { it == ' ' } to match.range.first }
-        .firstOrNull { (number, _) -> isValid(number) }
-        ?.let { (number, position) -> TrackingNumber(carrier, number) to position }
+        .filter { (number, _) -> isValid(number) }
+        .map { (number, position) -> TrackingNumber(carrier, number) to position }
+        .toList()
 }
 
 private fun distanceBetween(first: IntRange, second: IntRange): Int = when {
