@@ -90,6 +90,8 @@ class GeneralSettingsDataStore(
             "volume_navigation" -> interactionSettings.useVolumeKeysForNavigation
             "link_check_enabled" -> interactionSettings.isLinkCheckEnabled
             "attachment_reminder_enabled" -> interactionSettings.isAttachmentReminderEnabled
+            "packages_enabled" -> interactionSettings.isPackagesEnabled
+            "trips_enabled" -> interactionSettings.isTripsEnabled
             "domain_blocklist_threats" -> config.domainBlocklist.isThreatListEnabled
             "enable_telemetry" -> K9.isTelemetryEnabled
             else -> defValue
@@ -153,6 +155,8 @@ class GeneralSettingsDataStore(
             "volume_navigation" -> setUseVolumeKeysForNavigation(value)
             "link_check_enabled" -> updateInteractionSettings { it.copy(isLinkCheckEnabled = value) }
             "attachment_reminder_enabled" -> updateInteractionSettings { it.copy(isAttachmentReminderEnabled = value) }
+            "packages_enabled" -> updateInteractionSettings { it.copy(isPackagesEnabled = value) }
+            "trips_enabled" -> updateInteractionSettings { it.copy(isTripsEnabled = value) }
             "domain_blocklist_threats" -> updateDomainBlocklistSettings { it.copy(isThreatListEnabled = value) }
             "enable_telemetry" -> setTelemetryEnabled(value)
             else -> return

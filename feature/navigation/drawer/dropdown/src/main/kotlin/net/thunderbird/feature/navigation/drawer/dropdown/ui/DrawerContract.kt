@@ -6,6 +6,7 @@ import kotlinx.collections.immutable.persistentListOf
 import net.thunderbird.core.ui.contract.mvi.UnidirectionalViewModel
 import net.thunderbird.feature.account.AccountId
 import net.thunderbird.feature.navigation.drawer.api.NavigationDrawerExternalContract.DrawerConfig
+import net.thunderbird.feature.navigation.drawer.api.NavigationDrawerExternalContract.DrawerShortcut
 import net.thunderbird.feature.navigation.drawer.dropdown.domain.entity.DisplayAccount
 import net.thunderbird.feature.navigation.drawer.dropdown.domain.entity.DisplayFolder
 import net.thunderbird.feature.navigation.drawer.dropdown.domain.entity.DisplayTreeFolder
@@ -37,6 +38,7 @@ internal interface DrawerContract {
         val selectedFolder: DisplayFolder? = null,
         val showAccountSelection: Boolean = false,
         val isLoading: Boolean = false,
+        val shortcuts: ImmutableList<DrawerShortcut> = persistentListOf(),
     )
 
     sealed interface Event {
@@ -50,6 +52,7 @@ internal interface DrawerContract {
         data object OnSyncAccount : Event
         data object OnSyncAllAccounts : Event
         data object OnAddAccountClick : Event
+        data class OnShortcutClick(val shortcut: DrawerShortcut) : Event
     }
 
     sealed interface Effect {
@@ -59,5 +62,6 @@ internal interface DrawerContract {
         data object OpenSettings : Effect
         data object OpenAddAccount : Effect
         data object CloseDrawer : Effect
+        data class OpenShortcut(val shortcut: DrawerShortcut) : Effect
     }
 }

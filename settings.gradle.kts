@@ -205,6 +205,16 @@ include(
 )
 
 include(
+    ":feature:packages:api",
+    ":feature:packages:internal",
+)
+
+include(
+    ":feature:trips:api",
+    ":feature:trips:internal",
+)
+
+include(
     ":feature:newsletter:api",
     ":feature:newsletter:internal",
 )

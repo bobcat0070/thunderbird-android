@@ -78,6 +78,17 @@ class GeneralSettingsFragment : PreferenceFragmentCompat() {
             }
         }
 
+    private fun initializeCarrierTrackingAccounts() {
+        findPreference<Preference>("carrier_tracking_accounts")?.onPreferenceClickListener =
+            Preference.OnPreferenceClickListener {
+                FeatureLauncherActivity.launch(
+                    context = requireContext(),
+                    target = FeatureLauncherTarget.PackageCarrierAccounts,
+                )
+                true
+            }
+    }
+
     override fun onCreatePreferencesFix(savedInstanceState: Bundle?, rootKey: String?) {
         preferenceManager.preferenceDataStore = dataStore
         this.rootKey = rootKey
@@ -94,6 +105,7 @@ class GeneralSettingsFragment : PreferenceFragmentCompat() {
                 context?.let { NotificationActionsSettingsActivity.start(it) }
                 true
             }
+        initializeCarrierTrackingAccounts()
         findPreference<Preference>("remote_feature_flag")?.onPreferenceClickListener =
             Preference.OnPreferenceClickListener {
                 FeatureLauncherActivity.launch(

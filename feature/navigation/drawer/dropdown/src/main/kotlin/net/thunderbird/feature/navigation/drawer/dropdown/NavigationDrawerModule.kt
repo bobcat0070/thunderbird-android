@@ -87,6 +87,7 @@ val navigationDropDownDrawerModule: Module = module {
             getDisplayTreeFolder = get(),
             syncAccount = get(),
             syncAllAccounts = get(),
+            drawerShortcuts = getOrNull(),
         )
     }
 }

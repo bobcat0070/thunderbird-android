@@ -108,6 +108,14 @@ class DefaultInteractionSettingsPreferenceManager(
             InteractionSettingKey.AttachmentReminderEnabled.value,
             INTERACTION_SETTINGS_DEFAULT_ATTACHMENT_REMINDER_ENABLED,
         ),
+        isPackagesEnabled = storage.getBoolean(
+            InteractionSettingKey.PackagesEnabled.value,
+            INTERACTION_SETTINGS_DEFAULT_PACKAGES_ENABLED,
+        ),
+        isTripsEnabled = storage.getBoolean(
+            InteractionSettingKey.TripsEnabled.value,
+            INTERACTION_SETTINGS_DEFAULT_TRIPS_ENABLED,
+        ),
     )
 
     private fun writeConfig(config: InteractionSettings) {
@@ -150,6 +158,8 @@ class DefaultInteractionSettingsPreferenceManager(
                     InteractionSettingKey.AttachmentReminderEnabled.value,
                     config.isAttachmentReminderEnabled,
                 )
+                storageEditor.putBoolean(InteractionSettingKey.PackagesEnabled.value, config.isPackagesEnabled)
+                storageEditor.putBoolean(InteractionSettingKey.TripsEnabled.value, config.isTripsEnabled)
                 storageEditor.commit().also { commited ->
                     logger.verbose(TAG) { "writeConfig: storageEditor.commit() resulted in: $commited" }
                 }

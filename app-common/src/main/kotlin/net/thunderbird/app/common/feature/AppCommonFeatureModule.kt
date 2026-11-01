@@ -9,9 +9,11 @@ import net.thunderbird.app.common.feature.attachments.appCommonFeatureAttachment
 import net.thunderbird.app.common.feature.blocklist.appCommonFeatureBlocklistModule
 import net.thunderbird.app.common.feature.mail.appCommonFeatureMailModule
 import net.thunderbird.app.common.feature.newsletter.appCommonFeatureNewsletterModule
+import net.thunderbird.app.common.feature.packages.appCommonFeaturePackagesModule
 import net.thunderbird.app.common.feature.settings.DefaultFolderPinSettings
 import net.thunderbird.app.common.feature.settings.RemoteImageSendersExternalSettings
 import net.thunderbird.app.common.feature.spamdigest.appCommonFeatureSpamDigestModule
+import net.thunderbird.app.common.feature.trips.appCommonFeatureTripsModule
 import net.thunderbird.feature.account.avatar.di.featureAccountAvatarModule
 import net.thunderbird.feature.mail.message.composer.internal.featureMessageComposerModule
 import net.thunderbird.feature.navigation.drawer.api.NavigationDrawerExternalContract
@@ -31,6 +33,8 @@ internal val appCommonFeatureModule = module {
     includes(appCommonFeatureSpamDigestModule)
     includes(appCommonFeatureNewsletterModule)
     includes(appCommonFeatureAttachmentsModule)
+    includes(appCommonFeaturePackagesModule)
+    includes(appCommonFeatureTripsModule)
     includes(appCommonFeatureBlocklistModule)
 
     factory<FeatureLauncherExternalContract.MessageListLauncher> {
@@ -45,6 +49,10 @@ internal val appCommonFeatureModule = module {
 
     single<NavigationDrawerExternalContract.DrawerConfigWriter> {
         NavigationDrawerConfigWriter(get())
+    }
+
+    single<NavigationDrawerExternalContract.DrawerShortcuts> {
+        DefaultDrawerShortcuts(generalSettingsManager = get())
     }
 
     // Settings this fork keeps outside the main storage, so that settings export carries them too. Named, because

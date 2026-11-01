@@ -34,6 +34,16 @@ const val INTERACTION_SETTINGS_DEFAULT_LINK_CHECK_ENABLED = true
  */
 const val INTERACTION_SETTINGS_DEFAULT_ATTACHMENT_REMINDER_ENABLED = true
 
+/**
+ * Whether the Packages screen is offered: parcels gathered from the tracking numbers in shipping mail.
+ */
+const val INTERACTION_SETTINGS_DEFAULT_PACKAGES_ENABLED = true
+
+/**
+ * Whether the Trips screen is offered: upcoming bookings gathered from confirmations in the reader's mail.
+ */
+const val INTERACTION_SETTINGS_DEFAULT_TRIPS_ENABLED = true
+
 data class InteractionSettings(
     val useVolumeKeysForNavigation: Boolean = INTERACTION_SETTINGS_DEFAULT_USE_VOLUME_KEYS_NAVIGATION,
     val messageViewPostRemoveNavigation: String = INTERACTION_SETTINGS_DEFAULT_MESSAGE_VIEW_POST_REMOVE_NAVIGATION,
@@ -49,6 +59,8 @@ data class InteractionSettings(
     val undoSendDelaySeconds: Int = INTERACTION_SETTINGS_DEFAULT_UNDO_SEND_DELAY_SECONDS,
     val isLinkCheckEnabled: Boolean = INTERACTION_SETTINGS_DEFAULT_LINK_CHECK_ENABLED,
     val isAttachmentReminderEnabled: Boolean = INTERACTION_SETTINGS_DEFAULT_ATTACHMENT_REMINDER_ENABLED,
+    val isPackagesEnabled: Boolean = INTERACTION_SETTINGS_DEFAULT_PACKAGES_ENABLED,
+    val isTripsEnabled: Boolean = INTERACTION_SETTINGS_DEFAULT_TRIPS_ENABLED,
 )
 
 /**

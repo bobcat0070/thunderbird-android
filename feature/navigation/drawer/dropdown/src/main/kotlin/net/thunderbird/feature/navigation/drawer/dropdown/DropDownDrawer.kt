@@ -13,6 +13,7 @@ import net.thunderbird.core.ui.theme.api.FeatureThemeProvider
 import net.thunderbird.feature.account.AccountId
 import net.thunderbird.feature.account.UnifiedAccountId
 import net.thunderbird.feature.navigation.drawer.api.NavigationDrawer
+import net.thunderbird.feature.navigation.drawer.api.NavigationDrawerExternalContract.DrawerShortcuts
 import net.thunderbird.feature.navigation.drawer.api.R
 import net.thunderbird.feature.navigation.drawer.dropdown.domain.entity.UnifiedDisplayFolderType
 import net.thunderbird.feature.navigation.drawer.dropdown.domain.entity.createMailDisplayAccountFolderId
@@ -39,6 +40,7 @@ class DropDownDrawer(
 ) : NavigationDrawer, KoinComponent {
 
     private val themeProvider: FeatureThemeProvider by inject()
+    private val drawerShortcuts: DrawerShortcuts? by lazy { getKoin().getOrNull() }
     private val drawer: DrawerLayout = parent.findViewById(R.id.navigation_drawer_layout)
     private val drawerContent: ComposeView = parent.findViewById(R.id.navigation_drawer_content)
 
@@ -65,6 +67,7 @@ class DropDownDrawer(
                     openSettings = openSettings,
                     openAddAccount = openAddAccount,
                     closeDrawer = { close() },
+                    openShortcut = { shortcut -> drawerShortcuts?.open(parent, shortcut) },
                 )
             }
         }

@@ -60,6 +60,10 @@ dependencies {
     implementation(projects.feature.newsletter.internal)
     implementation(projects.feature.attachments.api)
     implementation(projects.feature.attachments.internal)
+    implementation(projects.feature.packages.api)
+    implementation(projects.feature.packages.internal)
+    implementation(projects.feature.trips.api)
+    implementation(projects.feature.trips.internal)
     implementation(projects.feature.mail.message.classification.api)
     implementation(projects.feature.widget.messageList)
 

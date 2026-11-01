@@ -19,17 +19,25 @@ import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.Delete
+import androidx.compose.material.icons.outlined.DirectionsBoat
+import androidx.compose.material.icons.outlined.DirectionsCar
 import androidx.compose.material.icons.outlined.Drafts
 import androidx.compose.material.icons.outlined.ErrorOutline
+import androidx.compose.material.icons.outlined.EventAvailable
 import androidx.compose.material.icons.outlined.ExpandLess
 import androidx.compose.material.icons.outlined.ExpandMore
+import androidx.compose.material.icons.outlined.Flight
 import androidx.compose.material.icons.outlined.Folder
+import androidx.compose.material.icons.outlined.Hotel
 import androidx.compose.material.icons.outlined.Inbox
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.KeyboardArrowDown
+import androidx.compose.material.icons.outlined.LocalActivity
+import androidx.compose.material.icons.outlined.LocalShipping
 import androidx.compose.material.icons.outlined.Menu
 import androidx.compose.material.icons.outlined.MoreVert
 import androidx.compose.material.icons.outlined.Report
+import androidx.compose.material.icons.outlined.Restaurant
 import androidx.compose.material.icons.outlined.Security
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.Sync
@@ -130,17 +138,21 @@ object Icons {
 
         val Delete: ImageVector = Icons.Outlined.Delete
         val Description: ImageVector = OutlinedDescriptionIcon
+        val DirectionsBoat: ImageVector = Icons.Outlined.DirectionsBoat
+        val DirectionsCar: ImageVector = Icons.Outlined.DirectionsCar
         val Drafts: ImageVector = Icons.Outlined.Drafts
         val Download: ImageVector = OutlinedDownloadIcon
         val DriveFileMove: ImageVector = OutlinedDriveFileMove
 
         val Encrypted: ImageVector = OutlinedEncrypted
         val ErrorOutline: ImageVector = Icons.Outlined.ErrorOutline
+        val EventAvailable: ImageVector = Icons.Outlined.EventAvailable
         val ExpandMore: ImageVector = Icons.Outlined.ExpandMore
         val ExpandLess: ImageVector = Icons.Outlined.ExpandLess
 
         val FavoriteFolder: ImageVector = OutlinedFavoriteFolderIcon
         val Fingerprint: ImageVector = OutlinedFingerprintIcon
+        val Flight: ImageVector = Icons.Outlined.Flight
         val Flower: ImageVector = OutlinedFlowerIcon
         val Folder: ImageVector = Icons.Outlined.Folder
         val FolderManaged: ImageVector = OutlinedFolderManagedIcon
@@ -150,12 +162,15 @@ object Icons {
 
         val Hearth: ImageVector = OutlinedHearthIcon
 
+        val Hotel: ImageVector = Icons.Outlined.Hotel
         val Image: ImageVector = OutlinedImageIcon
         val Inbox: ImageVector = Icons.Outlined.Inbox
         val Info: ImageVector = Icons.Outlined.Info
 
         val KeyboardArrowDown: ImageVector = Icons.Outlined.KeyboardArrowDown
 
+        val LocalActivity: ImageVector = Icons.Outlined.LocalActivity
+        val LocalShipping: ImageVector = Icons.Outlined.LocalShipping
         val Lock: ImageVector = OutlinedLockIcon
 
         val MarkEmailRead: ImageVector = OutlinedMarkEmailRead
@@ -175,6 +190,7 @@ object Icons {
         val Reply: ImageVector = OutlinedReply
         val ReplyAll: ImageVector = OutlinedReplyAll
         val Report: ImageVector = Icons.Outlined.Report
+        val Restaurant: ImageVector = Icons.Outlined.Restaurant
         val Rocket: ImageVector = OutlinedRocketIcon
 
         val School: ImageVector = OutlinedSchoolIcon

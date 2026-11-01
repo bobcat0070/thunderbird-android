@@ -7,14 +7,18 @@ import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.persistentListOf
 import net.thunderbird.components.ui.bolt.atom.icon.Icons
 import net.thunderbird.components.ui.bolt.common.window.WindowHeightSizeClass
 import net.thunderbird.components.ui.bolt.common.window.WindowWidthSizeClass
 import net.thunderbird.components.ui.bolt.common.window.calculateWindowSizeInfo
 import net.thunderbird.components.ui.bolt.theme.BoltTheme
+import net.thunderbird.feature.navigation.drawer.api.NavigationDrawerExternalContract.DrawerShortcut
 import net.thunderbird.feature.navigation.drawer.dropdown.R
 
 @Composable
+@Suppress("LongMethod")
 internal fun FolderSettingList(
     onSyncAccountClick: () -> Unit,
     onSyncAllAccountsClick: () -> Unit,
@@ -22,6 +26,8 @@ internal fun FolderSettingList(
     isUnifiedAccount: Boolean,
     isLoading: Boolean,
     modifier: Modifier = Modifier,
+    shortcuts: ImmutableList<DrawerShortcut> = persistentListOf(),
+    onShortcutClick: (DrawerShortcut) -> Unit = {},
 ) {
     val windowSizeInfo = calculateWindowSizeInfo()
     val isLandscape = windowSizeInfo.size.width > windowSizeInfo.size.height
@@ -42,6 +48,23 @@ internal fun FolderSettingList(
                 .fillMaxWidth()
         },
     ) {
+        shortcuts.forEach { shortcut ->
+            item(span = { if (hideText) GridItemSpan(1) else GridItemSpan(maxLineSpan) }) {
+                SettingListItem(
+                    label = stringResource(
+                        id = when (shortcut) {
+                            DrawerShortcut.PACKAGES -> R.string.navigation_drawer_dropdown_action_packages
+                            DrawerShortcut.TRIPS -> R.string.navigation_drawer_dropdown_action_trips
+                        },
+                    ),
+                    onClick = { onShortcutClick(shortcut) },
+                    icon = when (shortcut) {
+                        DrawerShortcut.PACKAGES -> Icons.Outlined.LocalShipping
+                        DrawerShortcut.TRIPS -> Icons.Outlined.Flight
+                    },
+                )
+            }
+        }
         if (isUnifiedAccount.not()) {
             item(span = { if (hideText) GridItemSpan(1) else GridItemSpan(maxLineSpan) }) {
                 SettingListItem(

@@ -453,6 +453,12 @@
     <string name="general_settings_link_check_summary">Show where a link goes, with the option to open it without its tracking. Links that name a different site than they open are always warned about.</string>
     <string name="general_settings_attachment_reminder_title">Warn about forgotten attachments</string>
     <string name="general_settings_attachment_reminder_summary">Ask before sending a message that mentions an attachment but has none</string>
+    <string name="general_settings_packages_title">Packages</string>
+    <string name="general_settings_packages_summary">Gather parcels from the tracking numbers in your shipping mail, in the drawer under Packages</string>
+    <string name="general_settings_carrier_accounts_title">Carrier tracking accounts</string>
+    <string name="general_settings_carrier_accounts_summary">Optional UPS, FedEx and USPS developer credentials for live parcel status</string>
+    <string name="general_settings_trips_title">Trips</string>
+    <string name="general_settings_trips_summary">Gather flights, stays, car rentals, restaurant bookings, tickets and cruises from your confirmations, in the drawer under Trips</string>
     <!-- %1$s is the listed domain, e.g. phish.example -->
     <string name="blocklist_link_threat">⚠ <xliff:g id="domain">%1$s</xliff:g> is on HaGeZi\'s threat list of malware, phishing and scam sites.</string>
     <!-- %1$s is the listed domain; %2$s is the list's name: Light, Normal, Pro, Pro++ or Ultimate -->

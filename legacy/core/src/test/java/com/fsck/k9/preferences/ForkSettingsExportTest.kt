@@ -202,6 +202,8 @@ class ForkSettingsExportTest : K9RobolectricTest() {
             "attachmentReminderEnabled" to "false",
             "domainBlocklistTier" to "PRO",
             "domainBlocklistThreatListEnabled" to "false",
+            "packagesEnabled" to "false",
+            "tripsEnabled" to "false",
             VIEW_CATEGORY_GROUPING_KEY to "unified_sent=GROUPED",
             "notifyPersonal" to "false",
             "notifyNotifications" to "false",

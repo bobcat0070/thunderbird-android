@@ -4,6 +4,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.LocalActivity
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.navigation.NavDestination.Companion.hasRoute
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
@@ -24,8 +25,11 @@ import net.thunderbird.feature.debug.settings.navigation.SecretDebugSettingsRout
 import net.thunderbird.feature.funding.api.FundingNavigation
 import net.thunderbird.feature.navigation.changelog.api.ChangelogNavigation
 import net.thunderbird.feature.newsletter.NewsletterNavigation
+import net.thunderbird.feature.packages.PackagesNavigation
+import net.thunderbird.feature.packages.PackagesRoute
 import net.thunderbird.feature.thundermail.navigation.ThundermailNavigation
 import net.thunderbird.feature.thundermail.navigation.ThundermailRoute
+import net.thunderbird.feature.trips.TripsNavigation
 import org.koin.compose.koinInject
 
 @Suppress("LongMethod")
@@ -44,6 +48,8 @@ fun FeatureLauncherNavHost(
     fundingNavigation: FundingNavigation = koinInject(),
     newsletterNavigation: NewsletterNavigation = koinInject(),
     attachmentsNavigation: AttachmentsNavigation = koinInject(),
+    packagesNavigation: PackagesNavigation = koinInject(),
+    tripsNavigation: TripsNavigation = koinInject(),
     secretDebugSettingsNavigation: SecretDebugSettingsNavigation = koinInject(),
     thundermailNavigation: ThundermailNavigation = koinInject(),
     changelogNavigation: ChangelogNavigation = koinInject(),
@@ -147,6 +153,30 @@ fun FeatureLauncherNavHost(
         )
 
         attachmentsNavigation.registerRoutes(
+            navGraphBuilder = this,
+            onBack = onBack,
+            onFinish = { onBack() },
+        )
+
+        packagesNavigation.registerRoutes(
+            navGraphBuilder = this,
+            // Carrier accounts opened from Packages goes back there; opened from settings, it closes.
+            onBack = {
+                val previous = navController.previousBackStackEntry?.destination
+                if (previous?.hasRoute(PackagesRoute.Packages::class) ==
+                    true
+                ) {
+                    navController.popBackStack()
+                } else {
+                    onBack()
+                }
+            },
+            onFinish = { route ->
+                if (route == PackagesRoute.CarrierAccounts) navController.navigate(route) else onBack()
+            },
+        )
+
+        tripsNavigation.registerRoutes(
             navGraphBuilder = this,
             onBack = onBack,
             onFinish = { onBack() },

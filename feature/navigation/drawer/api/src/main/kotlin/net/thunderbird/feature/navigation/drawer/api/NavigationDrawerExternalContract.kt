@@ -1,5 +1,6 @@
 package net.thunderbird.feature.navigation.drawer.api
 
+import android.content.Context
 import kotlinx.coroutines.flow.Flow
 
 interface NavigationDrawerExternalContract {
@@ -16,6 +17,27 @@ interface NavigationDrawerExternalContract {
 
     fun interface DrawerConfigWriter {
         fun writeDrawerConfig(drawerConfig: DrawerConfig)
+    }
+
+    /**
+     * Screens of their own the drawer offers a way to, beside the folders.
+     */
+    enum class DrawerShortcut {
+        PACKAGES,
+        TRIPS,
+    }
+
+    /**
+     * Which shortcuts the drawer shows, as the reader's settings change, and how they open.
+     */
+    interface DrawerShortcuts {
+        fun getShortcutsFlow(): Flow<List<DrawerShortcut>>
+
+        /**
+         * Opens [shortcut]'s screen from [context], the activity showing the drawer, so that going back returns to
+         * it.
+         */
+        fun open(context: Context, shortcut: DrawerShortcut)
     }
 
     /**

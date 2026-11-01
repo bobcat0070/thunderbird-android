@@ -4,6 +4,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import net.thunderbird.core.ui.contract.mvi.observe
 import net.thunderbird.feature.account.AccountId
+import net.thunderbird.feature.navigation.drawer.api.NavigationDrawerExternalContract.DrawerShortcut
 import net.thunderbird.feature.navigation.drawer.dropdown.FolderDrawerState
 import net.thunderbird.feature.navigation.drawer.dropdown.ui.DrawerContract.Effect
 import net.thunderbird.feature.navigation.drawer.dropdown.ui.DrawerContract.Event
@@ -21,6 +22,7 @@ internal fun DrawerView(
     openSettings: () -> Unit,
     openAddAccount: () -> Unit,
     closeDrawer: () -> Unit,
+    openShortcut: (DrawerShortcut) -> Unit = {},
     viewModel: ViewModel = koinViewModel<DrawerViewModel>(),
 ) {
     val (state, dispatch) = viewModel.observe { effect ->
@@ -39,6 +41,8 @@ internal fun DrawerView(
             Effect.OpenAddAccount -> openAddAccount()
 
             Effect.CloseDrawer -> closeDrawer()
+
+            is Effect.OpenShortcut -> openShortcut(effect.shortcut)
         }
     }
 

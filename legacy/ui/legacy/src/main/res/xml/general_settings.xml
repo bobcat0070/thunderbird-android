@@ -521,6 +521,27 @@
             android:title="@string/general_settings_domain_blocklist_threats_title"
             />
 
+        <SwitchPreference
+            android:defaultValue="true"
+            android:key="packages_enabled"
+            android:summary="@string/general_settings_packages_summary"
+            android:title="@string/general_settings_packages_title"
+            />
+
+        <Preference
+            android:dependency="packages_enabled"
+            android:key="carrier_tracking_accounts"
+            android:summary="@string/general_settings_carrier_accounts_summary"
+            android:title="@string/general_settings_carrier_accounts_title"
+            />
+
+        <SwitchPreference
+            android:defaultValue="true"
+            android:key="trips_enabled"
+            android:summary="@string/general_settings_trips_summary"
+            android:title="@string/general_settings_trips_title"
+            />
+
         <MultiSelectListPreference
             android:dialogTitle="@string/global_settings_confirm_actions_title"
             android:entries="@array/confirm_action_entries"

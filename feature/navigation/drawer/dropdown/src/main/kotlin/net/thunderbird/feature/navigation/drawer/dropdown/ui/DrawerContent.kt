@@ -178,6 +178,8 @@ private fun FolderContent(
             )
             DividerHorizontal()
             FolderSettingList(
+                shortcuts = state.shortcuts,
+                onShortcutClick = { onEvent(Event.OnShortcutClick(it)) },
                 onSyncAccountClick = { onEvent(Event.OnSyncAccount) },
                 onSyncAllAccountsClick = { onEvent(Event.OnSyncAllAccounts) },
                 onSettingsClick = { onEvent(Event.OnSettingsClick) },

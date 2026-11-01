@@ -15,6 +15,7 @@ import kotlinx.coroutines.launch
 import net.thunderbird.core.ui.contract.mvi.BaseViewModel
 import net.thunderbird.feature.account.AccountId
 import net.thunderbird.feature.account.AccountIdFactory
+import net.thunderbird.feature.navigation.drawer.api.NavigationDrawerExternalContract.DrawerShortcuts
 import net.thunderbird.feature.navigation.drawer.dropdown.domain.DomainContract.UseCase
 import net.thunderbird.feature.navigation.drawer.dropdown.domain.entity.DisplayAccount
 import net.thunderbird.feature.navigation.drawer.dropdown.domain.entity.DisplayFolder
@@ -45,6 +46,7 @@ internal class DrawerViewModel(
     private val syncAllAccounts: UseCase.SyncAllAccounts,
     private val maxNestingLevel: Int = 2,
     initialState: State = State(),
+    private val drawerShortcuts: DrawerShortcuts? = null,
 ) : BaseViewModel<State, Event, Effect>(
     initialState = initialState,
 ),
@@ -61,6 +63,14 @@ internal class DrawerViewModel(
 
         viewModelScope.launch {
             loadAccounts()
+        }
+
+        drawerShortcuts?.let { shortcuts ->
+            viewModelScope.launch {
+                shortcuts.getShortcutsFlow().collectLatest { list ->
+                    updateState { it.copy(shortcuts = list.toImmutableList()) }
+                }
+            }
         }
 
         viewModelScope.launch {
@@ -188,6 +198,11 @@ internal class DrawerViewModel(
             Event.OnSyncAllAccounts -> onSyncAllAccounts()
 
             Event.OnAddAccountClick -> emitEffect(Effect.OpenAddAccount)
+
+            is Event.OnShortcutClick -> {
+                emitEffect(Effect.OpenShortcut(event.shortcut))
+                emitEffect(Effect.CloseDrawer)
+            }
         }
     }
 

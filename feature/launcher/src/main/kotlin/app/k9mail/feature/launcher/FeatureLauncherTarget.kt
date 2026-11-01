@@ -15,6 +15,8 @@ import net.thunderbird.feature.funding.api.FundingRoute
 import net.thunderbird.feature.navigation.changelog.api.ChangeLogMode
 import net.thunderbird.feature.navigation.changelog.api.ChangelogRoute
 import net.thunderbird.feature.newsletter.NewsletterRoute
+import net.thunderbird.feature.packages.PackagesRoute
+import net.thunderbird.feature.trips.TripsRoute
 
 sealed class FeatureLauncherTarget(
     val deepLinkUri: Uri,
@@ -78,6 +80,18 @@ sealed class FeatureLauncherTarget(
 
     data class SenderAttachments(val address: String) : FeatureLauncherTarget(
         deepLinkUri = AttachmentsRoute.Sender(address).route().toUri(),
+    )
+
+    data object Packages : FeatureLauncherTarget(
+        deepLinkUri = PackagesRoute.Packages.route().toUri(),
+    )
+
+    data object PackageCarrierAccounts : FeatureLauncherTarget(
+        deepLinkUri = PackagesRoute.CarrierAccounts.route().toUri(),
+    )
+
+    data object Trips : FeatureLauncherTarget(
+        deepLinkUri = TripsRoute.Trips.route().toUri(),
     )
 
     data class Changelog(val changeLogMode: ChangeLogMode) : FeatureLauncherTarget(

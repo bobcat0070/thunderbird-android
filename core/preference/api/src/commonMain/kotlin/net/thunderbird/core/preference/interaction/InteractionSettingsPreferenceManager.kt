@@ -18,6 +18,8 @@ enum class InteractionSettingKey(val value: String) {
     UndoSendDelaySeconds("undoSendDelaySeconds"),
     LinkCheckEnabled("linkCheckEnabled"),
     AttachmentReminderEnabled("attachmentReminderEnabled"),
+    PackagesEnabled("packagesEnabled"),
+    TripsEnabled("tripsEnabled"),
 }
 
 interface InteractionSettingsPreferenceManager : PreferenceManager<InteractionSettings>

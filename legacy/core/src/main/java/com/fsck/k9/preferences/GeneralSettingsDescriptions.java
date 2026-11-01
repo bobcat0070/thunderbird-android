@@ -55,6 +55,8 @@ import net.thunderbird.core.preference.storage.Storage;
 import net.thunderbird.core.preference.display.visualSettings.message.list.UiDensity;
 
 import static net.thunderbird.core.preference.interaction.InteractionSettingsKt.INTERACTION_SETTINGS_DEFAULT_ATTACHMENT_REMINDER_ENABLED;
+import static net.thunderbird.core.preference.interaction.InteractionSettingsKt.INTERACTION_SETTINGS_DEFAULT_PACKAGES_ENABLED;
+import static net.thunderbird.core.preference.interaction.InteractionSettingsKt.INTERACTION_SETTINGS_DEFAULT_TRIPS_ENABLED;
 import static net.thunderbird.core.preference.interaction.InteractionSettingsKt.INTERACTION_SETTINGS_DEFAULT_LINK_CHECK_ENABLED;
 import static net.thunderbird.core.preference.interaction.InteractionSettingsKt.INTERACTION_SETTINGS_DEFAULT_UNDO_SEND_DELAY_SECONDS;
 import static net.thunderbird.core.preference.bimi.BimiSettingsKt.BIMI_SETTINGS_DEFAULT_IS_ENABLED;
@@ -459,6 +461,12 @@ class GeneralSettingsDescriptions {
         ));
         s.put("domainBlocklistThreatListEnabled", Settings.versions(
             new V(116, new BooleanSetting(DOMAIN_BLOCKLIST_SETTINGS_DEFAULT_IS_THREAT_LIST_ENABLED))
+        ));
+        s.put("packagesEnabled", Settings.versions(
+            new V(117, new BooleanSetting(INTERACTION_SETTINGS_DEFAULT_PACKAGES_ENABLED))
+        ));
+        s.put("tripsEnabled", Settings.versions(
+            new V(117, new BooleanSetting(INTERACTION_SETTINGS_DEFAULT_TRIPS_ENABLED))
         ));
 
         // TODO: Add a way to properly support feature-specific settings.
