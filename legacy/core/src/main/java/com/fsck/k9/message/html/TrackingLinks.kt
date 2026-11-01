@@ -120,13 +120,12 @@ data class StrippedLink(
  * @return the stripped link, or `null` when there is nothing to take out or [url] is not a web link.
  */
 fun stripTracking(url: String): StrippedLink? {
-    val original = url.trim()
-    if (!WEB_LINK.containsMatchIn(original)) return null
-
-    var current = original
+    // Read as the browser will read it, so the stripped link goes where its host says: a redirect's destination is
+    // written by whoever sent the link, `https://evil.example\@paypal.com/` included.
+    var current = canonicalWebLink(url) ?: return null
     val skippedRedirects = mutableListOf<String>()
     while (skippedRedirects.size < MAX_UNWRAP_DEPTH) {
-        val destination = redirectDestination(current) ?: break
+        val destination = redirectDestination(current)?.let(::canonicalWebLink) ?: break
         skippedRedirects += hostOf(current).orEmpty()
         current = destination
     }
@@ -150,11 +149,12 @@ fun stripTracking(url: String): StrippedLink? {
  * @return the tracking service's host, or `null` when [url] does not look like one.
  */
 fun clickTrackerHost(url: String): String? {
-    val host = hostOf(url) ?: return null
+    val canonical = canonicalWebLink(url) ?: return null
+    val host = hostOf(canonical) ?: return null
     val labels = host.split('.')
     val isKnownService = labels.indices.any { start -> labels.drop(start).joinToString(".") in CLICK_TRACKING_DOMAINS }
     val isTrackingSubdomain = labels.size > 2 && labels.first() in CLICK_TRACKING_LABELS
-    val path = PATH.find(url)?.groupValues?.get(1).orEmpty()
+    val path = PATH.find(canonical)?.groupValues?.get(1).orEmpty()
     val isSubstackRedirect = host.endsWith("substack.com") && path.startsWith("/redirect/")
     val isTrackingPath = CLICK_TRACKING_PATH.containsMatchIn(path)
 

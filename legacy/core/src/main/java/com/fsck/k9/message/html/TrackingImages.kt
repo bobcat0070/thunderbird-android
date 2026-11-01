@@ -127,9 +127,11 @@ fun blockTrackingImages(html: String, blocklist: DomainBlocklist? = null): Block
 }
 
 private fun trackingImage(url: String, attributes: Map<String, String>, blocklist: DomainBlocklist?): TrackingImage? {
-    val host = hostOf(url) ?: return null
+    // Judged as the WebView will read it, so a tracker cannot pass for another host by how its address is written.
+    val canonical = canonicalWebLink(url) ?: return null
+    val host = hostOf(canonical) ?: return null
     val service = knownService(host)
-    val path = PATH.find(url)?.groupValues?.get(1).orEmpty()
+    val path = PATH.find(canonical)?.groupValues?.get(1).orEmpty()
 
     val isTracker = service != null ||
         OPEN_TRACKING_PATH.containsMatchIn(path) ||

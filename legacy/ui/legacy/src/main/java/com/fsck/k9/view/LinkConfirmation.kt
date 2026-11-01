@@ -15,6 +15,7 @@ import androidx.appcompat.app.AlertDialog
 import androidx.core.text.inSpans
 import androidx.core.view.isVisible
 import com.fsck.k9.message.html.StrippedLink
+import com.fsck.k9.message.html.canonicalWebLink
 import com.fsck.k9.message.html.clickTrackerHost
 import com.fsck.k9.message.html.hostOf
 import com.fsck.k9.message.html.senderRootWebsite
@@ -59,10 +60,12 @@ class LinkConfirmation(
         senderAddress: String? = null,
         onClosed: () -> Unit = {},
     ) {
-        val url = uri.toString()
+        // Checked, shown and opened as the browser will read it, so the site the checks judge is the one it opens.
+        val url = canonicalWebLink(uri.toString()) ?: uri.toString()
+        val link = Uri.parse(url)
         val host = hostOf(url)
         if (host == null) {
-            openUrl(context, uri)
+            openUrl(context, link)
             onClosed()
             return
         }
@@ -71,7 +74,7 @@ class LinkConfirmation(
         val listed = listing(host, stripped)
         val mustWarn = shownSite != null || listed?.match?.kind == BlocklistKind.THREAT
         if (!mustWarn && !generalSettingsManager.getConfig().interaction.isLinkCheckEnabled) {
-            openUrl(context, uri)
+            openUrl(context, link)
             onClosed()
             return
         }
@@ -83,10 +86,10 @@ class LinkConfirmation(
 
         val dialog = MaterialAlertDialogBuilder(context)
             .setTitle(if (shownSite != null) R.string.deceptive_link_title else R.string.link_dialog_title)
-            .setMessage(dialogMessage(context, uri, shownSite, listed, stripped))
+            .setMessage(dialogMessage(context, link, shownSite, listed, stripped))
             .apply { alternativeView?.let(::setView) }
             .setNegativeButton(R.string.link_dialog_dont_open, null)
-            .setNeutralButton(R.string.link_dialog_open_as_is) { _, _ -> openUrl(context, uri) }
+            .setNeutralButton(R.string.link_dialog_open_as_is) { _, _ -> openUrl(context, link) }
             .setPositiveButton(R.string.link_dialog_strip) { _, _ ->
                 stripped?.let { openUrl(context, Uri.parse(it.url)) }
             }

@@ -49,6 +49,16 @@ class TrackingImagesTest {
     }
 
     @Test
+    fun `a tracking service should be recognised however its address is written`() {
+        // The WebView loads this from list-manage.com; read literally it would be from shop.example.
+        val html = """<img src="https://us1.list-manage.com\@shop.example/track/open.php?u=1" width="600">"""
+
+        val testSubject = blockTrackingImages(html)
+
+        assertThat(testSubject.trackers.map { it.service }).containsExactly("Mailchimp")
+    }
+
+    @Test
     fun `an image on an open tracking path should be blocked whatever its host`() {
         val html = """<img src="https://email.brand.example/wf/open?upn=xyz">"""
 

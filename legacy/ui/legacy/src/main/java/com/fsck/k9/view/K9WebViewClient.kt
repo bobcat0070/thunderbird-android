@@ -1,5 +1,6 @@
 package com.fsck.k9.view
 
+import com.fsck.k9.message.html.canonicalWebLink
 import com.fsck.k9.message.html.findAddressTexts
 import com.fsck.k9.message.html.findDeceptiveLinks
 import com.fsck.k9.message.html.hostOf
@@ -94,10 +95,12 @@ class K9WebViewClient(
 
     /**
      * The WebView hands over the link as it resolved it, which can differ from the `href` as written by a trailing
-     * slash or entity decoding; both forms are tried.
+     * slash or entity decoding; both forms are tried. The keys are in [canonicalWebLink]'s form, and so is the lookup.
      */
-    private fun addressTextFor(url: String): String? =
-        addressTexts[url] ?: addressTexts[url.removeSuffix("/")] ?: addressTexts["$url/"]
+    private fun addressTextFor(url: String): String? {
+        val link = canonicalWebLink(url) ?: return null
+        return addressTexts[link] ?: addressTexts[link.removeSuffix("/")] ?: addressTexts["$link/"]
+    }
 
     override fun shouldInterceptRequest(webView: WebView, request: WebResourceRequest): WebResourceResponse? {
         val uri = request.url

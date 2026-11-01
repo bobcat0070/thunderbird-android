@@ -3,6 +3,7 @@ package com.fsck.k9.message.extractors
 import com.fsck.k9.mail.Part
 import com.fsck.k9.mail.internet.MessageExtractor
 import com.fsck.k9.mail.internet.MimeUtility
+import com.fsck.k9.message.html.canonicalWebLink
 import org.jsoup.Jsoup
 
 /**
@@ -105,6 +106,8 @@ internal fun findSignInLinkInHtml(html: String): String? {
         }
         .map { it.attr("href").trim() }
         .firstOrNull { WEB_LINK.containsMatchIn(it) && !NOT_SIGN_IN_LINK.containsMatchIn(it) }
+        // As a browser reads it, so the site the link is checked against is the one it opens.
+        ?.let(::canonicalWebLink)
 }
 
 internal fun findSignInLinkInText(text: String): String? {

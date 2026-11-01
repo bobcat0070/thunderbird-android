@@ -3,6 +3,7 @@ package com.fsck.k9.message.html
 import assertk.assertThat
 import assertk.assertions.isEmpty
 import assertk.assertions.isEqualTo
+import assertk.assertions.isNull
 import kotlin.test.Test
 
 class DeceptiveLinksTest {
@@ -56,6 +57,42 @@ class DeceptiveLinksTest {
     @Test
     fun `the host of a link should ignore credentials and the leading www`() {
         assertThat(hostOf("https://user:pass@WWW.Example.COM:8443/path")).isEqualTo("example.com")
+    }
+
+    @Test
+    fun `a link written so a browser reads another host should be judged by that host`() {
+        // Each of these opens evil.example in a browser, and in the WebView that hands the link over when tapped.
+        listOf(
+            """https://evil.example\@paypal.com/""",
+            """https:\\evil.example/""",
+            "https:/evil.example/",
+            "https:evil.example/",
+            "https://evil.ex\tample/",
+            "https://paypal.com@x@evil.example/",
+            "https://evil%2Eexample/",
+        ).forEach { href ->
+            val html = """<a href="$href">paypal.com</a>"""
+
+            assertThat(findDeceptiveLinks(html), name = href).isEqualTo(mapOf("evil.example" to "paypal.com"))
+        }
+    }
+
+    @Test
+    fun `the host of a link should be the one a browser opens`() {
+        assertThat(hostOf("""https://evil.example\@accounts.google.com/""")).isEqualTo("evil.example")
+        assertThat(hostOf(" HTTPS:\\\\Evil.Example\\path")).isEqualTo("evil.example")
+        assertThat(hostOf("https://a@b@evil.example:443/")).isEqualTo("evil.example")
+        assertThat(hostOf("https://")).isNull()
+        assertThat(hostOf("mailto:a@evil.example")).isNull()
+    }
+
+    @Test
+    fun `a web link should be written as a browser reads it`() {
+        assertThat(canonicalWebLink("""https://evil.example\@paypal.com/a\b?q=\x#\y"""))
+            .isEqualTo("""https://evil.example/@paypal.com/a/b?q=\x#\y""")
+        assertThat(canonicalWebLink(" HTTPS:evil.ex\nample/x ")).isEqualTo("https://evil.example/x")
+        assertThat(canonicalWebLink("https://www.paypal.com/signin?x=1")).isEqualTo("https://www.paypal.com/signin?x=1")
+        assertThat(canonicalWebLink("mailto:a@example.com")).isNull()
     }
 
     @Test

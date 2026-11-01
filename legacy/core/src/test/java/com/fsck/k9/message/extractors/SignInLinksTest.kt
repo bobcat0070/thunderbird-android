@@ -43,6 +43,14 @@ class SignInLinksTest {
     }
 
     @Test
+    fun `a sign-in link should be given as a browser reads it`() {
+        // A browser opens evil.example; read literally the link would pass for Google's, threat list check included.
+        assertThat(
+            findSignInLinkInHtml("""<a href="https://evil.example\@accounts.google.com/">Sign in</a>"""),
+        ).isEqualTo("https://evil.example/@accounts.google.com/")
+    }
+
+    @Test
     fun `a mail whose subject is not about signing in should not be read`() {
         val testSubject = htmlMessage("""<a href="https://shop.example/account">Sign in</a>""")
 

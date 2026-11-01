@@ -83,6 +83,16 @@ class TrackingLinksTest {
     }
 
     @Test
+    fun `a redirect destination should be given as a browser reads it`() {
+        val destination = URLEncoder.encode("""https://evil.example\@paypal.com/login""", "UTF-8")
+
+        val result = stripTracking("https://nam12.safelinks.protection.outlook.com/?url=$destination&data=05")
+
+        assertThat(result?.url).isEqualTo("https://evil.example/@paypal.com/login")
+        assertThat(result?.url?.let(::hostOf)).isEqualTo("evil.example")
+    }
+
+    @Test
     fun `a redirector whose destination is not a web link should be left alone`() {
         assertThat(stripTracking("https://l.facebook.com/l.php?u=javascript%3Aalert(1)")).isNull()
     }
