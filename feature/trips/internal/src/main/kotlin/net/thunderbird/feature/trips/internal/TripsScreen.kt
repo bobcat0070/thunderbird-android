@@ -182,8 +182,13 @@ private fun TripHeader(trip: Trip) {
             bottom = BoltTheme.spacings.half,
         ),
     ) {
-        TextTitleLarge(text = trip.place ?: stringResource(R.string.trips_untitled))
-        TextBodyMedium(text = dateRange(trip.firstDate, trip.lastDate))
+        val dates = dateRange(trip.firstDate, trip.lastDate)
+        if (trip.place != null) {
+            TextTitleLarge(text = trip.place)
+            TextBodyMedium(text = dates)
+        } else {
+            TextTitleLarge(text = dates)
+        }
     }
 }
 

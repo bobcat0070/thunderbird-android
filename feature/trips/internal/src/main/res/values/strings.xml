@@ -2,8 +2,6 @@
 <resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
     <string name="trips_title">Trips</string>
     <string name="trips_empty">No upcoming trips. Flights, stays, car rentals, restaurant bookings, tickets and cruises confirmed in your mail over the last year show up here.</string>
-    <!-- Heading of a trip whose bookings name no place -->
-    <string name="trips_untitled">Trip</string>
     <!-- A booking's confirmation number. Example: "Confirmation RXJ34P" -->
     <string name="trips_confirmation">Confirmation <xliff:g id="code">%s</xliff:g></string>
     <!-- Introduces the confirmation number in a calendar event's description -->

@@ -2,6 +2,7 @@ package net.thunderbird.feature.trips.internal
 
 import assertk.assertThat
 import assertk.assertions.containsExactly
+import assertk.assertions.isEmpty
 import assertk.assertions.isEqualTo
 import assertk.assertions.isNotNull
 import assertk.assertions.isNull
@@ -139,6 +140,34 @@ class ReservationsTest {
     }
 
     @Test
+    fun `a request to review a stay should not be read as a booking`() {
+        val reservation = reservationFromText(
+            subject = "Review your stay",
+            senderName = "The Maven Hotel",
+            text = "Thanks for staying with us Sep 21 - Sep 24. Confirmation 92045",
+            mailKey = "mail6",
+            mailDate = utcMillis(LocalDate.of(2026, 9, 25)),
+            zone = ZoneOffset.UTC,
+        )
+
+        assertThat(reservation).isNull()
+    }
+
+    @Test
+    fun `a date without a year shortly before the mail should be read as past, not as next year`() {
+        val times = findTimes("You checked out on Sep 24.", sentOn = LocalDate.of(2026, 9, 25))
+
+        assertThat(times).isEmpty()
+    }
+
+    @Test
+    fun `a date without a year months before the mail should be read as next year`() {
+        val times = findTimes("Your flight on Jan 5 at 8:05 AM", sentOn = LocalDate.of(2026, 12, 20))
+
+        assertThat(times.map { it.local }).containsExactly(LocalDateTime.of(2027, 1, 5, 8, 5))
+    }
+
+    @Test
     fun `bookings close in time should form one trip named for the flight's destination`() {
         val flight = reservation(ReservationType.FLIGHT, "UA 1234", day(12), city = "Denver")
         val hotel = reservation(ReservationType.LODGING, "Hotel Monaco", day(12), end = day(15), city = "Denver")
@@ -201,6 +230,8 @@ class ReservationsTest {
         assertThat(event.isAllDay).isEqualTo(false)
         assertThat(event.end - event.begin).isEqualTo(135L * 60 * 1000)
     }
+
+    private fun utcMillis(date: LocalDate) = date.atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli()
 
     private fun day(day: Int) = TripTime(LocalDate.of(2026, 11, day).atStartOfDay(), hasTime = false)
 

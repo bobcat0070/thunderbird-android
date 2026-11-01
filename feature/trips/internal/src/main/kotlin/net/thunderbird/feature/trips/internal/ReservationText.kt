@@ -14,7 +14,15 @@ private val BOOKING_SUBJECT = Regex(
         "flight|cruise|rental|table)|check-?in|boarding pass)\\b",
 )
 
-private val NOT_A_BOOKING = Regex("(?i)\\b(?:sale|deal|offer|% off|newsletter|unsubscribe|win |sweepstakes)\\b")
+/**
+ * Subjects of offers, and of mail that follows a booking already over: a request to review the stay names it, and its
+ * date, as a confirmation would.
+ */
+private val NOT_A_BOOKING = Regex(
+    "(?i)\\b(?:sale|deal|offer|% off|newsletter|unsubscribe|win |sweepstakes|review|feedback|survey|" +
+        "rate (?:your|us)|how was|how did we do|tell us|share your|" +
+        "thanks? (?:you )?for (?:staying|flying|sailing|dining|visiting)|folio)\\b",
+)
 
 /**
  * The kind of booking a subject (or sender) names, in the order they are tried: a cruise or flight mentions a hotel
@@ -178,12 +186,23 @@ private val MONTH_PREFIXES = listOf("jan", "feb", "mar", "apr", "may", "jun", "j
 private const val MONTH_PREFIX_LENGTH = 3
 
 /**
- * A date without a year is the next one on or after the mail was sent: a confirmation is for something to come.
+ * How long before the mail a date without a year may lie and still be read as that date, already past, rather than
+ * as the same day next year: a mail about a stay that just ended names its days.
+ */
+private const val RECENT_PAST_DAYS = 60L
+
+/**
+ * A date without a year is the next one after the mail was sent, as a confirmation is for something to come, unless
+ * it lies only shortly before the mail, when it is that day, already past.
  */
 private fun dateOf(year: String, month: Int, day: Int, sentOn: LocalDate): LocalDate? = try {
     when {
-        year.isEmpty() -> LocalDate.of(sentOn.year, month, day).let { if (it < sentOn) it.plusYears(1) else it }
+        year.isEmpty() -> LocalDate.of(sentOn.year, month, day).let {
+            if (it < sentOn.minusDays(RECENT_PAST_DAYS)) it.plusYears(1) else it
+        }
+
         year.length == 2 -> LocalDate.of(CENTURY + year.toInt() % TWO_DIGIT_YEAR, month, day)
+
         else -> LocalDate.of(year.toInt(), month, day)
     }
 } catch (_: DateTimeException) {
