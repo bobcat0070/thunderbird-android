@@ -4,6 +4,9 @@ import android.graphics.Bitmap
 import android.graphics.Canvas
 import com.caverock.androidsvg.SVG
 import com.fsck.k9.contacts.AvatarCache
+import java.nio.ByteBuffer
+import java.nio.charset.CharacterCodingException
+import java.nio.charset.CodingErrorAction
 import net.thunderbird.components.core.logging.Logger
 import net.thunderbird.core.preference.GeneralSettingsManager
 import okhttp3.OkHttpClient
@@ -55,6 +58,11 @@ class BimiLogoLoader(
     private val vmcValidator: VmcValidator,
     private val logger: Logger,
 ) {
+    init {
+        // The profile has no use for entities, and expanding them is how a small document becomes a huge one.
+        // [isSafeMark] refuses a document type declaration; this holds even should one get past it.
+        SVG.setInternalEntitiesEnabled(false)
+    }
 
     @Suppress("TooGenericExceptionCaught")
     fun loadLogo(
@@ -240,12 +248,46 @@ private val IMAGE_ELEMENT = Regex("""<\s*(?:[a-z0-9_.-]+:)?image\b""", RegexOpti
 private val DOCTYPE = Regex("""<!\s*(?:DOCTYPE|ENTITY)""", RegexOption.IGNORE_CASE)
 
 /**
+ * The encoding an XML declaration names. The renderer decodes a document in it, so a document declaring one the
+ * checks below do not read in - UTF-7 writes `<image` as `+ADw-image` - would be checked as one text and
+ * rendered as another.
+ */
+private val DECLARED_ENCODING = Regex("""^﻿?\s*<\?xml[^>]*?\bencoding\s*=\s*["']([^"']*)["']""")
+
+private val UTF8_NAMES = setOf("utf-8", "utf8", "us-ascii", "ascii")
+
+/**
  * @return whether [svg] is safe to hand to the renderer.
+ *
+ * The checks read the mark as UTF-8 text, so only a mark that is exactly that is accepted. The renderer reads more:
+ * it unpacks gzip on its own and decodes UTF-16 and other encodings, any of which would carry an image element or a
+ * document type declaration past checks that did not see them as text. The profile is UTF-8 anyway.
  */
 internal fun isSafeMark(svg: ByteArray): Boolean {
-    val text = String(svg, Charsets.UTF_8)
+    val text = strictUtf8(svg) ?: return false
+    if ('\u0000' in text) return false
+
+    val encoding = DECLARED_ENCODING.find(text)?.groupValues?.get(1)?.trim()?.lowercase()
+    if (encoding != null && encoding !in UTF8_NAMES) return false
 
     return !IMAGE_ELEMENT.containsMatchIn(text) && !DOCTYPE.containsMatchIn(text)
+}
+
+/**
+ * @return [bytes] as UTF-8 text, or `null` when they are not valid UTF-8 - as gzip, UTF-16 with a byte order mark
+ *   and most other encodings are not.
+ */
+@Suppress("SwallowedException")
+private fun strictUtf8(bytes: ByteArray): String? {
+    val decoder = Charsets.UTF_8.newDecoder()
+        .onMalformedInput(CodingErrorAction.REPORT)
+        .onUnmappableCharacter(CodingErrorAction.REPORT)
+
+    return try {
+        decoder.decode(ByteBuffer.wrap(bytes)).toString()
+    } catch (e: CharacterCodingException) {
+        null
+    }
 }
 
 /**
