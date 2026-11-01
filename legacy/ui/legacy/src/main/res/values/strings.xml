@@ -170,6 +170,13 @@
     <string name="message_details_classification_reason_server_other">Your mail provider sorted it into Other</string>
     <string name="message_details_classification_reason_none">Nothing indicated what this is</string>
     <string name="classify_action">Classify message</string>
+    <!-- Message view menu item: marks the mail, or its sender, as booking mail for the Trips screen -->
+    <string name="trip_mail_action">Trip mail</string>
+    <string name="trip_mail_title">Read for Trips</string>
+    <string name="trip_mail_this_mail">This mail</string>
+    <!-- Example: "All mail from expedia.com" -->
+    <string name="trip_mail_all_from_domain">All mail from <xliff:g id="domain">%s</xliff:g></string>
+    <string name="trip_mail_saved">Trips will read it when it next opens</string>
     <string name="classify_message_title">What kind of mail is this?</string>
     <string name="classify_message_description">Thunderbird will use this to sort future mail from %1$s.</string>
     <string name="classify_as_human">Personal mail</string>

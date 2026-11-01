@@ -15,11 +15,22 @@ private val BOOKING_SUBJECT = Regex(
 )
 
 /**
+ * Subjects that say something about a trip, which is enough from a sender on the travel sender list: such a sender's
+ * reminders, receipts and welcome mail name the booking's dates.
+ */
+private val TRIP_SUBJECT = Regex(
+    "(?i)\\b(?:order|receipt|reminder|upcoming|welcome|trip|visit|vacation|documents?|countdown|get ready|" +
+        "your (?:room|cabin|car|table))\\b",
+)
+
+/**
  * Subjects of offers, and of mail that follows a booking already over: a request to review the stay names it, and its
  * date, as a confirmation would.
  */
 private val NOT_A_BOOKING = Regex(
-    "(?i)\\b(?:sale|deal|offer|% off|newsletter|unsubscribe|win |sweepstakes|review|feedback|survey|" +
+    "(?i)\\b(?:sale|deals?|offers?|% off|\\d+ off|discount|bonus|book now|book today|your next|" +
+        "last-minute|secure your|get your tickets|don't miss|presale|pre-sale|just announced|limited time|" +
+        "newsletter|unsubscribe|win |sweepstakes|review|feedback|survey|" +
         "rate (?:your|us)|how was|how did we do|tell us|share your|" +
         "thanks? (?:you )?for (?:staying|flying|sailing|dining|visiting)|folio)\\b",
 )
@@ -90,15 +101,30 @@ private const val TWO_DIGIT_YEAR = 100
 private const val PM_OFFSET = 12
 
 /**
+ * What is known of a mail beyond its words.
+ *
+ * @param isListedSender whether its sender is on the travel sender list.
+ * @param senderType the kind of booking the listed sender sends, when it sends only one.
+ * @param isMarked whether the reader marked the mail as trip mail.
+ */
+data class MailHints(
+    val isListedSender: Boolean = false,
+    val senderType: ReservationType? = null,
+    val isMarked: Boolean = false,
+)
+
+/**
  * Reads a booking from a confirmation's words, for the many that carry no booking markup: what kind it is from the
  * subject, when from the first dates in the text that fall after the mail was sent, and the confirmation number.
  *
  * Words are less certain than markup, so a booking is only read from a mail whose subject both confirms a booking
- * and names its kind, and the result is marked as read from text.
+ * and names its kind, and the result is marked as read from text. A sender on the travel sender list needs a subject
+ * that only says something about a trip, and its kind comes from the sender, or else the text; a mail the reader
+ * marked needs neither.
  *
  * @return the booking, or `null` when the mail does not look like a confirmation or names no date.
  */
-@Suppress("ReturnCount")
+@Suppress("ReturnCount", "LongParameterList")
 fun reservationFromText(
     subject: String?,
     senderName: String?,
@@ -106,15 +132,22 @@ fun reservationFromText(
     mailKey: String,
     mailDate: Long,
     zone: ZoneId = ZoneId.systemDefault(),
+    hints: MailHints = MailHints(),
 ): Reservation? {
-    val cleanSubject = subject?.replace(REPLY_PREFIX, "")?.trim() ?: return null
-    if (!BOOKING_SUBJECT.containsMatchIn(cleanSubject) || NOT_A_BOOKING.containsMatchIn(cleanSubject)) return null
+    val cleanSubject = subject?.replace(REPLY_PREFIX, "")?.trim()
+        ?: if (hints.isMarked) "" else return null
+    if (!hints.isMarked && !isBookingSubject(cleanSubject, hints.isListedSender)) return null
 
-    val naming = "$cleanSubject ${senderName.orEmpty()}"
-    val type = TYPE_WORDS.firstOrNull { (_, words) -> words.containsMatchIn(naming) }?.first ?: return null
+    val readText = text.take(MAX_TEXT_LENGTH)
+    val isTravelMail = hints.isListedSender || hints.isMarked
+    val type = typeIn("$cleanSubject ${senderName.orEmpty()}")
+        ?: hints.senderType
+        ?: (if (isTravelMail) firstTypeIn(readText) else null)
+        ?: (if (hints.isMarked) ReservationType.EVENT else null)
+        ?: return null
 
     val sentOn = Instant.ofEpochMilli(mailDate).atZone(zone).toLocalDate()
-    val times = findTimes(text.take(MAX_TEXT_LENGTH), sentOn)
+    val times = findTimes(readText, sentOn)
     val start = times.firstOrNull() ?: return null
     val end = if (type in MULTI_DAY_TYPES) {
         times.firstOrNull { it.date > start.date && it.date <= start.date.plusDays(MAX_DURATION_DAYS) }
@@ -124,7 +157,7 @@ fun reservationFromText(
 
     return Reservation(
         type = type,
-        title = cleanSubject,
+        title = cleanSubject.ifEmpty { senderName.orEmpty() },
         start = start,
         end = end,
         confirmation = CONFIRMATION.find(text)?.groupValues?.get(1)?.takeIf(::looksLikeCode),
@@ -133,6 +166,26 @@ fun reservationFromText(
         mailDate = mailDate,
     )
 }
+
+private fun isBookingSubject(subject: String, isListedSender: Boolean): Boolean {
+    val confirms = BOOKING_SUBJECT.containsMatchIn(subject) ||
+        (isListedSender && TRIP_SUBJECT.containsMatchIn(subject))
+    return confirms && !NOT_A_BOOKING.containsMatchIn(subject)
+}
+
+/**
+ * The kind of booking [naming] names, a subject with its sender, tried in the order of [TYPE_WORDS].
+ */
+private fun typeIn(naming: String): ReservationType? =
+    TYPE_WORDS.firstOrNull { (_, words) -> words.containsMatchIn(naming) }?.first
+
+/**
+ * The kind of booking named first in [text]: a mail's body names what it is about before the resort it is at.
+ */
+private fun firstTypeIn(text: String): ReservationType? = TYPE_WORDS
+    .mapNotNull { (type, words) -> words.find(text)?.let { type to it.range.first } }
+    .minByOrNull { (_, position) -> position }
+    ?.first
 
 private val MULTI_DAY_TYPES = setOf(ReservationType.LODGING, ReservationType.CAR_RENTAL, ReservationType.CRUISE)
 

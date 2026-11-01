@@ -45,6 +45,7 @@ internal class StoredMailHeader(
     val reference: MessageReference,
     val date: Long,
     val senderName: String?,
+    val senderAddress: String?,
     val subject: String?,
 )
 
@@ -64,12 +65,15 @@ internal fun messageReferenceOf(key: String): MessageReference? {
 
 /**
  * The mail sent since [since] in every account matching [condition], leaving out the trash and spam, newest first.
+ *
+ * @param conditionArgs the values for the `?` placeholders in [condition], in order.
  */
 internal fun storedMailHeaders(
     accountManager: LegacyAccountManager,
     messageStoreManager: MessageStoreManager,
     since: Long,
     condition: String,
+    conditionArgs: List<String> = emptyList(),
 ): List<StoredMailHeader> {
     return accountManager.findAll().flatMap { account ->
         val skippedIds = SKIPPED_FOLDERS.mapNotNull { account.specialFolderId(it) }
@@ -81,7 +85,8 @@ internal fun storedMailHeaders(
 
         messageStoreManager.getMessageStore(account.id).getMessages(
             selection = "messages.date >= ? AND $condition$folderCondition",
-            selectionArgs = (listOf(since.toString()) + skippedIds.map { it.toString() }).toTypedArray(),
+            selectionArgs = (listOf(since.toString()) + conditionArgs + skippedIds.map { it.toString() })
+                .toTypedArray(),
             sortOrder = "messages.date DESC",
             messageMapper = { message ->
                 val from = message.fromAddresses.firstOrNull()
@@ -89,6 +94,7 @@ internal fun storedMailHeaders(
                     reference = MessageReference(account.id, message.folderId, message.messageServerId),
                     date = message.messageDate,
                     senderName = from?.personal?.takeIf { it.isNotBlank() } ?: from?.address,
+                    senderAddress = from?.address,
                     subject = message.subject,
                 )
             },

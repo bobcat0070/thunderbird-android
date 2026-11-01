@@ -13,7 +13,13 @@ internal class DefaultTripsNavigation : TripsNavigation {
     ) {
         with(navGraphBuilder) {
             deepLinkComposable<TripsRoute.Trips>(TripsRoute.Trips.BASE_PATH) {
-                TripsScreen(onBack = onBack)
+                TripsScreen(
+                    onBack = onBack,
+                    onOpenTravelSenders = { onFinish(TripsRoute.TravelSenders) },
+                )
+            }
+            deepLinkComposable<TripsRoute.TravelSenders>(TripsRoute.TravelSenders.BASE_PATH) {
+                TravelSendersScreen(onBack = onBack)
             }
         }
     }

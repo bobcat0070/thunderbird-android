@@ -16,6 +16,7 @@ import app.k9mail.feature.launcher.FeatureLauncherExternalContract.AccountSetupC
 import app.k9mail.feature.launcher.FeatureLauncherExternalContract.MessageListLauncher
 import app.k9mail.feature.onboarding.main.navigation.OnboardingNavigation
 import app.k9mail.feature.onboarding.main.navigation.OnboardingRoute
+import kotlin.reflect.KClass
 import net.thunderbird.core.featureflag.navigation.RemoteFeatureFlagNavigation
 import net.thunderbird.feature.account.settings.api.AccountSettingsNavigation
 import net.thunderbird.feature.account.settings.api.AccountSettingsRoute
@@ -30,6 +31,7 @@ import net.thunderbird.feature.packages.PackagesRoute
 import net.thunderbird.feature.thundermail.navigation.ThundermailNavigation
 import net.thunderbird.feature.thundermail.navigation.ThundermailRoute
 import net.thunderbird.feature.trips.TripsNavigation
+import net.thunderbird.feature.trips.TripsRoute
 import org.koin.compose.koinInject
 
 @Suppress("LongMethod")
@@ -161,16 +163,7 @@ fun FeatureLauncherNavHost(
         packagesNavigation.registerRoutes(
             navGraphBuilder = this,
             // Carrier accounts opened from Packages goes back there; opened from settings, it closes.
-            onBack = {
-                val previous = navController.previousBackStackEntry?.destination
-                if (previous?.hasRoute(PackagesRoute.Packages::class) ==
-                    true
-                ) {
-                    navController.popBackStack()
-                } else {
-                    onBack()
-                }
-            },
+            onBack = { navController.backTo(PackagesRoute.Packages::class, onBack) },
             onFinish = { route ->
                 if (route == PackagesRoute.CarrierAccounts) navController.navigate(route) else onBack()
             },
@@ -178,8 +171,11 @@ fun FeatureLauncherNavHost(
 
         tripsNavigation.registerRoutes(
             navGraphBuilder = this,
-            onBack = onBack,
-            onFinish = { onBack() },
+            // Travel senders opened from Trips goes back there.
+            onBack = { navController.backTo(TripsRoute.Trips::class, onBack) },
+            onFinish = { route ->
+                if (route == TripsRoute.TravelSenders) navController.navigate(route) else onBack()
+            },
         )
 
         secretDebugSettingsNavigation.registerRoutes(
@@ -243,4 +239,11 @@ private fun NavGraphBuilder.registerThundermailNavigation(
             }
         },
     )
+}
+
+/**
+ * Goes back to the screen before when it is [parent], as for a screen opened from it; otherwise leaves with [onBack].
+ */
+private fun NavHostController.backTo(parent: KClass<*>, onBack: () -> Unit) {
+    if (previousBackStackEntry?.destination?.hasRoute(parent) == true) popBackStack() else onBack()
 }

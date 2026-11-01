@@ -101,6 +101,12 @@
         />
 
     <item
+        android:id="@+id/trip_mail"
+        android:title="@string/trip_mail_action"
+        app:showAsAction="never"
+        />
+
+    <item
         android:id="@+id/server_categories"
         android:title="@string/server_categories_action"
         android:visible="false"

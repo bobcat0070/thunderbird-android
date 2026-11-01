@@ -154,6 +154,82 @@ class ReservationsTest {
     }
 
     @Test
+    fun `a travel sender's reminder should be read, with its kind from the sender`() {
+        val reservation = reservationFromText(
+            subject = "Reminder: Capri by the Sea 203",
+            senderName = null,
+            text = "Arrival Date 11/24/2026\nDeparture Date 11/27/2026",
+            mailKey = "mail7",
+            mailDate = MAIL_DATE,
+            zone = ZoneOffset.UTC,
+            hints = MailHints(isListedSender = true, senderType = ReservationType.LODGING),
+        )
+
+        assertThat(reservation).isNotNull()
+        assertThat(reservation!!.type).isEqualTo(ReservationType.LODGING)
+        assertThat(reservation.end?.date).isEqualTo(LocalDate.of(2026, 11, 27))
+    }
+
+    @Test
+    fun `a travel sender's kind should come from its text when it sends several`() {
+        val reservation = reservationFromText(
+            subject = "Your upcoming visit",
+            senderName = "Aulani",
+            text = "Reservation Confirmed! Monday Dinner, November 30, 2026 at 8:00 PM. Aulani, a Disney Resort & Spa",
+            mailKey = "mail8",
+            mailDate = MAIL_DATE,
+            zone = ZoneOffset.UTC,
+            hints = MailHints(isListedSender = true),
+        )
+
+        assertThat(reservation?.type).isEqualTo(ReservationType.RESTAURANT)
+    }
+
+    @Test
+    fun `the same reminder from a sender not on the list should not be read`() {
+        val reservation = reservationFromText(
+            subject = "Your upcoming visit",
+            senderName = "Aulani",
+            text = "Monday Dinner, November 30, 2026 at 8:00 PM",
+            mailKey = "mail9",
+            mailDate = MAIL_DATE,
+            zone = ZoneOffset.UTC,
+        )
+
+        assertThat(reservation).isNull()
+    }
+
+    @Test
+    fun `a travel sender's offer should not be read as a booking`() {
+        val reservation = reservationFromText(
+            subject = "Unlock \$450 Off Your Next Vacation",
+            senderName = "Sandals",
+            text = "Travel by December 15, 2026",
+            mailKey = "mail10",
+            mailDate = MAIL_DATE,
+            zone = ZoneOffset.UTC,
+            hints = MailHints(isListedSender = true, senderType = ReservationType.LODGING),
+        )
+
+        assertThat(reservation).isNull()
+    }
+
+    @Test
+    fun `a ticket seller's promotion should not be read as a booking`() {
+        val reservation = reservationFromText(
+            subject = "Secure your seats for the 39th Annual Spirit of Christmas",
+            senderName = "Chandler Center for the Arts",
+            text = "Saturday, December 12, 2026 at 2:00 PM",
+            mailKey = "mail11",
+            mailDate = MAIL_DATE,
+            zone = ZoneOffset.UTC,
+            hints = MailHints(isListedSender = true, senderType = ReservationType.EVENT),
+        )
+
+        assertThat(reservation).isNull()
+    }
+
+    @Test
     fun `a date without a year shortly before the mail should be read as past, not as next year`() {
         val times = findTimes("You checked out on Sep 24.", sentOn = LocalDate.of(2026, 9, 25))
 

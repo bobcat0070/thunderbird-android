@@ -55,11 +55,13 @@ internal interface TripsContract {
         data class OpenMail(val key: String) : Event
         data class AddToCalendar(val reservation: Reservation) : Event
         data object DownloadMailsClicked : Event
+        data object TravelSendersClicked : Event
         data object BackClicked : Event
     }
 
     sealed interface Effect {
         data object NavigateBack : Effect
+        data object OpenTravelSenders : Effect
         data class OpenCalendar(val reservation: Reservation) : Effect
         data class Downloaded(val count: Int) : Effect
     }
@@ -86,16 +88,30 @@ internal class ReservationCache {
 internal class TripsViewModel(
     private val mailSource: TravelMailSource,
     private val cache: ReservationCache,
+    private val senders: TravelSenderStore,
     private val clock: Clock,
 ) : BaseViewModel<State, Event, Effect>(State()), TripsContract.ViewModel {
 
+    /**
+     * The travel sender list's version the trips were last read with, `null` before the first read.
+     */
+    private var loadedVersion: Int? = null
+
     override fun event(event: Event) {
         when (event) {
-            Event.LoadTrips -> handleOneTimeEvent(event) { load(isRefresh = false) }
+            // Sent each time the screen shows, as after the travel sender list, which may have changed.
+            Event.LoadTrips -> if (loadedVersion != senders.version) load(isRefresh = false)
+
             Event.Refresh -> load(isRefresh = true)
+
             is Event.OpenMail -> mailSource.openMail(event.key)
+
             is Event.AddToCalendar -> emitEffect(Effect.OpenCalendar(event.reservation))
+
             Event.DownloadMailsClicked -> downloadMails()
+
+            Event.TravelSendersClicked -> emitEffect(Effect.OpenTravelSenders)
+
             Event.BackClicked -> emitEffect(Effect.NavigateBack)
         }
     }
@@ -105,9 +121,14 @@ internal class TripsViewModel(
     private fun load(isRefresh: Boolean) {
         if (state.value.isRefreshing) return
         updateState { it.copy(isRefreshing = isRefresh) }
+        loadedVersion = senders.version
 
         viewModelScope.launch {
-            val headers = mailSource.candidates(now() - TRIPS_SCAN_DAYS * DAY_MILLIS)
+            val headers = mailSource.candidates(
+                since = now() - TRIPS_SCAN_DAYS * DAY_MILLIS,
+                senderDomains = senders.listed().map { it.domain }.toSet(),
+                markedMessageIds = senders.markedMessageIds(),
+            )
             val reservations = headers.filter { it.isDownloaded }.flatMap { header -> reservationsIn(header) }
             val today = Instant.ofEpochMilli(now()).atZone(ZoneId.systemDefault()).toLocalDate()
 
@@ -129,7 +150,15 @@ internal class TripsViewModel(
      */
     @Suppress("ReturnCount")
     private suspend fun reservationsIn(header: TravelMailHeader): List<Reservation> {
-        cache.get(header.key)?.let { return it }
+        val address = header.senderAddress.orEmpty()
+        val hints = MailHints(
+            isListedSender = senders.isListedSender(address),
+            senderType = senders.typeOf(address),
+            isMarked = header.isMarked,
+        )
+        // What a mail reads as depends on its hints, which change as the reader edits the list.
+        val cacheKey = "${header.key}|$hints"
+        cache.get(cacheKey)?.let { return it }
 
         val content = mailSource.content(header.key) ?: return emptyList()
         val reservations = withContext(Dispatchers.Default) {
@@ -137,10 +166,19 @@ internal class TripsViewModel(
             val fromMarkup = html?.let { reservationsFromMarkup(it, header.key, header.date) }.orEmpty()
             fromMarkup.ifEmpty {
                 val text = content.text ?: html?.let { Jsoup.parse(it).wholeText() }.orEmpty()
-                listOfNotNull(reservationFromText(header.subject, header.senderName, text, header.key, header.date))
+                listOfNotNull(
+                    reservationFromText(
+                        subject = header.subject,
+                        senderName = header.senderName,
+                        text = text,
+                        mailKey = header.key,
+                        mailDate = header.date,
+                        hints = hints,
+                    ),
+                )
             }
         }
-        cache.put(header.key, reservations)
+        cache.put(cacheKey, reservations)
         return reservations
     }
 

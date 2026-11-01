@@ -33,6 +33,27 @@ private val BOOKING_SUBJECT_WORDS = listOf(
 private val BOOKING_CONDITION = containsAny("messages.subject", BOOKING_SUBJECT_WORDS)
 
 /**
+ * Words in a subject that say something about a trip, which is enough for mail from a travel sender: its reminders,
+ * receipts and welcome mail.
+ */
+private val TRIP_SUBJECT_WORDS = listOf(
+    "order", "receipt", "reminder", "upcoming", "welcome", "trip", "visit", "vacation", "document", "countdown",
+    "get ready", "your room", "your cabin", "your car", "your table",
+)
+
+private val TRIP_SUBJECT_CONDITION = containsAny("messages.subject", TRIP_SUBJECT_WORDS)
+
+/**
+ * A domain as the travel sender list holds it. Checked again here, as domains are written into the query.
+ */
+private val DOMAIN = Regex("^[a-z0-9-]+(?:\\.[a-z0-9-]+)+$")
+
+/**
+ * How many marked mails are looked for, each a query placeholder; SQLite takes 999 by default.
+ */
+private const val MAX_MARKED_IN_QUERY = 500
+
+/**
  * The largest HTML part read for booking markup; a confirmation is far smaller.
  */
 private const val MAX_HTML_SIZE = 512L * 1024
@@ -48,25 +69,53 @@ internal class LegacyTravelMailSource(
     private val messagingController: MessagingController,
 ) : TravelMailSource {
 
-    override suspend fun candidates(since: Long): List<TravelMailHeader> = withContext(Dispatchers.IO) {
-        headers(since, DOWNLOADED_CONDITION, isDownloaded = true) +
-            headers(since, NOT_DOWNLOADED_CONDITION, isDownloaded = false)
+    override suspend fun candidates(
+        since: Long,
+        senderDomains: Set<String>,
+        markedMessageIds: Set<String>,
+    ): List<TravelMailHeader> = withContext(Dispatchers.IO) {
+        val domains = senderDomains.filter { DOMAIN.matches(it) }
+        val marked = markedMessageIds.take(MAX_MARKED_IN_QUERY)
+
+        val senderCondition = domains.takeIf { it.isNotEmpty() }?.let {
+            val addressParts = domains.flatMap { domain -> listOf("@$domain", ".$domain") }
+            "(${containsAny("messages.sender_list", addressParts)} AND $TRIP_SUBJECT_CONDITION)"
+        }
+        val markedCondition = marked.takeIf { it.isNotEmpty() }?.let {
+            "messages.message_id IN (${marked.joinToString(",") { "?" }})"
+        }
+        val condition = listOfNotNull(BOOKING_CONDITION, senderCondition, markedCondition)
+            .joinToString(" OR ", prefix = "(", postfix = ")")
+        val conditionArgs = if (markedCondition != null) marked else emptyList()
+
+        val markedKeys = markedCondition?.let {
+            headers(since, it, marked).map { header -> header.reference.toKey() }.toSet()
+        }.orEmpty()
+
+        listOf(true, false).flatMap { isDownloaded ->
+            val downloadCondition = if (isDownloaded) DOWNLOADED_CONDITION else NOT_DOWNLOADED_CONDITION
+            headers(since, "$condition AND $downloadCondition", conditionArgs).map { header ->
+                val key = header.reference.toKey()
+                TravelMailHeader(
+                    key = key,
+                    date = header.date,
+                    senderName = header.senderName,
+                    senderAddress = header.senderAddress,
+                    subject = header.subject,
+                    isDownloaded = isDownloaded,
+                    isMarked = key in markedKeys,
+                )
+            }
+        }
     }
 
-    private fun headers(since: Long, downloadCondition: String, isDownloaded: Boolean) = storedMailHeaders(
+    private fun headers(since: Long, condition: String, conditionArgs: List<String>) = storedMailHeaders(
         accountManager = accountManager,
         messageStoreManager = messageStoreManager,
         since = since,
-        condition = "$BOOKING_CONDITION AND $downloadCondition",
-    ).map { header ->
-        TravelMailHeader(
-            key = header.reference.toKey(),
-            date = header.date,
-            senderName = header.senderName,
-            subject = header.subject,
-            isDownloaded = isDownloaded,
-        )
-    }
+        condition = condition,
+        conditionArgs = conditionArgs,
+    )
 
     override suspend fun content(key: String): TravelMailContent? = withContext(Dispatchers.IO) {
         val reference = messageReferenceOf(key) ?: return@withContext null

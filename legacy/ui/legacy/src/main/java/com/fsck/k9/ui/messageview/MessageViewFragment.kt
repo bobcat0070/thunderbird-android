@@ -509,6 +509,8 @@ class MessageViewFragment :
         )
         menu.findItem(R.id.unsubscribe).isVisible = canMessageBeUnsubscribed()
         menu.findItem(R.id.classify).isVisible = senderAddress() != null
+        menu.findItem(R.id.trip_mail).isVisible = generalSettingsManager.getConfig().interaction.isTripsEnabled &&
+            (message?.messageId != null || senderAddress() != null)
         menu.findItem(R.id.all_mail_from_sender).isVisible = senderAddress() != null
         menu.findItem(R.id.server_categories).isVisible = canEditServerCategories
         menu.findItem(R.id.show_headers).isVisible = true
@@ -552,6 +554,7 @@ class MessageViewFragment :
             R.id.move_to_drafts -> onMoveToDrafts()
             R.id.unsubscribe -> onUnsubscribe()
             R.id.classify -> onClassify()
+            R.id.trip_mail -> onTripMail()
             R.id.all_mail_from_sender -> onShowAllMailFromSender()
             R.id.server_categories -> onServerCategories()
             R.id.show_headers -> onShowHeaders()
@@ -616,6 +619,11 @@ class MessageViewFragment :
 
         ClassifyMessageDialogFragment.create(senderAddress)
             .show(parentFragmentManager, "classify_message")
+    }
+
+    private fun onTripMail() {
+        TripMailDialogFragment.create(messageId = message?.messageId, senderAddress = senderAddress())
+            .show(parentFragmentManager, "trip_mail")
     }
 
     /**

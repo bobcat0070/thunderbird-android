@@ -18,6 +18,18 @@ sealed interface TripsRoute : Route {
 
         const val BASE_PATH = "$TRIPS_BASE_DEEP_LINK/list"
     }
+
+    /**
+     * The senders whose mail Trips reads for bookings, to add to or remove from.
+     */
+    @Serializable
+    data object TravelSenders : TripsRoute {
+        override val basePath: String = BASE_PATH
+
+        override fun route(): String = basePath
+
+        const val BASE_PATH = "$TRIPS_BASE_DEEP_LINK/travel_senders"
+    }
 }
 
 interface TripsNavigation : Navigation<TripsRoute>

@@ -57,6 +57,7 @@ private val DAY_FORMAT: DateTimeFormatter = DateTimeFormatter.ofPattern("EEE")
 @Composable
 internal fun TripsScreen(
     onBack: () -> Unit,
+    onOpenTravelSenders: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: ViewModel = koinViewModel<TripsViewModel>(),
 ) {
@@ -65,6 +66,8 @@ internal fun TripsScreen(
     val (state, dispatch) = viewModel.observe { effect ->
         when (effect) {
             Effect.NavigateBack -> onBack()
+
+            Effect.OpenTravelSenders -> onOpenTravelSenders()
 
             is Effect.OpenCalendar -> openCalendar(context, effect.reservation)
 
@@ -89,6 +92,13 @@ internal fun TripsScreen(
             TopAppBarWithBackButton(
                 title = stringResource(R.string.trips_title),
                 onBackClick = { dispatch(Event.BackClicked) },
+                actions = {
+                    ButtonIcon(
+                        onClick = { dispatch(Event.TravelSendersClicked) },
+                        imageVector = Icons.Outlined.Settings,
+                        contentDescription = stringResource(R.string.trips_travel_senders_title),
+                    )
+                },
             )
         },
         modifier = modifier,

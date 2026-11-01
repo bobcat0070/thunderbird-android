@@ -12,13 +12,33 @@
     <string name="trips_no_calendar">No calendar app on this device can add events</string>
     <!-- Above the list, when some booking-looking mail is known only by its envelope, as Microsoft 365 mail is until it is opened -->
     <plurals name="trips_mails_not_downloaded">
-        <item quantity="one"><xliff:g id="count">%d</xliff:g> booking mail hasn\'t been downloaded, so it isn\'t read.</item>
-        <item quantity="other"><xliff:g id="count">%d</xliff:g> booking mails haven\'t been downloaded, so they aren\'t read.</item>
+        <item quantity="one"><xliff:g id="count">%d</xliff:g> mail that may be a booking hasn\'t been downloaded, so it isn\'t read yet.</item>
+        <item quantity="other"><xliff:g id="count">%d</xliff:g> mails that may be bookings haven\'t been downloaded, so they aren\'t read yet.</item>
     </plurals>
     <plurals name="trips_download_mails">
         <item quantity="one">Download <xliff:g id="count">%d</xliff:g> mail</item>
         <item quantity="other">Download <xliff:g id="count">%d</xliff:g> mails</item>
     </plurals>
+    <string name="trips_travel_senders_title">Travel senders</string>
+    <string name="trips_travel_senders_intro">Trips reads mail from these senders for bookings, including reminders and receipts whose subject doesn\'t say \"confirmation\". To add a sender or a single mail, open the mail and choose Trip mail from its menu.</string>
+    <!-- How many single mails the reader marked as trip mail from the message view -->
+    <plurals name="trips_travel_senders_marked_mail">
+        <item quantity="one"><xliff:g id="count">%d</xliff:g> mail marked as trip mail.</item>
+        <item quantity="other"><xliff:g id="count">%d</xliff:g> mails marked as trip mail.</item>
+    </plurals>
+    <string name="trips_travel_senders_domain">Domain, such as expedia.com</string>
+    <string name="trips_travel_senders_add">Add</string>
+    <string name="trips_travel_senders_not_a_domain">That isn\'t a domain name</string>
+    <!-- Shown under a sender the reader added, rather than one the app lists -->
+    <string name="trips_travel_senders_added">Added by you</string>
+    <!-- Content description of the button that removes a sender from the list. Example: "Remove expedia.com" -->
+    <string name="trips_travel_senders_remove">Remove <xliff:g id="domain">%s</xliff:g></string>
+    <string name="trips_kind_flights">Flights</string>
+    <string name="trips_kind_stays">Stays</string>
+    <string name="trips_kind_car_rentals">Car rentals</string>
+    <string name="trips_kind_restaurants">Restaurants</string>
+    <string name="trips_kind_events">Events</string>
+    <string name="trips_kind_cruises">Cruises</string>
     <string name="trips_downloading">Downloading <xliff:g id="done">%1$d</xliff:g> of <xliff:g id="total">%2$d</xliff:g></string>
     <plurals name="trips_downloaded">
         <item quantity="one"><xliff:g id="count">%d</xliff:g> mail downloaded</item>
