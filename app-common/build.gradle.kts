@@ -58,6 +58,8 @@ dependencies {
     implementation(projects.feature.impersonation.internal)
     implementation(projects.feature.newsletter.api)
     implementation(projects.feature.newsletter.internal)
+    implementation(projects.feature.attachments.api)
+    implementation(projects.feature.attachments.internal)
     implementation(projects.feature.mail.message.classification.api)
     implementation(projects.feature.widget.messageList)
 

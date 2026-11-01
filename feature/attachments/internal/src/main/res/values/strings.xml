@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+    <!-- Title of the screen listing every file one sender sent -->
+    <string name="attachments_sender_title">Attachments</string>
+    <!-- Above the list: whose files are listed. Example: "From alice@example.com" -->
+    <string name="attachments_sender_subtitle">From <xliff:g id="sender">%s</xliff:g></string>
+    <string name="attachments_sender_empty">No attachments from this sender.</string>
+    <!-- A file's size and when its message was sent, under its name. Example: "1.2 MB · Mar 3" -->
+    <string name="attachments_size_and_date"><xliff:g id="size">%1$s</xliff:g> · <xliff:g id="date">%2$s</xliff:g></string>
+    <!-- Content description of the button that opens the message a file came with -->
+    <string name="attachments_show_message">Open message</string>
+    <string name="attachments_opening">Opening…</string>
+    <!-- Above the list, when some of the sender's mail is known only by its envelope, as Microsoft 365 mail is until it is opened -->
+    <plurals name="attachments_messages_not_downloaded">
+        <item quantity="one"><xliff:g id="count">%d</xliff:g> message from this sender hasn\'t been downloaded, so any files in it aren\'t listed.</item>
+        <item quantity="other"><xliff:g id="count">%d</xliff:g> messages from this sender haven\'t been downloaded, so any files in them aren\'t listed.</item>
+    </plurals>
+    <!-- Button that downloads up to 25 of those messages -->
+    <plurals name="attachments_download_messages">
+        <item quantity="one">Download <xliff:g id="count">%d</xliff:g> message</item>
+        <item quantity="other">Download <xliff:g id="count">%d</xliff:g> messages</item>
+    </plurals>
+    <!-- While downloading. Example: "Downloading 3 of 25" -->
+    <string name="attachments_downloading">Downloading <xliff:g id="done">%1$d</xliff:g> of <xliff:g id="total">%2$d</xliff:g></string>
+    <plurals name="attachments_downloaded">
+        <item quantity="one"><xliff:g id="count">%d</xliff:g> message downloaded</item>
+        <item quantity="other"><xliff:g id="count">%d</xliff:g> messages downloaded</item>
+    </plurals>
+    <string name="attachments_no_viewer">No app on this device can open this file</string>
+    <string name="attachments_open_failed">The file could not be opened</string>
+</resources>

@@ -200,6 +200,11 @@ include(
 )
 
 include(
+    ":feature:attachments:api",
+    ":feature:attachments:internal",
+)
+
+include(
     ":feature:newsletter:api",
     ":feature:newsletter:internal",
 )

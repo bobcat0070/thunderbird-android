@@ -704,6 +704,8 @@
     <string name="account_settings_folders">Folders</string>
     <string name="account_settings_spam_digest">Spam</string>
     <string name="all_mail_from_sender_action">All mail from this sender</string>
+    <!-- Menu item in the list of all mail from one sender, opening the list of every file they sent -->
+    <string name="sender_attachments_action">Attachments</string>
     <string name="sender_archive_all_action">Archive all</string>
     <string name="manage_newsletters_action">Manage newsletters</string>
     <string name="sender_delete_all_action">Delete all</string>

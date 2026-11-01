@@ -23,6 +23,7 @@ dependencies {
 
     implementation(projects.feature.funding.api)
     implementation(projects.feature.newsletter.api)
+    implementation(projects.feature.attachments.api)
     implementation(projects.feature.debugSettings)
 
     implementation(libs.androidx.activity.compose)

@@ -5,6 +5,7 @@ import app.k9mail.feature.launcher.di.featureLauncherModule
 import com.fsck.k9.preferences.ExternalGlobalSettings
 import com.fsck.k9.preferences.FolderPinSettings
 import net.thunderbird.app.common.feature.account.appCommonFeatureAccountModule
+import net.thunderbird.app.common.feature.attachments.appCommonFeatureAttachmentsModule
 import net.thunderbird.app.common.feature.blocklist.appCommonFeatureBlocklistModule
 import net.thunderbird.app.common.feature.mail.appCommonFeatureMailModule
 import net.thunderbird.app.common.feature.newsletter.appCommonFeatureNewsletterModule
@@ -29,6 +30,7 @@ internal val appCommonFeatureModule = module {
     includes(featureThundermailCommonModule)
     includes(appCommonFeatureSpamDigestModule)
     includes(appCommonFeatureNewsletterModule)
+    includes(appCommonFeatureAttachmentsModule)
     includes(appCommonFeatureBlocklistModule)
 
     factory<FeatureLauncherExternalContract.MessageListLauncher> {

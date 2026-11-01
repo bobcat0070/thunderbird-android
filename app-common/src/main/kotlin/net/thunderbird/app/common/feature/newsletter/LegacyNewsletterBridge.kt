@@ -29,8 +29,8 @@ import net.thunderbird.feature.search.legacy.createSenderSearch
  * What the stored address list puts between an address and its display name; see
  * [net.thunderbird.feature.search.legacy.api.MessageSearchField.SENDER_ADDRESS].
  */
-private const val NAME_SEPARATOR = ";\u0001"
-private const val SENDER_ADDRESS_CONDITION = "instr(lower(messages.sender_list) || ';' || char(1), ?) = 1"
+internal const val NAME_SEPARATOR = ";\u0001"
+internal const val SENDER_ADDRESS_CONDITION = "instr(lower(messages.sender_list) || ';' || char(1), ?) = 1"
 
 /**
  * One stored message, as much of it as the newsletter screen needs.

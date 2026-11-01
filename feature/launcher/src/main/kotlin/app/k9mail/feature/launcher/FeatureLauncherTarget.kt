@@ -9,6 +9,7 @@ import app.k9mail.feature.onboarding.main.navigation.OnboardingRoute
 import net.thunderbird.core.featureflag.navigation.RemoteFeatureFlagRoute
 import net.thunderbird.feature.account.AccountId
 import net.thunderbird.feature.account.settings.api.AccountSettingsRoute
+import net.thunderbird.feature.attachments.AttachmentsRoute
 import net.thunderbird.feature.debug.settings.navigation.SecretDebugSettingsRoute
 import net.thunderbird.feature.funding.api.FundingRoute
 import net.thunderbird.feature.navigation.changelog.api.ChangeLogMode
@@ -73,6 +74,10 @@ sealed class FeatureLauncherTarget(
 
     data object Newsletters : FeatureLauncherTarget(
         deepLinkUri = NewsletterRoute.Senders.route().toUri(),
+    )
+
+    data class SenderAttachments(val address: String) : FeatureLauncherTarget(
+        deepLinkUri = AttachmentsRoute.Sender(address).route().toUri(),
     )
 
     data class Changelog(val changeLogMode: ChangeLogMode) : FeatureLauncherTarget(

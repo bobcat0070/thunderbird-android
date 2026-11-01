@@ -1402,6 +1402,7 @@ class LegacyMessageListFragment :
         menu.findItem(R.id.search_remote).isVisible = isRemoteSearchAllowed
         menu.findItem(R.id.search_everywhere).isVisible = isManualSearch && !localSearch.searchAllAccounts()
         val hasSenderMail = senderAddress != null && !currentMessageListItems.isNullOrEmpty()
+        menu.findItem(R.id.sender_attachments).isVisible = senderAddress != null
         menu.findItem(R.id.sender_archive_all).isVisible = hasSenderMail
         menu.findItem(R.id.sender_delete_all).isVisible = hasSenderMail
         menu.findItem(R.id.sender_unsubscribe).isVisible = hasSenderMail
@@ -1516,6 +1517,12 @@ class LegacyMessageListFragment :
             R.id.expunge -> onExpunge()
             R.id.search_everywhere -> onSearchEverywhere()
             R.id.pin_folder -> onTogglePin()
+            R.id.sender_attachments -> senderAddress?.let { address ->
+                FeatureLauncherActivity.launch(
+                    context = requireContext(),
+                    target = FeatureLauncherTarget.SenderAttachments(address),
+                )
+            }
             R.id.sender_archive_all -> confirmSenderBulkAction(archive = true)
             R.id.sender_delete_all -> confirmSenderBulkAction(archive = false)
             R.id.sender_unsubscribe -> onUnsubscribeFromSender()

@@ -105,6 +105,12 @@
         />
 
     <item
+        android:id="@+id/sender_attachments"
+        android:title="@string/sender_attachments_action"
+        app:showAsAction="never"
+        />
+
+    <item
         android:id="@+id/sender_archive_all"
         android:title="@string/sender_archive_all_action"
         app:showAsAction="never"
