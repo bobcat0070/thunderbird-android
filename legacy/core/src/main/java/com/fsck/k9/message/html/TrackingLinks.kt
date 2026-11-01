@@ -149,12 +149,12 @@ fun stripTracking(url: String): StrippedLink? {
  * @return the tracking service's host, or `null` when [url] does not look like one.
  */
 fun clickTrackerHost(url: String): String? {
-    val canonical = canonicalWebLink(url) ?: return null
-    val host = hostOf(canonical) ?: return null
+    val host = hostOf(url) ?: return null
     val labels = host.split('.')
     val isKnownService = labels.indices.any { start -> labels.drop(start).joinToString(".") in CLICK_TRACKING_DOMAINS }
     val isTrackingSubdomain = labels.size > 2 && labels.first() in CLICK_TRACKING_LABELS
-    val path = PATH.find(canonical)?.groupValues?.get(1).orEmpty()
+    // Read from the link as a browser reads it, as hostOf reads the host.
+    val path = PATH.find(canonicalWebLink(url).orEmpty())?.groupValues?.get(1).orEmpty()
     val isSubstackRedirect = host.endsWith("substack.com") && path.startsWith("/redirect/")
     val isTrackingPath = CLICK_TRACKING_PATH.containsMatchIn(path)
 
