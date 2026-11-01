@@ -253,9 +253,11 @@ private val DOCTYPE = Regex("""<!\s*(?:DOCTYPE|ENTITY)""", RegexOption.IGNORE_CA
  * checks below do not read in - UTF-7 writes `<image` as `+ADw-image` - would be checked as one text and
  * rendered as another.
  */
-private val DECLARED_ENCODING = Regex("""^﻿?\s*<\?xml[^>]*?\bencoding\s*=\s*["']([^"']*)["']""")
+private val DECLARED_ENCODING = Regex("""^\uFEFF?\s*<\?xml[^>]*?\bencoding\s*=\s*["']([^"']*)["']""")
 
 private val UTF8_NAMES = setOf("utf-8", "utf8", "us-ascii", "ascii")
+
+private val NUL = Char(0)
 
 /**
  * @return whether [svg] is safe to hand to the renderer.
@@ -266,12 +268,13 @@ private val UTF8_NAMES = setOf("utf-8", "utf8", "us-ascii", "ascii")
  */
 internal fun isSafeMark(svg: ByteArray): Boolean {
     val text = strictUtf8(svg) ?: return false
-    if ('\u0000' in text) return false
-
     val encoding = DECLARED_ENCODING.find(text)?.groupValues?.get(1)?.trim()?.lowercase()
-    if (encoding != null && encoding !in UTF8_NAMES) return false
 
-    return !IMAGE_ELEMENT.containsMatchIn(text) && !DOCTYPE.containsMatchIn(text)
+    // A NUL is how UTF-16 and UTF-32 without a byte order mark get through as valid UTF-8.
+    return NUL !in text &&
+        (encoding == null || encoding in UTF8_NAMES) &&
+        !IMAGE_ELEMENT.containsMatchIn(text) &&
+        !DOCTYPE.containsMatchIn(text)
 }
 
 /**

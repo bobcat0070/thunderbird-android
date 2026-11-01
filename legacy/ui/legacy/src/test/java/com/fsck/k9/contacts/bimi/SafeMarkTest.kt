@@ -77,7 +77,7 @@ class SafeMarkTest {
         val svg = """<?xml version="1.0" encoding="utf-8"?><svg xmlns="http://www.w3.org/2000/svg"><rect/></svg>"""
 
         assertThat(isSafeMark(svg.toByteArray())).isTrue()
-        assertThat(isSafeMark("﻿$svg".toByteArray())).isTrue()
+        assertThat(isSafeMark("\uFEFF$svg".toByteArray())).isTrue()
     }
 
     private companion object {
