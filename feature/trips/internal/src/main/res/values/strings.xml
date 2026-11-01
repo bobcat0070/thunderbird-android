@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+    <string name="trips_title">Trips</string>
+    <string name="trips_empty">No upcoming trips. Flights, stays, car rentals, restaurant bookings, tickets and cruises confirmed in your mail over the last year show up here.</string>
+    <!-- Heading of a trip whose bookings name no place -->
+    <string name="trips_untitled">Trip</string>
+    <!-- A booking's confirmation number. Example: "Confirmation RXJ34P" -->
+    <string name="trips_confirmation">Confirmation <xliff:g id="code">%s</xliff:g></string>
+    <!-- Introduces the confirmation number in a calendar event's description -->
+    <string name="trips_confirmation_label">Confirmation:</string>
+    <string name="trips_from_text">Read from the mail\'s text; check the details in the mail.</string>
+    <string name="trips_add_to_calendar">Add to calendar</string>
+    <string name="trips_open_mail">Open mail</string>
+    <string name="trips_no_calendar">No calendar app on this device can add events</string>
+    <!-- Above the list, when some booking-looking mail is known only by its envelope, as Microsoft 365 mail is until it is opened -->
+    <plurals name="trips_mails_not_downloaded">
+        <item quantity="one"><xliff:g id="count">%d</xliff:g> booking mail hasn\'t been downloaded, so it isn\'t read.</item>
+        <item quantity="other"><xliff:g id="count">%d</xliff:g> booking mails haven\'t been downloaded, so they aren\'t read.</item>
+    </plurals>
+    <plurals name="trips_download_mails">
+        <item quantity="one">Download <xliff:g id="count">%d</xliff:g> mail</item>
+        <item quantity="other">Download <xliff:g id="count">%d</xliff:g> mails</item>
+    </plurals>
+    <string name="trips_downloading">Downloading <xliff:g id="done">%1$d</xliff:g> of <xliff:g id="total">%2$d</xliff:g></string>
+    <plurals name="trips_downloaded">
+        <item quantity="one"><xliff:g id="count">%d</xliff:g> mail downloaded</item>
+        <item quantity="other"><xliff:g id="count">%d</xliff:g> mails downloaded</item>
+    </plurals>
+</resources>
