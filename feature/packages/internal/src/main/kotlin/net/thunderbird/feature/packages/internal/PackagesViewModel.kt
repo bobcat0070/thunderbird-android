@@ -23,11 +23,6 @@ import net.thunderbird.feature.packages.internal.carrier.LiveTracker
  */
 internal const val SCAN_WINDOW_DAYS = 45
 
-/**
- * How many not yet downloaded mails one tap on Download fetches.
- */
-internal const val DOWNLOAD_BATCH_SIZE = 25
-
 private const val DAY_MILLIS = 24 * 60 * 60 * 1000L
 
 /**
@@ -136,7 +131,7 @@ internal class PackagesViewModel(
         updateState { it.copy(download = DownloadProgress(done = 0, total = 0)) }
 
         viewModelScope.launch {
-            val count = mailSource.downloadMails(since(), DOWNLOAD_BATCH_SIZE) { done, total ->
+            val count = mailSource.downloadMails(since()) { done, total ->
                 updateState { it.copy(download = DownloadProgress(done, total)) }
             }
             emitEffect(Effect.ShowNotice(Notice.Downloaded(count)))

@@ -183,7 +183,6 @@ private fun NotDownloadedNotice(
     onEvent: (Event) -> Unit,
 ) {
     val count = state.mailsNotDownloaded
-    val batch = minOf(count, DOWNLOAD_BATCH_SIZE)
     val download = state.download
 
     Column(
@@ -196,7 +195,7 @@ private fun NotDownloadedNotice(
             text = if (download != null && download.total > 0) {
                 stringResource(R.string.packages_downloading, download.done, download.total)
             } else {
-                pluralStringResource(R.plurals.packages_download_mails, batch, batch)
+                pluralStringResource(R.plurals.packages_download_mails, count, count)
             },
             onClick = { onEvent(Event.DownloadMailsClicked) },
             enabled = download == null,

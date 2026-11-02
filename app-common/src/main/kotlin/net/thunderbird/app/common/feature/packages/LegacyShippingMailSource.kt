@@ -108,10 +108,9 @@ internal class LegacyShippingMailSource(
 
     override suspend fun downloadMails(
         since: Long,
-        limit: Int,
         onProgress: (done: Int, total: Int) -> Unit,
     ): Int {
-        val headers = withContext(Dispatchers.IO) { headers(since, NOT_DOWNLOADED_CONDITION).take(limit) }
+        val headers = withContext(Dispatchers.IO) { headers(since, NOT_DOWNLOADED_CONDITION) }
         var downloaded = 0
         headers.forEachIndexed { index, header ->
             if (downloadStoredMessage(messagingController, header.reference)) downloaded++

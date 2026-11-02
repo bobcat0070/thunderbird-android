@@ -24,11 +24,6 @@ import org.jsoup.Jsoup
  */
 internal const val TRIPS_SCAN_DAYS = 365
 
-/**
- * How many not yet downloaded mails one tap on Download fetches.
- */
-internal const val TRIPS_DOWNLOAD_BATCH_SIZE = 25
-
 private const val DAY_MILLIS = 24 * 60 * 60 * 1000L
 
 internal interface TripsContract {
@@ -184,7 +179,7 @@ internal class TripsViewModel(
 
     private fun downloadMails() {
         if (state.value.download != null) return
-        val keys = state.value.notDownloaded.take(TRIPS_DOWNLOAD_BATCH_SIZE)
+        val keys = state.value.notDownloaded
         if (keys.isEmpty()) return
         updateState { it.copy(download = DownloadProgress(done = 0, total = keys.size)) }
 

@@ -129,7 +129,7 @@ class PackagesViewModelTest {
 
         override suspend fun shippingMails(since: Long) = mails
         override suspend fun notDownloadedCount(since: Long) = 0
-        override suspend fun downloadMails(since: Long, limit: Int, onProgress: (Int, Int) -> Unit) = 0
+        override suspend fun downloadMails(since: Long, onProgress: (Int, Int) -> Unit) = 0
 
         override fun openMail(key: String) {
             calls += "open $key"

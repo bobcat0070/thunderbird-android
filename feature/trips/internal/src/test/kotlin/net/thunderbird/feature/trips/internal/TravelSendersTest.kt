@@ -3,6 +3,7 @@ package net.thunderbird.feature.trips.internal
 import app.cash.turbine.test
 import assertk.assertThat
 import assertk.assertions.containsExactly
+import assertk.assertions.isEmpty
 import assertk.assertions.isEqualTo
 import assertk.assertions.isNull
 import assertk.assertions.single
@@ -123,6 +124,28 @@ class TravelSendersTest {
     }
 
     @Test
+    fun `download should fetch every mail that has not been downloaded, newest first`() = runTest {
+        val notDownloaded = (1..40).map { minute ->
+            TravelMailHeader(
+                key = "m$minute",
+                date = NOW - minute * 60_000L,
+                senderName = null,
+                senderAddress = null,
+                subject = "Booking confirmation",
+                isDownloaded = false,
+            )
+        }
+        val mailSource = FakeTravelMailSource(header = null, content = null, notDownloaded = notDownloaded.shuffled())
+        val testSubject = TripsViewModel(mailSource, ReservationCache(), senders, clock)
+        testSubject.event(TripsContract.Event.LoadTrips)
+
+        testSubject.event(TripsContract.Event.DownloadMailsClicked)
+
+        assertThat(mailSource.downloadedKeys).isEqualTo(notDownloaded.map { it.key })
+        assertThat(testSubject.state.value.notDownloaded).isEmpty()
+    }
+
+    @Test
     fun `trips should be read again when the sender list has changed`() {
         val mailSource = FakeTravelMailSource(header = null, content = null)
         val testSubject = TripsViewModel(mailSource, ReservationCache(), senders, clock)
@@ -173,10 +196,12 @@ private class FakeTravelSenderStore : TravelSenderStore {
 private class FakeTravelMailSource(
     private val header: TravelMailHeader?,
     private val content: TravelMailContent?,
+    private val notDownloaded: List<TravelMailHeader> = emptyList(),
 ) : TravelMailSource {
     var calls = 0
     var senderDomains: Set<String> = emptySet()
     var markedMessageIds: Set<String> = emptySet()
+    var downloadedKeys: List<String> = emptyList()
 
     override suspend fun candidates(
         since: Long,
@@ -186,12 +211,15 @@ private class FakeTravelMailSource(
         calls++
         this.senderDomains = senderDomains
         this.markedMessageIds = markedMessageIds
-        return listOfNotNull(header)
+        return listOfNotNull(header) + notDownloaded.filterNot { it.key in downloadedKeys }
     }
 
     override suspend fun content(key: String): TravelMailContent? = content
 
-    override suspend fun download(keys: List<String>, onProgress: (done: Int, total: Int) -> Unit): Int = 0
+    override suspend fun download(keys: List<String>, onProgress: (done: Int, total: Int) -> Unit): Int {
+        downloadedKeys = keys
+        return keys.size
+    }
 
     override fun openMail(key: String) = Unit
 }

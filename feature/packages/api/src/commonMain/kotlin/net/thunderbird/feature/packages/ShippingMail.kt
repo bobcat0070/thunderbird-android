@@ -55,11 +55,11 @@ interface ShippingMailSource {
     suspend fun notDownloadedCount(since: Long): Int
 
     /**
-     * Downloads the newest [limit] of those mails so their tracking numbers can be read.
+     * Downloads those mails, newest first, so their tracking numbers can be read.
      *
      * @return how many were downloaded.
      */
-    suspend fun downloadMails(since: Long, limit: Int, onProgress: (done: Int, total: Int) -> Unit): Int
+    suspend fun downloadMails(since: Long, onProgress: (done: Int, total: Int) -> Unit): Int
 
     fun openMail(key: String)
 
