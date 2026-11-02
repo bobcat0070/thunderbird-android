@@ -12,6 +12,7 @@ import net.thunderbird.backend.graph.api.serverCategories
 import net.thunderbird.backend.graph.api.setServerImportance
 import net.thunderbird.backend.graph.api.setServerRelevance
 import net.thunderbird.backend.graph.api.toEnvelopeMessage
+import net.thunderbird.core.common.mail.Flag
 
 /**
  * Downloads message content from Microsoft Graph.
@@ -50,7 +51,15 @@ internal class CommandDownloadMessage(
         // the moment it was opened.
         serverState.receivedDate()?.let { message.internalDate = it }
 
-        backendStorage.getFolder(folderServerId).saveMessage(message, MessageDownloadState.FULL)
+        // Nor any flags, and saving it without them would mark the message unread and take away its star and
+        // arrows. The stored message's are kept: they include what the reader did here that the mailbox has not
+        // been told yet.
+        val backendFolder = backendStorage.getFolder(folderServerId)
+        if (backendFolder.isMessagePresent(messageServerId)) {
+            message.setFlags(backendFolder.getMessageFlags(messageServerId) - Flag.X_DOWNLOADED_PARTIAL, true)
+        }
+
+        backendFolder.saveMessage(message, MessageDownloadState.FULL)
     }
 
     /**

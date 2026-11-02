@@ -3,6 +3,7 @@ package net.thunderbird.backend.graph.command
 import app.k9mail.backend.testing.InMemoryBackendStorage
 import assertk.assertThat
 import assertk.assertions.contains
+import assertk.assertions.containsAll
 import assertk.assertions.isEqualTo
 import assertk.assertions.isNotNull
 import com.fsck.k9.backend.api.BackendFolder
@@ -85,6 +86,25 @@ class CommandDownloadMessageTest {
         testSubject.downloadCompleteMessage(FOLDER_ID, "m1")
 
         assertThat(savedMessages.single().importance).isEqualTo(MessageImportance.HIGH)
+    }
+
+    @Test
+    fun `a downloaded message should stay read, starred and replied to`() = runTest {
+        createFolder()
+        val testSubject = createTestSubject()
+        server.enqueue(MockResponse().setBody(RAW_MIME))
+        val folder = backendStorage.getFolder(FOLDER_ID)
+        folder.saveMessage(testSubject.fetchFullMessage("m1"), MessageDownloadState.ENVELOPE)
+        folder.setMessageFlag("m1", Flag.SEEN, true)
+        folder.setMessageFlag("m1", Flag.FLAGGED, true)
+        folder.setMessageFlag("m1", Flag.ANSWERED, true)
+        server.enqueue(MockResponse().setBody(RAW_MIME))
+        server.enqueue(MockResponse().setBody("""{"id":"m1"}"""))
+
+        testSubject.downloadCompleteMessage(FOLDER_ID, "m1")
+
+        assertThat(folder.getMessageFlags("m1"))
+            .containsAll(Flag.SEEN, Flag.FLAGGED, Flag.ANSWERED, Flag.X_DOWNLOADED_FULL)
     }
 
     @Test
