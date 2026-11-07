@@ -29,7 +29,6 @@ class FolderSettingsProvider(
     // A pinned folder is worth exporting even when every other setting is at its default.
     private fun FolderSettings.containsOnlyDefaultValues(): Boolean {
         return isInTopGroup == getDefaultValue("inTopGroup") &&
-            isIntegrate == getDefaultValue("integrate") &&
             isSyncEnabled == getDefaultValue("syncEnabled") &&
             isVisible == getDefaultValue("visible") &&
             isNotificationsEnabled == getDefaultValue("notificationsEnabled") &&
@@ -50,7 +49,6 @@ class FolderSettingsProvider(
         return FolderSettings(
             folder.serverId,
             isInTopGroup,
-            isIntegrate,
             isSyncEnabled,
             isVisible,
             isNotificationsEnabled,
@@ -66,7 +64,6 @@ class FolderSettingsProvider(
 data class FolderSettings(
     val serverId: String,
     val isInTopGroup: Boolean,
-    val isIntegrate: Boolean,
     val isSyncEnabled: Boolean,
     val isVisible: Boolean,
     val isNotificationsEnabled: Boolean,

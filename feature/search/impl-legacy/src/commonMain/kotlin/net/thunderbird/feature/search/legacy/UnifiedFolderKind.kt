@@ -1,7 +1,6 @@
 package net.thunderbird.feature.search.legacy
 
-import net.thunderbird.feature.account.UnifiedAccountId
-import net.thunderbird.feature.mail.folder.FolderType
+import net.thunderbird.feature.mail.folder.FolderRole
 import net.thunderbird.feature.search.legacy.SearchConditionTreeNode.Operator
 import net.thunderbird.feature.search.legacy.api.MessageSearchField
 import net.thunderbird.feature.search.legacy.api.SearchAttribute
@@ -15,15 +14,15 @@ import net.thunderbird.feature.search.legacy.api.SearchCondition
  * @param searchId identifies the unified folder in views that need a string, such as the drawer's folder list and
  *   per-view settings. The inbox keeps "unified_folders", the id it has always had there. A search itself carries
  *   its unified folder in [LocalMessageSearch.type]; see [fromSearch].
- * @param folderType the special folder this shows from each account.
+ * @param role the special folder this shows from each account.
  */
-enum class UnifiedFolderKind(val searchId: String, val folderType: FolderType) {
-    INBOX("unified_folders", FolderType.INBOX),
-    DRAFTS("unified_drafts", FolderType.DRAFTS),
-    SENT("unified_sent", FolderType.SENT),
-    ARCHIVE("unified_archive", FolderType.ARCHIVE),
-    SPAM("unified_spam", FolderType.SPAM),
-    TRASH("unified_trash", FolderType.TRASH),
+enum class UnifiedFolderKind(val searchId: String, val role: FolderRole) {
+    INBOX("unified_folders", FolderRole.INBOX),
+    DRAFTS("unified_drafts", FolderRole.DRAFTS),
+    SENT("unified_sent", FolderRole.SENT),
+    ARCHIVE("unified_archive", FolderRole.ARCHIVE),
+    SPAM("unified_spam", FolderRole.SPAM),
+    TRASH("unified_trash", FolderRole.TRASH),
     ;
 
     companion object {
@@ -38,7 +37,7 @@ enum class UnifiedFolderKind(val searchId: String, val folderType: FolderType) {
         fun fromSearch(search: LocalMessageSearch): UnifiedFolderKind? {
             val selection = (search.type as? LocalMessageSearchType.Unified)?.folder as? UnifiedFolderSelection.Special
                 ?: return null
-            return entries.firstOrNull { it.folderType == selection.folderType }
+            return entries.firstOrNull { it.role == selection.role }
         }
     }
 }
@@ -46,21 +45,10 @@ enum class UnifiedFolderKind(val searchId: String, val folderType: FolderType) {
 /**
  * @return a search showing [kind] across every account.
  *
- * The inbox is selected by the folders' `integrate` flag, which the user controls per folder. Every other kind is
- * selected by role, because which folder is an account's Sent folder is an account setting - chosen by the user or
- * by name on servers that do not mark their special folders - and not something a folder records about itself.
+ * Each account's folder of that role is resolved when the search runs; see [LocalMessageSearch.conditionsForAccount].
  */
-fun createUnifiedFolderSearch(kind: UnifiedFolderKind): LocalMessageSearch {
-    return LocalMessageSearch().apply {
-        id = UnifiedAccountId
-        type = LocalMessageSearchType.Unified(UnifiedFolderSelection.Special(kind.folderType))
-        if (kind == UnifiedFolderKind.INBOX) {
-            and(MessageSearchField.INTEGRATE, "1", SearchAttribute.EQUALS)
-        } else {
-            and(MessageSearchField.SPECIAL_FOLDER, kind.name, SearchAttribute.EQUALS)
-        }
-    }
-}
+fun createUnifiedFolderSearch(kind: UnifiedFolderKind): LocalMessageSearch =
+    LocalMessageSearch.createUnifiedSearch(kind.role)
 
 /**
  * The id no folder has, for an account without a folder of the kind asked for. Its mail is left out rather than

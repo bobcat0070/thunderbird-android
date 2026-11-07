@@ -4,12 +4,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import net.thunderbird.core.ui.contract.mvi.observe
 import net.thunderbird.feature.account.AccountId
+import net.thunderbird.feature.mail.folder.FolderRole
 import net.thunderbird.feature.navigation.drawer.api.NavigationDrawerExternalContract.DrawerShortcut
 import net.thunderbird.feature.navigation.drawer.dropdown.FolderDrawerState
 import net.thunderbird.feature.navigation.drawer.dropdown.ui.DrawerContract.Effect
 import net.thunderbird.feature.navigation.drawer.dropdown.ui.DrawerContract.Event
 import net.thunderbird.feature.navigation.drawer.dropdown.ui.DrawerContract.ViewModel
-import net.thunderbird.feature.search.legacy.UnifiedFolderKind
 import org.koin.compose.viewmodel.koinViewModel
 
 @Suppress("LongParameterList")
@@ -18,7 +18,7 @@ internal fun DrawerView(
     drawerState: FolderDrawerState,
     openAccount: (accountId: AccountId) -> Unit,
     openFolder: (accountId: AccountId, folderId: Long) -> Unit,
-    openUnifiedFolder: (UnifiedFolderKind) -> Unit,
+    openUnifiedFolder: (role: FolderRole) -> Unit,
     openSettings: () -> Unit,
     openAddAccount: () -> Unit,
     closeDrawer: () -> Unit,
@@ -34,7 +34,7 @@ internal fun DrawerView(
                 effect.folderId,
             )
 
-            is Effect.OpenUnifiedFolder -> openUnifiedFolder(effect.kind)
+            is Effect.OpenUnifiedFolder -> openUnifiedFolder(effect.role)
 
             is Effect.OpenSettings -> openSettings()
 

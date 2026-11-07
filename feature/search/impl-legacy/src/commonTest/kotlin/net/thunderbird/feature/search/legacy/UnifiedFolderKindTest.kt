@@ -7,7 +7,7 @@ import assertk.assertions.isNull
 import assertk.assertions.isSameInstanceAs
 import kotlin.test.Test
 import net.thunderbird.feature.account.UnifiedAccountId
-import net.thunderbird.feature.mail.folder.FolderType
+import net.thunderbird.feature.mail.folder.FolderRole
 import net.thunderbird.feature.search.legacy.api.MessageSearchField
 import net.thunderbird.feature.search.legacy.api.SearchAttribute
 import net.thunderbird.feature.search.legacy.api.SearchCondition
@@ -32,26 +32,24 @@ class UnifiedFolderKindTest {
     }
 
     @Test
-    fun `the unified inbox should still be chosen by the folders integrate flag`() {
-        val search = createUnifiedFolderSearch(UnifiedFolderKind.INBOX)
+    fun `a unified folder search should name its folder by role`() {
+        val search = createUnifiedFolderSearch(UnifiedFolderKind.SENT)
 
         assertThat(search.id).isEqualTo(UnifiedAccountId)
         assertThat(search.type)
-            .isEqualTo(LocalMessageSearchType.Unified(UnifiedFolderSelection.Special(FolderType.INBOX)))
-        assertThat(search.conditions.condition)
-            .isEqualTo(SearchCondition(MessageSearchField.INTEGRATE, SearchAttribute.EQUALS, "1"))
+            .isEqualTo(LocalMessageSearchType.Unified(UnifiedFolderSelection.Special(FolderRole.SENT)))
+        // Across every account, not limited to one.
+        assertThat(search.searchAllAccounts()).isEqualTo(true)
     }
 
     @Test
-    fun `a unified special folder should be chosen by role`() {
-        val search = createUnifiedFolderSearch(UnifiedFolderKind.SENT)
+    fun `a unified folder should resolve to each account's own folder`() {
+        val search = createUnifiedFolderSearch(UnifiedFolderKind.INBOX)
 
-        assertThat(search.type)
-            .isEqualTo(LocalMessageSearchType.Unified(UnifiedFolderSelection.Special(FolderType.SENT)))
-        assertThat(search.conditions.condition)
-            .isEqualTo(SearchCondition(MessageSearchField.SPECIAL_FOLDER, SearchAttribute.EQUALS, "SENT"))
-        // Across every account, not limited to one.
-        assertThat(search.searchAllAccounts()).isEqualTo(true)
+        val conditions = search.conditionsForAccount { role -> if (role == FolderRole.INBOX) 7L else null }
+
+        assertThat(conditions?.condition)
+            .isEqualTo(SearchCondition(MessageSearchField.FOLDER, SearchAttribute.EQUALS, "7"))
     }
 
     @Test
@@ -73,9 +71,7 @@ class UnifiedFolderKindTest {
 
     @Test
     fun `a role should resolve to the folder the account uses for it`() {
-        val search = createUnifiedFolderSearch(UnifiedFolderKind.SENT)
-
-        val resolved = search.conditions.resolveSpecialFolders { kind ->
+        val resolved = specialFolder(UnifiedFolderKind.SENT).resolveSpecialFolders { kind ->
             if (kind == UnifiedFolderKind.SENT) SENT_FOLDER_ID else null
         }
 
@@ -86,9 +82,7 @@ class UnifiedFolderKindTest {
     @Test
     fun `an account without the folder should contribute no mail rather than all of it`() {
         // Dropping the condition instead would list every folder of that account in the unified Sent folder.
-        val search = createUnifiedFolderSearch(UnifiedFolderKind.ARCHIVE)
-
-        val resolved = search.conditions.resolveSpecialFolders { null }
+        val resolved = specialFolder(UnifiedFolderKind.ARCHIVE).resolveSpecialFolders { null }
 
         assertThat(resolved.condition)
             .isEqualTo(SearchCondition(MessageSearchField.FOLDER, SearchAttribute.EQUALS, "-1"))
@@ -119,7 +113,7 @@ class UnifiedFolderKindTest {
     @Test
     fun `a search without a role should be returned untouched`() {
         val tree = SearchConditionTreeNode.Builder(
-            SearchCondition(MessageSearchField.INTEGRATE, SearchAttribute.EQUALS, "1"),
+            SearchCondition(MessageSearchField.SUBJECT, SearchAttribute.CONTAINS, "invoice"),
         ).build()
 
         assertThat(tree.resolveSpecialFolders { SENT_FOLDER_ID }).isSameInstanceAs(tree)
@@ -128,9 +122,7 @@ class UnifiedFolderKindTest {
     @Test
     fun `an unresolved role should match nothing rather than reach the database`() {
         // A consumer that forgets to resolve gets an empty list, not a SQL error on a column that does not exist.
-        val search = createUnifiedFolderSearch(UnifiedFolderKind.SENT)
-
-        val clause = SqlWhereClause.Builder().withConditions(search.conditions).build()
+        val clause = SqlWhereClause.Builder().withConditions(specialFolder(UnifiedFolderKind.SENT)).build()
 
         assertThat(clause.selection).isEqualTo("0")
         assertThat(clause.selectionArgs).containsExactly()
@@ -138,13 +130,15 @@ class UnifiedFolderKindTest {
 
     @Test
     fun `a resolved role should become an ordinary folder condition`() {
-        val search = createUnifiedFolderSearch(UnifiedFolderKind.SENT)
-
         val clause = SqlWhereClause.Builder()
-            .withConditions(search.conditions.resolveSpecialFolders { SENT_FOLDER_ID })
+            .withConditions(specialFolder(UnifiedFolderKind.SENT).resolveSpecialFolders { SENT_FOLDER_ID })
             .build()
 
         assertThat(clause.selection).isEqualTo("folder_id = ?")
         assertThat(clause.selectionArgs).containsExactly("42")
     }
+
+    private fun specialFolder(kind: UnifiedFolderKind): SearchConditionTreeNode = SearchConditionTreeNode.Builder(
+        SearchCondition(MessageSearchField.SPECIAL_FOLDER, SearchAttribute.EQUALS, kind.name),
+    ).build()
 }

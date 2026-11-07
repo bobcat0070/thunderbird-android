@@ -17,7 +17,12 @@ class MessageListLiveDataTest {
 
     @Test
     fun `the newest messages should stand in for the list when no message is being read`() {
-        val testSubject = MessageListInfo(listOf(item(1), item(2)), hasMoreMessages = false)
+        val testSubject = MessageListInfo(
+            listOf(item(1), item(2)),
+            hasMoreMessages = false,
+            hasUnsyncedFolders = false,
+            hasRemoteFolders = true,
+        )
 
         val result = testSubject.canStandInForWholeList(activeMessage = null)
 
@@ -26,7 +31,12 @@ class MessageListLiveDataTest {
 
     @Test
     fun `the newest messages should stand in for the list when they hold the message being read`() {
-        val testSubject = MessageListInfo(listOf(item(1), item(2)), hasMoreMessages = false)
+        val testSubject = MessageListInfo(
+            listOf(item(1), item(2)),
+            hasMoreMessages = false,
+            hasUnsyncedFolders = false,
+            hasRemoteFolders = true,
+        )
 
         val result = testSubject.canStandInForWholeList(activeMessage = reference(2))
 
@@ -37,7 +47,12 @@ class MessageListLiveDataTest {
     fun `the newest messages should not stand in for the list when the message being read is older`() {
         // The reader closes when the list beside it lacks its message, so this short list closed an older message
         // the moment it was opened.
-        val testSubject = MessageListInfo(listOf(item(1), item(2)), hasMoreMessages = false)
+        val testSubject = MessageListInfo(
+            listOf(item(1), item(2)),
+            hasMoreMessages = false,
+            hasUnsyncedFolders = false,
+            hasRemoteFolders = true,
+        )
 
         val result = testSubject.canStandInForWholeList(activeMessage = reference(3))
 

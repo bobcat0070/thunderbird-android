@@ -5,12 +5,12 @@ import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import net.thunderbird.core.ui.contract.mvi.UnidirectionalViewModel
 import net.thunderbird.feature.account.AccountId
+import net.thunderbird.feature.mail.folder.FolderRole
 import net.thunderbird.feature.navigation.drawer.api.NavigationDrawerExternalContract.DrawerConfig
 import net.thunderbird.feature.navigation.drawer.api.NavigationDrawerExternalContract.DrawerShortcut
 import net.thunderbird.feature.navigation.drawer.dropdown.domain.entity.DisplayAccount
 import net.thunderbird.feature.navigation.drawer.dropdown.domain.entity.DisplayFolder
 import net.thunderbird.feature.navigation.drawer.dropdown.domain.entity.DisplayTreeFolder
-import net.thunderbird.feature.search.legacy.UnifiedFolderKind
 
 internal interface DrawerContract {
 
@@ -58,7 +58,7 @@ internal interface DrawerContract {
     sealed interface Effect {
         data class OpenAccount(val accountId: AccountId) : Effect
         data class OpenFolder(val accountId: AccountId, val folderId: Long) : Effect
-        data class OpenUnifiedFolder(val kind: UnifiedFolderKind) : Effect
+        data class OpenUnifiedFolder(val role: FolderRole) : Effect
         data object OpenSettings : Effect
         data object OpenAddAccount : Effect
         data object CloseDrawer : Effect

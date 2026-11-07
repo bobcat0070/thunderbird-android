@@ -1,6 +1,7 @@
 package com.fsck.k9.mailstore
 
 import assertk.assertThat
+import assertk.assertions.containsExactly
 import assertk.assertions.isEqualTo
 import assertk.assertions.isNull
 import com.fsck.k9.mail.AuthType
@@ -256,6 +257,30 @@ class DefaultSpecialFolderUpdaterTest {
         assertThat(updatedAccount.archiveFolderSelection).isEqualTo(SpecialFolderSelection.MANUAL)
         assertThat(updatedAccount.draftsFolderId).isEqualTo(2L)
     }
+
+    @Test
+    fun `updateSpecialFoldersSync should show and sync a new inbox without touching the unified inbox setting`() =
+        runTest {
+            // Arrange
+            accountManager.updateSync(accountId) { it.copy(inboxFolderId = 7L) }
+            remoteFolderQueryRepository.remoteFolders = listOf(
+                createRemoteFolder(id = 7, type = FolderType.REGULAR, serverId = "OldInbox"),
+                createRemoteFolder(id = 1, type = FolderType.INBOX, serverId = "INBOX"),
+            )
+
+            // Act
+            subject.updateSpecialFoldersSync()
+
+            // Assert
+            assertThat(folderDetailsRepository.partialUpdates).containsExactly(
+                PartialUpdatableFolderDetails(
+                    folderId = 1L,
+                    visible = true,
+                    syncEnabled = true,
+                    notificationsEnabled = true,
+                ),
+            )
+        }
 
     private fun createAccount(id: AccountId): LegacyAccount {
         val profile = ProfileDto(

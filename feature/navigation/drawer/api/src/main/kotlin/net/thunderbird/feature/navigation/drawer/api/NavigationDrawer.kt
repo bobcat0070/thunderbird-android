@@ -2,6 +2,7 @@ package net.thunderbird.feature.navigation.drawer.api
 
 import androidx.appcompat.app.AppCompatActivity
 import net.thunderbird.feature.account.AccountId
+import net.thunderbird.feature.mail.folder.FolderRole
 
 interface NavigationDrawer {
     val parent: AppCompatActivity
@@ -11,15 +12,7 @@ interface NavigationDrawer {
 
     fun selectFolder(accountId: AccountId, folderId: Long)
 
-    fun selectUnifiedInbox()
-
-    /**
-     * Highlights the unified folder a search shows - the unified Sent folder, say.
-     *
-     * @param searchId the id of the search being displayed. A search that is not a unified folder leaves the
-     *   selection as it is.
-     */
-    fun selectUnifiedFolder(searchId: String)
+    fun selectUnifiedFolder(role: FolderRole)
 
     fun deselect()
 

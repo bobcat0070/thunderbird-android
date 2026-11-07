@@ -52,7 +52,6 @@ class FolderSettingsDataStoreTest {
         val folder = FolderDetails(
             folder = Folder(id = 1, name = "Folder", type = FolderType.REGULAR, isLocalOnly = serverId == null),
             isInTopGroup = false,
-            isIntegrate = false,
             isSyncEnabled = true,
             isVisible = true,
             isNotificationsEnabled = false,

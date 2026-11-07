@@ -13,6 +13,7 @@ import net.thunderbird.core.android.account.LegacyAccountManager
 import net.thunderbird.feature.account.AccountId
 import net.thunderbird.feature.account.AccountIdFactory
 import net.thunderbird.feature.account.UnifiedAccountId
+import net.thunderbird.feature.mail.folder.FolderRole
 import net.thunderbird.feature.navigation.drawer.api.NavigationDrawerExternalContract.PinnedFolder
 import net.thunderbird.feature.navigation.drawer.api.NavigationDrawerExternalContract.PinnedFolderRepository
 import net.thunderbird.feature.navigation.drawer.dropdown.domain.DomainContract.UnifiedFolderRepository
@@ -21,7 +22,6 @@ import net.thunderbird.feature.navigation.drawer.dropdown.domain.entity.DisplayF
 import net.thunderbird.feature.navigation.drawer.dropdown.domain.entity.MailDisplayFolder
 import net.thunderbird.feature.navigation.drawer.dropdown.domain.entity.PinnedDisplayFolder
 import net.thunderbird.feature.navigation.drawer.dropdown.domain.entity.UnifiedDisplayFolder
-import net.thunderbird.feature.navigation.drawer.dropdown.domain.entity.UnifiedDisplayFolderType
 import app.k9mail.legacy.ui.folder.DisplayFolder as LegacyDisplayFolder
 
 internal class GetDisplayFoldersForAccount(
@@ -52,9 +52,11 @@ internal class GetDisplayFoldersForAccount(
     }
 
     private fun getUnifiedFoldersFlow(): Flow<List<UnifiedDisplayFolder>> {
-        return combine(UnifiedDisplayFolderType.entries.map(unifiedFolderRepository::getUnifiedDisplayFolderFlow)) {
-            it.toList()
+        val unifiedFolderFlows = FolderRole.entries.map { role ->
+            unifiedFolderRepository.getUnifiedDisplayFolderFlow(role)
         }
+
+        return combine(unifiedFolderFlows) { unifiedFolders -> unifiedFolders.toList() }
     }
 
     /**

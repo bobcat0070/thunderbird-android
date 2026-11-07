@@ -10,11 +10,11 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.runTest
 import net.thunderbird.account.fake.FakeAccountData.ACCOUNT_ID
 import net.thunderbird.account.fake.FakeAccountData.ACCOUNT_ID_RAW
+import net.thunderbird.feature.mail.folder.FolderRole
 import net.thunderbird.feature.navigation.drawer.dropdown.FolderDrawerState
 import net.thunderbird.feature.navigation.drawer.dropdown.ui.DrawerContract.Effect
 import net.thunderbird.feature.navigation.drawer.dropdown.ui.DrawerContract.Event
 import net.thunderbird.feature.navigation.drawer.dropdown.ui.DrawerContract.State
-import net.thunderbird.feature.search.legacy.UnifiedFolderKind
 
 internal class DrawerViewKtTest : ComposeTest() {
 
@@ -30,7 +30,7 @@ internal class DrawerViewKtTest : ComposeTest() {
                 drawerState = FolderDrawerState(),
                 openAccount = { counter.openAccountCount++ },
                 openFolder = { _, _ -> counter.openFolderCount++ },
-                openUnifiedFolder = { counter.openUnifiedFolderCount++ },
+                openUnifiedFolder = { role -> counter.openedUnifiedFolderRoles += role },
                 openSettings = { counter.openSettingsCount++ },
                 openAddAccount = { counter.openAddAccountCount++ },
                 closeDrawer = { counter.closeDrawerCount++ },
@@ -53,8 +53,8 @@ internal class DrawerViewKtTest : ComposeTest() {
             ),
         )
 
-        verifyCounter.openUnifiedFolderCount++
-        viewModel.effect(Effect.OpenUnifiedFolder(UnifiedFolderKind.SENT))
+        verifyCounter.openedUnifiedFolderRoles += FolderRole.SENT
+        viewModel.effect(Effect.OpenUnifiedFolder(FolderRole.SENT))
 
         verifyCounter.openSettingsCount++
         viewModel.effect(Effect.OpenSettings)
@@ -80,7 +80,7 @@ internal class DrawerViewKtTest : ComposeTest() {
                 drawerState = state.value,
                 openAccount = { },
                 openFolder = { _, _ -> },
-                openUnifiedFolder = { },
+                openUnifiedFolder = { _ -> },
                 openSettings = { },
                 openAddAccount = { },
                 closeDrawer = { },
@@ -109,7 +109,7 @@ internal class DrawerViewKtTest : ComposeTest() {
     private data class Counter(
         var openAccountCount: Int = 0,
         var openFolderCount: Int = 0,
-        var openUnifiedFolderCount: Int = 0,
+        var openedUnifiedFolderRoles: List<FolderRole> = emptyList(),
         var openSettingsCount: Int = 0,
         var openAddAccountCount: Int = 0,
         var closeDrawerCount: Int = 0,

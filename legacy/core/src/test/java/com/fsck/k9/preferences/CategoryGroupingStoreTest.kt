@@ -82,7 +82,6 @@ class CategoryGroupingStoreTest : K9RobolectricTest() {
     private fun folder(id: Long, serverId: String) = RemoteFolderDetails(
         folder = RemoteFolder(id = id, serverId = serverId, name = serverId, type = FolderType.REGULAR),
         isInTopGroup = false,
-        isIntegrate = false,
         isSyncEnabled = false,
         isVisible = true,
         isNotificationsEnabled = false,

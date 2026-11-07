@@ -239,7 +239,7 @@ public class MessagingController implements MessagingControllerRegistry, Messagi
                 accountManager
         );
         notificationOperations =
-            new NotificationOperations(notificationController, accountManager, messageStoreManager);
+            new NotificationOperations(notificationController, accountManager, outboxFolderManager);
         archiveOperations = new ArchiveOperations(this, accountManager, featureFlagProvider);
     }
 

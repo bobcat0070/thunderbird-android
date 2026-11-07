@@ -158,7 +158,7 @@ class MessageViewFragment :
             folderNameFormatter = get { parametersOf(requireContext()) },
         )
     }
-    private val replayAllStrategy: ReplyActionStrategy<LegacyAccount, Message> by inject()
+    private val replyAllStrategy: ReplyActionStrategy<LegacyAccount, Message> by inject()
     private val messageStoreManager: MessageStoreManager by inject()
 
     /**
@@ -920,7 +920,7 @@ class MessageViewFragment :
     fun onReply(forceReplyAction: Boolean = false) {
         val message = this.message ?: return
 
-        val additionalActions = replayAllStrategy.getReplyActions(account, message).additionalActions
+        val additionalActions = replyAllStrategy.getReplyActions(account, message).additionalActions
         if (!forceReplyAction && ReplyAction.REPLY_ALL in additionalActions) {
             messageReaderViewModel.event(Event.OpenMessageReaderBottomSheet())
         } else {
@@ -1481,13 +1481,15 @@ class MessageViewFragment :
     override fun onSaveAttachment(attachment: AttachmentViewInfo) {
         currentAttachmentViewInfo = attachment
 
+        val mimeType = requireNotNull(attachment.mimeType) {
+            "Invalid attachment type. The mimeType is null. Attachment = $attachment"
+        }
+
         try {
             createDocumentLauncher.launch(
                 input = CreateDocumentResultContract.Input(
                     title = attachment.displayName ?: getString(MessageReaderR.string.unnamed_attachment_title),
-                    mimeType = requireNotNull(attachment.mimeType) {
-                        "Invalid attachment type. The mimeType is null. Attachment = $attachment"
-                    },
+                    mimeType = getSaveAttachmentMimeType(attachment.displayName, mimeType),
                 ),
             )
         } catch (_: ActivityNotFoundException) {

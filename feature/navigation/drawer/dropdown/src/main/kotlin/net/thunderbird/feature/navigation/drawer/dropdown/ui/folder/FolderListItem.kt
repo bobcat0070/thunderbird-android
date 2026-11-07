@@ -25,6 +25,7 @@ import net.thunderbird.components.ui.bolt.atom.icon.Icons
 import net.thunderbird.components.ui.bolt.atom.text.TextLabelLarge
 import net.thunderbird.components.ui.bolt.organism.drawer.NavigationDrawerItem
 import net.thunderbird.components.ui.bolt.theme.BoltTheme
+import net.thunderbird.feature.mail.folder.FolderRole
 import net.thunderbird.feature.mail.folder.FolderType
 import net.thunderbird.feature.navigation.drawer.dropdown.R
 import net.thunderbird.feature.navigation.drawer.dropdown.domain.entity.DisplayFolder
@@ -32,7 +33,6 @@ import net.thunderbird.feature.navigation.drawer.dropdown.domain.entity.DisplayT
 import net.thunderbird.feature.navigation.drawer.dropdown.domain.entity.MailDisplayFolder
 import net.thunderbird.feature.navigation.drawer.dropdown.domain.entity.PinnedDisplayFolder
 import net.thunderbird.feature.navigation.drawer.dropdown.domain.entity.UnifiedDisplayFolder
-import net.thunderbird.feature.navigation.drawer.dropdown.domain.entity.UnifiedDisplayFolderType
 import net.thunderbird.feature.navigation.drawer.dropdown.ui.common.AnimatedExpandIcon
 
 @Composable
@@ -179,13 +179,14 @@ private fun mapFolderName(
 
 @Composable
 private fun mapUnifiedFolderName(folder: UnifiedDisplayFolder): String {
-    return when (folder.unifiedType) {
-        UnifiedDisplayFolderType.INBOX -> stringResource(R.string.navigation_drawer_dropdown_unified_inbox_title)
-        UnifiedDisplayFolderType.DRAFTS -> stringResource(R.string.navigation_drawer_dropdown_unified_drafts_title)
-        UnifiedDisplayFolderType.SENT -> stringResource(R.string.navigation_drawer_dropdown_unified_sent_title)
-        UnifiedDisplayFolderType.ARCHIVE -> stringResource(R.string.navigation_drawer_dropdown_unified_archive_title)
-        UnifiedDisplayFolderType.SPAM -> stringResource(R.string.navigation_drawer_dropdown_unified_spam_title)
-        UnifiedDisplayFolderType.TRASH -> stringResource(R.string.navigation_drawer_dropdown_unified_trash_title)
+    return when (folder.role) {
+        FolderRole.INBOX -> stringResource(R.string.navigation_drawer_dropdown_unified_inbox_title)
+        FolderRole.OUTBOX -> stringResource(R.string.navigation_drawer_dropdown_unified_outbox_title)
+        FolderRole.DRAFTS -> stringResource(R.string.navigation_drawer_dropdown_unified_drafts_title)
+        FolderRole.SENT -> stringResource(R.string.navigation_drawer_dropdown_unified_sent_title)
+        FolderRole.ARCHIVE -> stringResource(R.string.navigation_drawer_dropdown_unified_archive_title)
+        FolderRole.SPAM -> stringResource(R.string.navigation_drawer_dropdown_unified_spam_title)
+        FolderRole.TRASH -> stringResource(R.string.navigation_drawer_dropdown_unified_trash_title)
     }
 }
 
@@ -220,12 +221,13 @@ private fun mapFolderTypeIcon(type: FolderType): ImageVector {
 }
 
 private fun mapDisplayUnifiedFolderIcon(folder: UnifiedDisplayFolder): ImageVector {
-    return when (folder.unifiedType) {
-        UnifiedDisplayFolderType.INBOX -> Icons.Outlined.AllInbox
-        UnifiedDisplayFolderType.DRAFTS -> Icons.Outlined.Drafts
-        UnifiedDisplayFolderType.SENT -> Icons.Outlined.Send
-        UnifiedDisplayFolderType.ARCHIVE -> Icons.Outlined.Archive
-        UnifiedDisplayFolderType.SPAM -> Icons.Outlined.Report
-        UnifiedDisplayFolderType.TRASH -> Icons.Outlined.Delete
+    return when (folder.role) {
+        FolderRole.INBOX -> Icons.Outlined.AllInbox
+        FolderRole.OUTBOX -> Icons.Outlined.Outbox
+        FolderRole.DRAFTS -> Icons.Outlined.Drafts
+        FolderRole.SENT -> Icons.Outlined.Send
+        FolderRole.ARCHIVE -> Icons.Outlined.Archive
+        FolderRole.SPAM -> Icons.Outlined.Report
+        FolderRole.TRASH -> Icons.Outlined.Delete
     }
 }

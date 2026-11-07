@@ -49,14 +49,19 @@ internal fun MessageListItemView(item: MessageListItem) {
                     // A conversation opens as it does in the app: all of its messages, not just the newest.
                     threadRoot = item.threadRoot.takeIf { item.threadCount > 1 },
                 )
-                PendingIntentCompat.getActivity(
-                    context,
-                    Random.Default.nextInt(),
-                    intent,
-                    PendingIntent.FLAG_UPDATE_CURRENT,
-                    false,
-                )!!
-                    .send()
+                // Only returns null when using FLAG_NO_CREATE
+                val pendingIntent = checkNotNull(
+                    PendingIntentCompat.getActivity(
+                        context,
+                        Random.Default.nextInt(),
+                        intent,
+                        PendingIntent.FLAG_UPDATE_CURRENT,
+                        false,
+                    ),
+                ) {
+                    "Failed to create activity PendingIntent"
+                }
+                pendingIntent.send()
             }
         },
     ) {

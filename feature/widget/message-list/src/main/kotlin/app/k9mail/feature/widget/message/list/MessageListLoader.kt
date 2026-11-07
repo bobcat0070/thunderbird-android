@@ -3,6 +3,7 @@ package app.k9mail.feature.widget.message.list
 import app.k9mail.legacy.mailstore.MessageListRepository
 import com.fsck.k9.helper.MessageHelper
 import com.fsck.k9.mailstore.MessageColumns
+import com.fsck.k9.search.conditionsFor
 import com.fsck.k9.search.getLegacyAccounts
 import net.thunderbird.core.android.account.LegacyAccount
 import net.thunderbird.core.android.account.LegacyAccountManager
@@ -10,6 +11,7 @@ import net.thunderbird.core.android.account.SortType
 import net.thunderbird.core.preference.GeneralSettingsManager
 import net.thunderbird.core.preference.display.visualSettings.message.list.MessageListPreferencesManager
 import net.thunderbird.feature.mail.folder.api.OutboxFolderManager
+import net.thunderbird.feature.search.legacy.SearchConditionTreeNode
 import net.thunderbird.feature.search.legacy.sql.SqlWhereClause
 import net.thunderbird.legacy.logging.Log
 
@@ -51,21 +53,21 @@ internal class MessageListLoader(
 
     private fun loadMessageListForAccount(account: LegacyAccount, config: MessageListConfig): List<MessageListItem> {
         val accountId = account.id
+        val conditions = config.search.conditionsFor(account, outboxFolderManager) ?: return emptyList()
         val sortOrder = buildSortOrder(config)
         val mapper = MessageListItemMapper(messageHelper, account, messageListPreferencesManager, outboxFolderManager)
+        val (selection, selectionArgs) = buildSelection(conditions)
 
         return if (config.showingThreadedList) {
-            val (selection, selectionArgs) = buildSelection(config)
             messageListRepository.getThreadedMessages(accountId, selection, selectionArgs, sortOrder, mapper)
         } else {
-            val (selection, selectionArgs) = buildSelection(config)
             messageListRepository.getMessages(accountId, selection, selectionArgs, sortOrder, mapper)
         }
     }
 
-    private fun buildSelection(config: MessageListConfig): Pair<String, Array<String>> {
+    private fun buildSelection(conditions: SearchConditionTreeNode): Pair<String, Array<String>> {
         val whereClause = SqlWhereClause.Builder()
-            .withConditions(config.search.conditions)
+            .withConditions(conditions)
             .build()
 
         return whereClause.selection to whereClause.selectionArgs.toTypedArray()

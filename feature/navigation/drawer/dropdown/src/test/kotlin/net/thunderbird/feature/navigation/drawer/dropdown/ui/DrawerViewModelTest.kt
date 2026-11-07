@@ -24,6 +24,7 @@ import kotlinx.coroutines.test.runTest
 import net.thunderbird.components.ui.testing.coroutines.MainDispatcherHelper
 import net.thunderbird.feature.account.AccountId
 import net.thunderbird.feature.account.AccountIdFactory
+import net.thunderbird.feature.mail.folder.FolderRole
 import net.thunderbird.feature.mail.folder.FolderType
 import net.thunderbird.feature.mail.folder.api.Folder
 import net.thunderbird.feature.navigation.drawer.api.NavigationDrawerExternalContract.DrawerConfig
@@ -32,12 +33,10 @@ import net.thunderbird.feature.navigation.drawer.dropdown.domain.entity.DisplayT
 import net.thunderbird.feature.navigation.drawer.dropdown.domain.entity.MailDisplayAccount
 import net.thunderbird.feature.navigation.drawer.dropdown.domain.entity.MailDisplayFolder
 import net.thunderbird.feature.navigation.drawer.dropdown.domain.entity.UnifiedDisplayFolder
-import net.thunderbird.feature.navigation.drawer.dropdown.domain.entity.UnifiedDisplayFolderType
 import net.thunderbird.feature.navigation.drawer.dropdown.ui.DrawerContract.Effect
 import net.thunderbird.feature.navigation.drawer.dropdown.ui.DrawerContract.Event
 import net.thunderbird.feature.navigation.drawer.dropdown.ui.DrawerContract.State
 import net.thunderbird.feature.navigation.drawer.dropdown.ui.FakeData.MAIL_DISPLAY_ACCOUNT
-import net.thunderbird.feature.search.legacy.UnifiedFolderKind
 
 @OptIn(ExperimentalCoroutinesApi::class)
 internal class DrawerViewModelTest {
@@ -420,7 +419,9 @@ internal class DrawerViewModelTest {
             val getDisplayAccountsFlow = MutableStateFlow(displayAccounts)
             val displayFoldersMap = mapOf(
                 displayAccounts[0].id to
-                    createDisplayFolderList(1) + listOf(createDisplayUnifiedFolder()),
+                    createDisplayFolderList(1) + listOf(
+                        createDisplayUnifiedFolder(role = FolderRole.SENT),
+                    ),
             )
             val displayFoldersFlow = MutableStateFlow(displayFoldersMap)
             val initialState = State(
@@ -444,7 +445,7 @@ internal class DrawerViewModelTest {
             // Consume the state update
             turbines.awaitStateItem()
 
-            assertThat(turbines.awaitEffectItem()).isEqualTo(Effect.OpenUnifiedFolder(UnifiedFolderKind.INBOX))
+            assertThat(turbines.awaitEffectItem()).isEqualTo(Effect.OpenUnifiedFolder(FolderRole.SENT))
 
             turbines.assertThatAndEffectTurbineConsumed {
                 isEqualTo(Effect.CloseDrawer)
@@ -567,14 +568,12 @@ internal class DrawerViewModelTest {
     }
 
     private fun createDisplayUnifiedFolder(
-        id: String = "unified_inbox",
-        unifiedType: UnifiedDisplayFolderType = UnifiedDisplayFolderType.INBOX,
+        role: FolderRole = FolderRole.INBOX,
         unreadCount: Int = 0,
         starredCount: Int = 0,
     ): UnifiedDisplayFolder {
         return UnifiedDisplayFolder(
-            folderId = id,
-            unifiedType = unifiedType,
+            role = role,
             unreadMessageCount = unreadCount,
             starredMessageCount = starredCount,
         )

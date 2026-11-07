@@ -6,6 +6,8 @@ import com.fsck.k9.ui.settings.account.PinnedFolderStore
 import com.fsck.k9.ui.settings.account.SpamDigestRunPreferences
 import com.fsck.k9.ui.settings.account.AccountSettingsViewModel
 import com.fsck.k9.ui.settings.account.getSystemVibrator
+import com.fsck.k9.ui.settings.export.AndroidRealtimeMeasurer
+import com.fsck.k9.ui.settings.export.RealtimeMeasurer
 import com.fsck.k9.ui.settings.export.SettingsExportViewModel
 import com.fsck.k9.ui.settings.general.GeneralSettingsDataStore
 import com.fsck.k9.ui.settings.general.GeneralSettingsViewModel
@@ -57,6 +59,11 @@ val settingsUiModule = module {
         SettingsExportViewModel(
             accountManager = get(),
             settingsExporter = get(),
+            logger = get(),
+            realtimeMeasurer = get(),
         )
     }
+
+    single<RealtimeMeasurer>{ AndroidRealtimeMeasurer() }
+
 }

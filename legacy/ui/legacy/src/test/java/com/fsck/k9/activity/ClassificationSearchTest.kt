@@ -5,6 +5,7 @@ import assertk.assertions.contains
 import assertk.assertions.isEqualTo
 import net.thunderbird.feature.account.AccountIdFactory
 import net.thunderbird.feature.mail.message.classification.api.MessageClass
+import net.thunderbird.feature.mail.folder.FolderRole
 import net.thunderbird.feature.search.legacy.LocalMessageSearch
 import net.thunderbird.feature.search.legacy.UnifiedFolderKind
 import net.thunderbird.feature.search.legacy.createUnifiedFolderSearch
@@ -36,33 +37,32 @@ class ClassificationSearchTest {
     }
 
     @Test
-    fun `should keep a condition that names no folder at all`() {
-        // What the unified inbox is: an "integrate" condition and nothing else. Carrying only folder ids left
-        // this search matching every folder of every account, so a message deleted from a category list moved
-        // to the trash and still matched - the row stayed, marked read, looking as though it had not been
-        // deleted at all.
-        val search = LocalMessageSearch().apply {
-            and(MessageSearchField.INTEGRATE, "1", SearchAttribute.EQUALS)
-        }
+    fun `should stay within the folders of the unified list it was opened from`() {
+        // The unified inbox names no folder: each account's inbox is resolved when the search runs. Carrying only
+        // folder ids left this search matching every folder of every account, so a message deleted from a
+        // category list moved to the trash and still matched - the row stayed, marked read, looking as though it
+        // had not been deleted at all.
+        val search = LocalMessageSearch.createUnifiedSearch(FolderRole.INBOX)
 
         val narrowed = search.narrowedToClassification(MessageClass.NOTIFICATION)
 
-        assertThat(narrowed.leafConditions()).contains(
-            SearchCondition(MessageSearchField.INTEGRATE, SearchAttribute.EQUALS, "1"),
+        val conditions = narrowed.conditionsForAccount { role -> if (role == FolderRole.INBOX) INBOX_ID else null }
+        assertThat(conditions?.getLeafSet().orEmpty().mapNotNull { it.condition }).contains(
+            SearchCondition(MessageSearchField.FOLDER, SearchAttribute.EQUALS, INBOX_ID.toString()),
         )
     }
 
     @Test
     fun `should keep every condition of a search built from several`() {
         val search = LocalMessageSearch().apply {
-            and(MessageSearchField.INTEGRATE, "1", SearchAttribute.EQUALS)
+            and(MessageSearchField.FLAGGED, "1", SearchAttribute.EQUALS)
             and(MessageSearchField.READ, "0", SearchAttribute.EQUALS)
         }
 
         val narrowed = search.narrowedToClassification(MessageClass.HUMAN)
 
         assertThat(narrowed.leafConditions()).contains(
-            SearchCondition(MessageSearchField.INTEGRATE, SearchAttribute.EQUALS, "1"),
+            SearchCondition(MessageSearchField.FLAGGED, SearchAttribute.EQUALS, "1"),
         )
         assertThat(narrowed.leafConditions()).contains(
             SearchCondition(MessageSearchField.READ, SearchAttribute.EQUALS, "0"),
@@ -87,7 +87,7 @@ class ClassificationSearchTest {
     fun `should keep searching every account when the original did`() {
         // An empty set means "all accounts", so it has to stay empty rather than become a list of none.
         val search = LocalMessageSearch().apply {
-            and(MessageSearchField.INTEGRATE, "1", SearchAttribute.EQUALS)
+            and(MessageSearchField.FLAGGED, "1", SearchAttribute.EQUALS)
         }
 
         val narrowed = search.narrowedToClassification(MessageClass.NEWSLETTER)
@@ -108,3 +108,5 @@ class ClassificationSearchTest {
 
     private fun LocalMessageSearch.leafConditions(): List<SearchCondition> = leafSet.mapNotNull { it.condition }
 }
+
+private const val INBOX_ID = 7L

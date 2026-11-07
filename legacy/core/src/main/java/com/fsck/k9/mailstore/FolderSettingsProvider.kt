@@ -30,7 +30,6 @@ class FolderSettingsProvider(
                 isPushEnabledByDefault(account.incomingServerSettings.type, folderType),
             ),
             inTopGroup = storage.getBoolean("$prefix.inTopGroup", false),
-            integrate = storage.getBoolean("$prefix.integrate", false),
         ).also {
             removeImportedFolderSettings(prefix)
         }

@@ -36,8 +36,8 @@ internal class MessageListRemoteViewFactory(private val context: Context) : Remo
 
     override fun onCreate() {
         unifiedInboxFolders = SearchAccount.createUnifiedInboxSearch(
-            title = coreResourceProvider.searchUnifiedFoldersTitle(),
-            detail = coreResourceProvider.searchUnifiedFoldersDetail(),
+            title = coreResourceProvider.unifiedInboxTitle(),
+            detail = coreResourceProvider.unifiedInboxDetail(),
         ).relatedSearch
 
         senderAboveSubject = generalSettingsManager.getConfig().display.inboxSettings.isMessageListSenderAboveSubject

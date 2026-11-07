@@ -41,5 +41,6 @@ object Migrations {
         if (oldVersion < 93) MigrationTo93(db).addSenderAuthenticationColumn()
         if (oldVersion < 94) MigrationTo94(db, migrationsHelper).enableSentFolderSync()
         if (oldVersion < 95) MigrationTo95(db).addImportanceAndServerCategoriesColumns()
+        if (oldVersion < 96) MigrationTo96(db).removeIntegrateColumn()
     }
 }

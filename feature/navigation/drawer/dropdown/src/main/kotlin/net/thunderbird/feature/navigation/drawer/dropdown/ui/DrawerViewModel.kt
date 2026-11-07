@@ -287,7 +287,7 @@ internal class DrawerViewModel(
                 ),
             )
         } else if (folder is UnifiedDisplayFolder) {
-            emitEffect(Effect.OpenUnifiedFolder(folder.unifiedType.kind))
+            emitEffect(Effect.OpenUnifiedFolder(folder.role))
         }
 
         viewModelScope.launch {
