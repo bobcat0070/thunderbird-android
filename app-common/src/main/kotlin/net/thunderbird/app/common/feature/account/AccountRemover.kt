@@ -94,7 +94,7 @@ class AccountRemover(
         try {
             localKeyStoreManager.deleteCertificates(account)
         } catch (e: Exception) {
-            logger.error(tag = TAG, throwable = e) { "Failed to remove certificates for account $account" }
+            logger.error(tag = TAG, throwable = e) { "Failed to remove certificates for account ${account.id}" }
         }
     }
 }

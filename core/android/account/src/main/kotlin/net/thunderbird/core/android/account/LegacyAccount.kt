@@ -119,6 +119,12 @@ data class LegacyAccount(
     val folderPathDelimiter: FolderPathDelimiter = "/",
 ) : Account {
 
+    /**
+     * Names the account by its id only. The generated form would print the server passwords, the OAuth tokens and
+     * the email address into any log or error message the account ends up in.
+     */
+    override fun toString(): String = "LegacyAccount(id=$id)"
+
     fun isSortAscending(sortType: SortType): Boolean {
         return sortAscending[sortType] ?: sortType.isDefaultAscending
     }

@@ -29,7 +29,7 @@ constructor(
 ) {
 
     fun cancelMailSync(account: LegacyAccount) {
-        Log.v(TAG, "Canceling mail sync worker for %s", account)
+        Log.v(TAG, "Canceling mail sync worker for %s", account.id)
         val uniqueWorkName = createUniqueWorkName(account.id)
         workManager.cancelUniqueWork(uniqueWorkName)
     }
@@ -38,9 +38,9 @@ constructor(
         if (isNeverSyncInBackground()) return
 
         getSyncIntervalIfEnabled(account)?.let { syncIntervalMinutes ->
-            Log.v(TAG, "Scheduling mail sync worker for %s", account)
+            Log.v(TAG, "Scheduling mail sync worker for %s", account.id)
             Log.v(TAG, "  sync interval: %d minutes", syncIntervalMinutes)
-            syncDebugLogger.info(TAG, null) { "Scheduling mail sync worker $account" }
+            syncDebugLogger.info(TAG, null) { "Scheduling mail sync worker ${account.id}" }
             syncDebugLogger.info(TAG, null) { "  sync interval: $syncIntervalMinutes minutes\"" }
 
             val constraints = Constraints.Builder()
