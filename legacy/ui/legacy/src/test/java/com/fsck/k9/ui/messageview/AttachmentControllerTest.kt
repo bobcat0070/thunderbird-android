@@ -17,6 +17,7 @@ import com.fsck.k9.mailstore.LocalPart
 import com.fsck.k9.provider.AttachmentTempFileProvider
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
+import java.io.File
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -34,6 +35,7 @@ import net.thunderbird.core.preference.GeneralSettingsManager
 import net.thunderbird.feature.account.AccountIdFactory
 import org.junit.After
 import org.junit.Assert.assertArrayEquals
+import org.junit.Assume.assumeTrue
 import org.junit.Before
 import org.koin.core.context.GlobalContext.stopKoin
 import org.koin.core.context.startKoin
@@ -75,6 +77,7 @@ class AttachmentControllerTest : RobolectricTest() {
     @OptIn(ExperimentalCoroutinesApi::class)
     @Test
     fun `attachment content is set available if download is success`() = runTest {
+        assumeFileProviderPaths()
         // Arrange
         val fakeAttachment = AttachmentViewInfo(
             mimeType = mimeType,
@@ -154,6 +157,7 @@ class AttachmentControllerTest : RobolectricTest() {
     @OptIn(ExperimentalCoroutinesApi::class)
     @Test
     fun `viewing attachment should an appropriate activity with ACTION intent`() = runTest {
+        assumeFileProviderPaths()
         // Arrange
         val application = ApplicationProvider.getApplicationContext<Application>()
         val shadowApplication = shadowOf(application)
@@ -233,5 +237,13 @@ class AttachmentControllerTest : RobolectricTest() {
 
         override fun getConfigFlow(): Flow<GeneralSettings> = flowOf(getConfig())
         override fun save(config: GeneralSettings) = Unit
+    }
+
+    /**
+     * FileProvider matches a file to its root by a path with `/` separators, which a Windows path never has, so
+     * handing out a URI for an attachment only works where Android runs.
+     */
+    private fun assumeFileProviderPaths() {
+        assumeTrue("FileProvider needs '/' path separators", File.separatorChar == '/')
     }
 }

@@ -18,6 +18,9 @@ import com.fsck.k9.mail.testing.security.FakeTrustManager
 import com.fsck.k9.mail.testing.security.SimpleTrustedSocketFactory
 import java.net.UnknownHostException
 import kotlin.test.Test
+import net.thunderbird.components.core.logging.testing.TestLogger
+import net.thunderbird.legacy.logging.Log
+import org.junit.Before
 
 private const val USERNAME = "user"
 private const val PASSWORD = "password"
@@ -36,6 +39,12 @@ class ImapServerSettingsValidatorTest {
         clientInfoAppName = CLIENT_NAME,
         clientInfoAppVersion = CLIENT_VERSION,
     )
+
+    @Before
+    fun setUp() {
+        // The connection logs, and without a logger of its own this class only passed after another test set one.
+        Log.logger = TestLogger()
+    }
 
     @Test
     fun `valid server settings with password should return Success`() {

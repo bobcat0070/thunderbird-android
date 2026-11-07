@@ -145,7 +145,7 @@ class DefaultMessageDataMapperTest : RobolectricTest() {
         // Act
         val result = testSubject.toDomain(dto)
         val mappedAttachment = requireNotNull(result.attachments).single()
-        val file = File(requireNotNull(mappedAttachment.internalUri).toString().removePrefix("file:"))
+        val file = File(requireNotNull(requireNotNull(mappedAttachment.internalUri).path))
 
         // Assert
         assertThat(file.readBytes()).isEqualTo("ABC".toByteArray(Charsets.US_ASCII))
