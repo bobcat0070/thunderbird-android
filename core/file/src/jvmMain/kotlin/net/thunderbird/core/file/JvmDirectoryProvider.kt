@@ -1,7 +1,6 @@
 package net.thunderbird.core.file
 
 import com.eygraber.uri.Uri
-import com.eygraber.uri.toUri
 import java.io.File
 
 /**
@@ -55,7 +54,22 @@ class JvmDirectoryProvider(
 
     private val filesDir = File(appDir, "files").apply { mkdirs() }
 
-    override fun getCacheDir(): Uri = cacheDir.toUri()
+    override fun getCacheDir(): Uri = cacheDir.toFileUri()
 
-    override fun getFilesDir(): Uri = filesDir.toUri()
+    override fun getFilesDir(): Uri = filesDir.toFileUri()
+}
+
+/**
+ * A `file:` URI for this file, with `/` separators and a path starting with `/` on every system.
+ *
+ * Built like `File.toUri()`, which puts the path in as it is: on Windows that made `file://C%3A%5CUsers%5C...`,
+ * which no file URI reader turns back into the directory.
+ */
+internal fun File.toFileUri(): Uri {
+    val path = absoluteFile.invariantSeparatorsPath
+    return Uri.Builder()
+        .scheme("file")
+        .authority("")
+        .path(if (path.startsWith("/")) path else "/$path")
+        .build()
 }

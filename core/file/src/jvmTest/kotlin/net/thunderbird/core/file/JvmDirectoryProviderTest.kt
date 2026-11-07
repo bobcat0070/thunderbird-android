@@ -1,7 +1,9 @@
 package net.thunderbird.core.file
 
 import assertk.assertThat
+import assertk.assertions.isEqualTo
 import assertk.assertions.isTrue
+import assertk.assertions.startsWith
 import com.eygraber.uri.Uri
 import java.io.File
 import java.net.URI
@@ -42,4 +44,17 @@ class JvmDirectoryProviderTest {
     }
 
     private fun uriToFile(uri: Uri): File = File(URI(uri.toString()))
+
+    @Test
+    fun `toFileUri should make a URI that reads back as the same directory`() {
+        // Arrange
+        val directory = folder.newFolder("with space")
+
+        // Act
+        val uri = directory.toFileUri()
+
+        // Assert
+        assertThat(uri.toString()).startsWith("file:///")
+        assertThat(uriToFile(uri).canonicalPath).isEqualTo(directory.canonicalPath)
+    }
 }
