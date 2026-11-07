@@ -11,6 +11,7 @@ import assertk.assertThat
 import assertk.assertions.isEqualTo
 import com.fsck.k9.FakeLegacyAccount
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
 import net.thunderbird.account.fake.FakeAccountData.ACCOUNT_ID
@@ -244,6 +245,51 @@ class DefaultMessageCountsProviderTest {
             currentListener?.folderStatusChanged(ACCOUNT_ID, INBOX_FOLDER_ID)
             testScheduler.advanceUntilIdle()
             assertThat(awaitItem()).isEqualTo(MessageCounts(1, 1))
+        }
+    }
+
+    @Test
+    fun `getMessageCountsFlow should count a change off the thread that reported it`() = runTest {
+        // Arrange
+        var currentListener: SimpleMessagingListener? = null
+        val registry = object : MessagingControllerRegistry {
+            override fun addListener(listener: MessagingListener) {
+                currentListener = listener as SimpleMessagingListener
+            }
+
+            override fun removeListener(listener: MessagingListener) {
+                currentListener = null
+            }
+        }
+        var countQueries = 0
+        val messageStore = mock<ListenableMessageStore> {
+            on { getUnreadMessageCount(anyOrNull<SearchConditionTreeNode>()) } doAnswer { ++countQueries }
+            on { getStarredMessageCount(anyOrNull()) } doAnswer { countQueries }
+        }
+        val messageStoreManager = mock<MessageStoreManager> {
+            on { getMessageStore(ACCOUNT_ID) } doReturn messageStore
+        }
+        val testSubject = DefaultMessageCountsProvider(
+            accountManager = accountManager,
+            messageStoreManager = messageStoreManager,
+            messagingControllerRegistry = registry,
+            outboxFolderManager = FakeOutboxFolderManager(),
+            logger = TestLogger(),
+            coroutineContext = StandardTestDispatcher(testScheduler),
+        )
+        val search = LocalMessageSearch().apply { addAccountId(ACCOUNT_ID) }
+
+        testSubject.getMessageCountsFlow(search).test {
+            assertThat(awaitItem()).isEqualTo(MessageCounts(1, 1))
+
+            // Act
+            currentListener?.folderStatusChanged(ACCOUNT_ID, 0)
+            currentListener?.folderStatusChanged(ACCOUNT_ID, 0)
+
+            // Assert
+            assertThat(countQueries).isEqualTo(1)
+            testScheduler.advanceUntilIdle()
+            assertThat(expectMostRecentItem()).isEqualTo(MessageCounts(countQueries, countQueries))
         }
     }
 

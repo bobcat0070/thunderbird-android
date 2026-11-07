@@ -14,12 +14,12 @@ import kotlin.coroutines.CoroutineContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.awaitClose
-import kotlinx.coroutines.channels.trySendBlocking
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.buffer
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.launch
 import net.thunderbird.components.core.logging.Logger
 import net.thunderbird.core.android.account.LegacyAccount
 import net.thunderbird.core.android.account.LegacyAccountManager
@@ -97,19 +97,28 @@ internal class DefaultMessageCountsProvider(
 
     override fun getMessageCountsFlow(search: LocalMessageSearch): Flow<MessageCounts> {
         return callbackFlow {
-            send(getMessageCounts(search))
-
+            // Changes are only noted where they are reported, on the thread doing the sync, and counted here;
+            // a burst of changes while a count runs is counted once.
+            val changes = Channel<Unit>(capacity = Channel.CONFLATED)
             val folderStatusChangedListener = object : SimpleMessagingListener() {
                 override fun folderStatusChanged(accountId: AccountId, folderId: Long) {
                     if (search.canBeChangedBy(accountId, folderId)) {
-                        trySendBlocking(getMessageCounts(search))
+                        changes.trySend(Unit)
                     }
                 }
             }
             messagingControllerRegistry.addListener(folderStatusChangedListener)
 
+            send(getMessageCounts(search))
+            launch {
+                for (change in changes) {
+                    send(getMessageCounts(search))
+                }
+            }
+
             awaitClose {
                 messagingControllerRegistry.removeListener(folderStatusChangedListener)
+                changes.close()
             }
         }.buffer(capacity = Channel.CONFLATED)
             .distinctUntilChanged()
@@ -120,8 +129,8 @@ internal class DefaultMessageCountsProvider(
      * Whether a change to [folderId] of [accountId] can change this search's counts.
      *
      * The drawer watches every unified folder at once, and a sync reports each folder it touches, so recounting
-     * every unified folder of every account for each report meant dozens of queries per folder, run on the thread
-     * doing the sync. A unified folder counts one folder per account, so only that folder can change it.
+     * every unified folder of every account for each report meant dozens of queries per folder. A unified folder
+     * counts one folder per account, so only that folder can change it.
      */
     private fun LocalMessageSearch.canBeChangedBy(accountId: AccountId, folderId: Long): Boolean {
         val role = unifiedFolderRole
