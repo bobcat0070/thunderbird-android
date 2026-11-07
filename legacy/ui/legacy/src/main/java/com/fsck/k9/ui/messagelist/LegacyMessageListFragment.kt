@@ -2853,7 +2853,9 @@ class LegacyMessageListFragment :
 
         override fun remoteSearchStarted(folderId: Long) {
             handler.progress(true)
-            handler.updateFooter(getString(R.string.remote_search_sending_query))
+            if (!showsServerSearchInTitle) {
+                handler.updateFooter(getString(R.string.remote_search_sending_query))
+            }
         }
 
         override fun enableProgressIndicator(enable: Boolean) {
@@ -2893,9 +2895,18 @@ class LegacyMessageListFragment :
                 resources.getQuantityString(R.plurals.remote_search_downloading, numResults, numResults)
             }
 
-            handler.updateFooter(footerText)
+            if (!showsServerSearchInTitle) {
+                handler.updateFooter(footerText)
+            }
             informUserOfStatus()
         }
+
+        /**
+         * The sender view says how its server search is going under the address. It searches folder after folder,
+         * so the footer would also show a count for each one - mostly "Fetching 0 results".
+         */
+        private val showsServerSearchInTitle: Boolean
+            get() = senderAddress != null
 
         private fun informUserOfStatus() {
             handler.refreshTitle()
