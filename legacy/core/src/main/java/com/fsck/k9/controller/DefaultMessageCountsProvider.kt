@@ -6,8 +6,10 @@ import app.k9mail.legacy.message.controller.MessageCountsProvider
 import app.k9mail.legacy.message.controller.MessagingControllerRegistry
 import app.k9mail.legacy.message.controller.SimpleMessagingListener
 import com.fsck.k9.search.conditionsFor
+import com.fsck.k9.search.folderIdFor
 import com.fsck.k9.search.getLegacyAccounts
 import com.fsck.k9.search.specialFolderId
+import com.fsck.k9.search.unifiedFolderRole
 import kotlin.coroutines.CoroutineContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.Channel
@@ -99,7 +101,9 @@ internal class DefaultMessageCountsProvider(
 
             val folderStatusChangedListener = object : SimpleMessagingListener() {
                 override fun folderStatusChanged(accountId: AccountId, folderId: Long) {
-                    trySendBlocking(getMessageCounts(search))
+                    if (search.canBeChangedBy(accountId, folderId)) {
+                        trySendBlocking(getMessageCounts(search))
+                    }
                 }
             }
             messagingControllerRegistry.addListener(folderStatusChangedListener)
@@ -110,6 +114,24 @@ internal class DefaultMessageCountsProvider(
         }.buffer(capacity = Channel.CONFLATED)
             .distinctUntilChanged()
             .flowOn(coroutineContext)
+    }
+
+    /**
+     * Whether a change to [folderId] of [accountId] can change this search's counts.
+     *
+     * The drawer watches every unified folder at once, and a sync reports each folder it touches, so recounting
+     * every unified folder of every account for each report meant dozens of queries per folder, run on the thread
+     * doing the sync. A unified folder counts one folder per account, so only that folder can change it.
+     */
+    private fun LocalMessageSearch.canBeChangedBy(accountId: AccountId, folderId: Long): Boolean {
+        val role = unifiedFolderRole
+        val account = role?.let { accountManager.findById(accountId) }
+
+        return when {
+            !searchAllAccounts() && accountId !in accountIds -> false
+            role == null || account == null -> true
+            else -> account.folderIdFor(role, outboxFolderManager) == folderId
+        }
     }
 
     @Suppress("TooGenericExceptionCaught")

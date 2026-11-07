@@ -35,6 +35,8 @@ import org.mockito.kotlin.mock
 
 private const val UNREAD_COUNT = 2
 private const val STARRED_COUNT = 3
+private const val INBOX_FOLDER_ID = 10L
+private const val OTHER_FOLDER_ID = 11L
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class DefaultMessageCountsProviderTest {
@@ -196,6 +198,52 @@ class DefaultMessageCountsProviderTest {
             currentListener?.folderStatusChanged(ACCOUNT_ID, 0)
             testScheduler.advanceUntilIdle()
             assertThat(awaitItem()).isEqualTo(MessageCounts(2, 2))
+        }
+    }
+
+    @Test
+    fun `getMessageCountsFlow for a unified folder should ignore changes to other folders`() = runTest {
+        // Arrange
+        var currentListener: SimpleMessagingListener? = null
+        val registry = object : MessagingControllerRegistry {
+            override fun addListener(listener: MessagingListener) {
+                currentListener = listener as SimpleMessagingListener
+            }
+
+            override fun removeListener(listener: MessagingListener) {
+                currentListener = null
+            }
+        }
+        var currentCount = 0
+        val messageStore = mock<ListenableMessageStore> {
+            on { getUnreadMessageCount(anyOrNull<SearchConditionTreeNode>()) } doAnswer { currentCount }
+            on { getStarredMessageCount(anyOrNull()) } doAnswer { currentCount }
+        }
+        val messageStoreManager = mock<MessageStoreManager> {
+            on { getMessageStore(ACCOUNT_ID) } doReturn messageStore
+        }
+        val accountWithInbox = account.copy(inboxFolderId = INBOX_FOLDER_ID)
+        val testSubject = DefaultMessageCountsProvider(
+            accountManager = FakeLegacyAccountManager(listOf(accountWithInbox)),
+            messageStoreManager = messageStoreManager,
+            messagingControllerRegistry = registry,
+            outboxFolderManager = FakeOutboxFolderManager(),
+            logger = TestLogger(),
+            coroutineContext = UnconfinedTestDispatcher(testScheduler),
+        )
+
+        // Act & Assert
+        testSubject.getMessageCountsFlow(LocalMessageSearch.createUnifiedSearch(FolderRole.INBOX)).test {
+            assertThat(awaitItem()).isEqualTo(MessageCounts(0, 0))
+
+            currentCount = 1
+            currentListener?.folderStatusChanged(ACCOUNT_ID, OTHER_FOLDER_ID)
+            testScheduler.advanceUntilIdle()
+            expectNoEvents()
+
+            currentListener?.folderStatusChanged(ACCOUNT_ID, INBOX_FOLDER_ID)
+            testScheduler.advanceUntilIdle()
+            assertThat(awaitItem()).isEqualTo(MessageCounts(1, 1))
         }
     }
 
