@@ -9,12 +9,15 @@ import com.fsck.k9.activity.MessageSearchActivity
 import com.fsck.k9.controller.MessagingController
 import com.fsck.k9.mailstore.LocalStoreProvider
 import com.fsck.k9.message.extractors.Carrier
-import com.fsck.k9.message.extractors.findTrackingNumbers
+import com.fsck.k9.message.extractors.findTrackingNumbersInText
 import com.fsck.k9.message.extractors.messagePlainText
 import com.fsck.k9.view.LinkConfirmation
 import com.fsck.k9.view.LinkConfirmationActivity
 import java.util.concurrent.ConcurrentHashMap
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.withContext
 import net.thunderbird.app.common.feature.mailscan.DOWNLOADED_CONDITION
 import net.thunderbird.app.common.feature.mailscan.NOT_DOWNLOADED_CONDITION
@@ -74,17 +77,28 @@ internal class LegacyShippingMailSource(
 
     private class CachedMail(val mail: ShippingMail?)
 
-    override suspend fun shippingMails(since: Long): List<ShippingMail> = withContext(Dispatchers.IO) {
-        headers(since, DOWNLOADED_CONDITION).mapNotNull { header ->
-            val key = header.reference.toKey()
-            readMails.getOrPut(key) { CachedMail(read(header, key)) }.mail
-        }
+    /**
+     * Reads mails side by side, as many at a time as there are processors: turning a mail's HTML into text takes a
+     * few hundred milliseconds, and a cold start reads every shipping mail of the window.
+     */
+    private val readDispatcher = Dispatchers.IO.limitedParallelism(Runtime.getRuntime().availableProcessors())
+
+    override suspend fun shippingMails(since: Long): List<ShippingMail> = coroutineScope {
+        val headers = withContext(Dispatchers.IO) { headers(since, DOWNLOADED_CONDITION) }
+        headers.map { header ->
+            async(readDispatcher) {
+                val key = header.reference.toKey()
+                readMails[key] ?: CachedMail(read(header, key)).also { readMails[key] = it }
+            }
+        }.awaitAll().mapNotNull { it.mail }
     }
 
     @Suppress("ReturnCount")
     private fun read(header: StoredMailHeader, key: String): ShippingMail? {
         val message = loadStoredMessage(localStoreProvider, header.reference) ?: return null
-        val parcels = findTrackingNumbers(message, header.subject).map { trackingNumber ->
+        // The text is made once: from HTML that is the slow part, and both the numbers and the status read it.
+        val fullText = listOfNotNull(header.subject, messagePlainText(message)).joinToString("\n")
+        val parcels = findTrackingNumbersInText(fullText).map { trackingNumber ->
             ParcelNumber(
                 carrier = trackingNumber.carrier.toParcelCarrier(),
                 number = trackingNumber.number,
@@ -93,7 +107,7 @@ internal class LegacyShippingMailSource(
         }
         if (parcels.isEmpty()) return null
 
-        val text = listOfNotNull(header.subject, messagePlainText(message)).joinToString("\n").take(MAX_TEXT_LENGTH)
+        val text = fullText.take(MAX_TEXT_LENGTH)
         return ShippingMail(
             key = key,
             date = header.date,

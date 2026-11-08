@@ -7,7 +7,12 @@ import java.util.concurrent.ConcurrentHashMap
 import kotlin.time.Clock
 import kotlin.time.ExperimentalTime
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withContext
 import net.thunderbird.core.ui.contract.mvi.BaseViewModel
 import net.thunderbird.core.ui.contract.mvi.UnidirectionalViewModel
@@ -130,7 +135,15 @@ internal class TripsViewModel(
                 senderDomains = senders.listed().map { it.domain }.toSet(),
                 markedMessageIds = senders.markedMessageIds(),
             )
-            val reservations = headers.filter { it.isDownloaded }.flatMap { header -> reservationsIn(header) }
+            // Each mail takes a database read and a parse; a year of confirmations read one after another took
+            // half a minute, so they are read side by side, as many at a time as there are processors.
+            val reading = Semaphore(Runtime.getRuntime().availableProcessors())
+            val reservations = coroutineScope {
+                headers.filter { it.isDownloaded }
+                    .map { header -> async { reading.withPermit { reservationsIn(header) } } }
+                    .awaitAll()
+                    .flatten()
+            }
             val today = Instant.ofEpochMilli(now()).atZone(ZoneId.systemDefault()).toLocalDate()
 
             updateState {
