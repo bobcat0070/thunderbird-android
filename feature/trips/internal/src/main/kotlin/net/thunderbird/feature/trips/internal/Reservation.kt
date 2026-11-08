@@ -4,6 +4,7 @@ import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.ZoneId
 import java.time.ZoneOffset
+import kotlinx.serialization.Serializable
 
 enum class ReservationType {
     FLIGHT,
@@ -20,8 +21,11 @@ enum class ReservationType {
  *
  * @param hasTime whether a time of day was given, or only a date - a hotel's check-in day, say.
  */
+@Serializable
 data class TripTime(
+    @Serializable(with = LocalDateTimeSerializer::class)
     val local: LocalDateTime,
+    @Serializable(with = ZoneOffsetSerializer::class)
     val offset: ZoneOffset? = null,
     val hasTime: Boolean = true,
 ) {
@@ -50,6 +54,7 @@ data class TripTime(
  * @param mailKey the mail it was read from.
  * @param mailDate when that mail was sent, so a newer mail about the same booking wins.
  */
+@Serializable
 data class Reservation(
     val type: ReservationType,
     val title: String,

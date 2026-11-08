@@ -7,6 +7,7 @@ import assertk.assertions.isEmpty
 import assertk.assertions.isEqualTo
 import assertk.assertions.isNull
 import assertk.assertions.single
+import java.io.File
 import java.time.LocalDate
 import java.time.ZoneId
 import kotlin.test.AfterTest
@@ -22,6 +23,8 @@ import net.thunderbird.components.ui.testing.coroutines.MainDispatcherHelper
 import net.thunderbird.feature.trips.TravelMailContent
 import net.thunderbird.feature.trips.TravelMailHeader
 import net.thunderbird.feature.trips.TravelMailSource
+import org.junit.Rule
+import org.junit.rules.TemporaryFolder
 
 private val NOW = LocalDate.of(2026, 11, 1).atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
 
@@ -44,6 +47,16 @@ class TravelSendersTest {
     fun tearDown() {
         mainDispatcher.tearDown()
     }
+
+    @get:Rule
+    val folder = TemporaryFolder()
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    private fun newCache() = ReservationCache(
+        file = File(folder.root, "reservations.json"),
+        appUpdatedAt = { 1L },
+        ioDispatcher = UnconfinedTestDispatcher(),
+    )
 
     @Test
     fun `a sender at a subdomain of a listed domain should be listed under it`() {
@@ -110,7 +123,7 @@ class TravelSendersTest {
             ),
             content = TravelMailContent(html = null, text = "Dinner at Zuni on Nov 20, 2026 at 7:30 PM"),
         )
-        val testSubject = TripsViewModel(mailSource, ReservationCache(), senders, clock)
+        val testSubject = TripsViewModel(mailSource, newCache(), senders, clock)
 
         testSubject.state.test {
             testSubject.event(TripsContract.Event.LoadTrips)
@@ -136,7 +149,7 @@ class TravelSendersTest {
             )
         }
         val mailSource = FakeTravelMailSource(header = null, content = null, notDownloaded = notDownloaded.shuffled())
-        val testSubject = TripsViewModel(mailSource, ReservationCache(), senders, clock)
+        val testSubject = TripsViewModel(mailSource, newCache(), senders, clock)
         testSubject.event(TripsContract.Event.LoadTrips)
 
         testSubject.event(TripsContract.Event.DownloadMailsClicked)
@@ -148,7 +161,7 @@ class TravelSendersTest {
     @Test
     fun `trips should be read again when the sender list has changed`() {
         val mailSource = FakeTravelMailSource(header = null, content = null)
-        val testSubject = TripsViewModel(mailSource, ReservationCache(), senders, clock)
+        val testSubject = TripsViewModel(mailSource, newCache(), senders, clock)
 
         testSubject.event(TripsContract.Event.LoadTrips)
         testSubject.event(TripsContract.Event.LoadTrips)

@@ -13,7 +13,6 @@ import com.fsck.k9.message.extractors.findTrackingNumbersInText
 import com.fsck.k9.message.extractors.messagePlainText
 import com.fsck.k9.view.LinkConfirmation
 import com.fsck.k9.view.LinkConfirmationActivity
-import java.util.concurrent.ConcurrentHashMap
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -28,6 +27,7 @@ import net.thunderbird.app.common.feature.mailscan.loadStoredMessage
 import net.thunderbird.app.common.feature.mailscan.openStoredMessage
 import net.thunderbird.app.common.feature.mailscan.storedMailHeaders
 import net.thunderbird.app.common.feature.mailscan.toKey
+import net.thunderbird.app.common.feature.packages.ShippingMailCache.CachedMail
 import net.thunderbird.core.android.account.LegacyAccountManager
 import net.thunderbird.feature.packages.ParcelCarrier
 import net.thunderbird.feature.packages.ParcelNumber
@@ -59,7 +59,7 @@ private const val MAX_TEXT_LENGTH = 4000
 /**
  * Reads shipping mail from the stores of every account for the Packages screen.
  *
- * What each mail holds is kept for as long as the app runs, so opening Packages again reads only new mail.
+ * What each mail holds is kept, on the device, by [cache], so opening Packages again reads only new mail.
  */
 @Suppress("LongParameterList")
 internal class LegacyShippingMailSource(
@@ -69,14 +69,8 @@ internal class LegacyShippingMailSource(
     private val localStoreProvider: LocalStoreProvider,
     private val messagingController: MessagingController,
     private val linkConfirmation: LinkConfirmation,
+    private val cache: ShippingMailCache,
 ) : ShippingMailSource {
-    /**
-     * Each mail read so far, or `null` for one that turned out to name no tracking number.
-     */
-    private val readMails = ConcurrentHashMap<String, CachedMail>()
-
-    private class CachedMail(val mail: ShippingMail?)
-
     /**
      * Reads mails side by side, as many at a time as there are processors: turning a mail's HTML into text takes a
      * few hundred milliseconds, and a cold start reads every shipping mail of the window.
@@ -84,13 +78,16 @@ internal class LegacyShippingMailSource(
     private val readDispatcher = Dispatchers.IO.limitedParallelism(Runtime.getRuntime().availableProcessors())
 
     override suspend fun shippingMails(since: Long): List<ShippingMail> = coroutineScope {
+        cache.load()
         val headers = withContext(Dispatchers.IO) { headers(since, DOWNLOADED_CONDITION) }
-        headers.map { header ->
+        val keys = headers.map { header -> header.reference.toKey() }
+        val mails = headers.zip(keys) { header, key ->
             async(readDispatcher) {
-                val key = header.reference.toKey()
-                readMails[key] ?: CachedMail(read(header, key)).also { readMails[key] = it }
+                cache[key] ?: CachedMail(read(header, key)).also { cache[key] = it }
             }
         }.awaitAll().mapNotNull { it.mail }
+        cache.save(keys.toSet())
+        mails
     }
 
     @Suppress("ReturnCount")

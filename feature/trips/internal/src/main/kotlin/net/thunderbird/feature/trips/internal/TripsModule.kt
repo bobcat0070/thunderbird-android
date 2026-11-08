@@ -13,7 +13,7 @@ import org.koin.dsl.module
  */
 val featureTripsModule = module {
     single<TripsNavigation> { DefaultTripsNavigation() }
-    single { ReservationCache() }
+    single { ReservationCache(context = androidContext()) }
     single { SharedPreferencesTravelSenderStore(context = androidContext()) } binds
         arrayOf(TravelSenderStore::class, TravelSenders::class)
     factory<TravelMailDownloader> { DefaultTravelMailDownloader(mailSource = get(), senders = get(), clock = get()) }

@@ -36,6 +36,7 @@ dependencies {
 
     implementation(projects.core.featureflag)
     implementation(projects.core.file)
+    implementation(libs.kotlinx.serialization.json)
 
     implementation(projects.core.ui.setting.api)
     implementation(projects.core.ui.setting.implDialog)

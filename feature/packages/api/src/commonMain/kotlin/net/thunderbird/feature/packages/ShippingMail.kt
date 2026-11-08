@@ -1,5 +1,7 @@
 package net.thunderbird.feature.packages
 
+import kotlinx.serialization.Serializable
+
 /**
  * The carriers whose tracking numbers the app recognises in mail.
  */
@@ -15,6 +17,7 @@ enum class ParcelCarrier {
  *
  * @param trackingUrl the carrier's own tracking page for the number.
  */
+@Serializable
 data class ParcelNumber(
     val carrier: ParcelCarrier,
     val number: String,
@@ -30,6 +33,7 @@ data class ParcelNumber(
  * @param text the mail's subject and readable text, cut to a length that holds what a shipping update says.
  * @param senderAddress the address it was sent from, which tells a carrier's own mail from a shop's.
  */
+@Serializable
 data class ShippingMail(
     val key: String,
     val date: Long,

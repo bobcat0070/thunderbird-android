@@ -11,6 +11,7 @@ import org.koin.dsl.module
 internal val appCommonFeaturePackagesModule = module {
     includes(featurePackagesModule)
 
+    single { ShippingMailCache(context = androidContext()) }
     single<ShippingMailSource> {
         LegacyShippingMailSource(
             context = androidContext(),
@@ -19,6 +20,7 @@ internal val appCommonFeaturePackagesModule = module {
             localStoreProvider = get(),
             messagingController = get(),
             linkConfirmation = get(),
+            cache = get(),
         )
     }
 

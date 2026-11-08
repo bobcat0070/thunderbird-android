@@ -5,6 +5,7 @@ import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.ZoneId
+import kotlinx.serialization.Serializable
 
 /**
  * Subjects that confirm a booking, rather than advertise one.
@@ -118,6 +119,7 @@ private const val PM_OFFSET = 12
  * @param senderType the kind of booking the listed sender sends, when it sends only one.
  * @param isMarked whether the reader marked the mail as trip mail.
  */
+@Serializable
 data class MailHints(
     val isListedSender: Boolean = false,
     val senderType: ReservationType? = null,

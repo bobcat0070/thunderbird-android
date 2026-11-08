@@ -3,7 +3,6 @@ package net.thunderbird.feature.trips.internal
 import androidx.lifecycle.viewModelScope
 import java.time.Instant
 import java.time.ZoneId
-import java.util.concurrent.ConcurrentHashMap
 import kotlin.time.Clock
 import kotlin.time.ExperimentalTime
 import kotlinx.coroutines.Dispatchers
@@ -68,20 +67,6 @@ internal interface TripsContract {
 }
 
 /**
- * The bookings read from each mail, kept for as long as the app runs: a mail's body does not change, and reading a
- * year of confirmations again on every visit would be slow.
- */
-internal class ReservationCache {
-    private val byMail = ConcurrentHashMap<String, List<Reservation>>()
-
-    fun get(key: String): List<Reservation>? = byMail[key]
-
-    fun put(key: String, reservations: List<Reservation>) {
-        byMail[key] = reservations
-    }
-}
-
-/**
  * Reads bookings from the reader's confirmations and gathers them into trips.
  */
 @OptIn(ExperimentalTime::class)
@@ -130,6 +115,7 @@ internal class TripsViewModel(
         loadedVersion = senders.version
 
         viewModelScope.launch {
+            cache.load()
             val headers = mailSource.candidates(
                 since = now() - TRIPS_SCAN_DAYS * DAY_MILLIS,
                 senderDomains = senders.listed().map { it.domain }.toSet(),
@@ -144,6 +130,7 @@ internal class TripsViewModel(
                     .awaitAll()
                     .flatten()
             }
+            cache.save(mailKeys = headers.filter { it.isDownloaded }.map { it.key }.toSet())
             val today = Instant.ofEpochMilli(now()).atZone(ZoneId.systemDefault()).toLocalDate()
 
             updateState {
@@ -174,9 +161,7 @@ internal class TripsViewModel(
             senderType = senders.typeOf(address),
             isMarked = header.isMarked,
         )
-        // What a mail reads as depends on its hints, which change as the reader edits the list.
-        val cacheKey = "${header.key}|$hints"
-        cache.get(cacheKey)?.let { return it }
+        cache.get(header.key, hints)?.let { return it }
 
         val content = mailSource.content(header.key) ?: return emptyList()
         val reservations = withContext(Dispatchers.Default) {
@@ -196,7 +181,7 @@ internal class TripsViewModel(
                 )
             }
         }
-        cache.put(cacheKey, reservations)
+        cache.put(header.key, hints, reservations)
         return reservations
     }
 
