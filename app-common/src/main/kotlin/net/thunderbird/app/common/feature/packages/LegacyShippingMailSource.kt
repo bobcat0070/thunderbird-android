@@ -101,6 +101,7 @@ internal class LegacyShippingMailSource(
             subject = header.subject,
             parcels = parcels,
             text = text,
+            senderAddress = header.senderAddress,
         )
     }
 

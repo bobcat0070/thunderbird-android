@@ -29,7 +29,7 @@ data class ParcelMail(
 /**
  * A parcel, as all the mail that mentions its tracking number describes it.
  *
- * @property shop who sent the first mail about it, usually the shop.
+ * @property shop who the parcel is from: the shop that mailed about it, or the shipper the carrier's mail names.
  * @property title the subject of the first mail about it.
  * @property mailStatus the status the newest mail that reports one gives.
  * @property mails every mail that mentions the parcel, newest first.
@@ -84,7 +84,7 @@ fun catalogParcels(
                 number = number,
                 carrier = parcelNumber.carrier,
                 trackingUrl = parcelNumber.trackingUrl,
-                shop = first.senderName,
+                shop = parcelSender(mailsAbout.asReversed()),
                 title = first.subject,
                 firstSeen = first.date,
                 lastSeen = mailsAbout.first().date,

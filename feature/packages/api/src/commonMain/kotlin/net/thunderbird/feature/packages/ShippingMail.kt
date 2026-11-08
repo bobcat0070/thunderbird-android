@@ -28,6 +28,7 @@ data class ParcelNumber(
  * @param date when the mail was sent.
  * @param senderName who sent it, as the reader would recognise them: the display name, or else the address.
  * @param text the mail's subject and readable text, cut to a length that holds what a shipping update says.
+ * @param senderAddress the address it was sent from, which tells a carrier's own mail from a shop's.
  */
 data class ShippingMail(
     val key: String,
@@ -36,6 +37,7 @@ data class ShippingMail(
     val subject: String?,
     val parcels: List<ParcelNumber>,
     val text: String,
+    val senderAddress: String? = null,
 )
 
 /**
