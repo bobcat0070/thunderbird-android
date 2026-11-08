@@ -1,5 +1,8 @@
 package net.thunderbird.app.common.feature.packages
 
+import androidx.work.WorkerParameters
+import net.thunderbird.app.common.feature.mailscan.RecentMailDownloadScheduler
+import net.thunderbird.app.common.feature.mailscan.RecentMailDownloadWorker
 import net.thunderbird.feature.packages.ShippingMailSource
 import net.thunderbird.feature.packages.internal.featurePackagesModule
 import org.koin.android.ext.koin.androidContext
@@ -16,6 +19,17 @@ internal val appCommonFeaturePackagesModule = module {
             localStoreProvider = get(),
             messagingController = get(),
             linkConfirmation = get(),
+        )
+    }
+
+    factory { RecentMailDownloadScheduler(workManager = get()) }
+    factory { (parameters: WorkerParameters) ->
+        RecentMailDownloadWorker(
+            generalSettingsManager = get(),
+            shippingMailDownloader = get(),
+            travelMailDownloader = get(),
+            context = androidContext(),
+            workerParams = parameters,
         )
     }
 }

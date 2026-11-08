@@ -121,15 +121,45 @@ class PackagesViewModelTest {
         assertThat(mailSource.calls).containsExactly("search ${ups.number}", "open 1")
     }
 
+    @Test
+    fun `opening should download the shipping mail not on the device without asking`() {
+        mailSource.notDownloaded = 3
+
+        testSubject.event(Event.LoadParcels)
+
+        assertThat(mailSource.calls).containsExactly("download since ${NOW - SCAN_WINDOW_DAYS * DAY}")
+        assertThat(testSubject.state.value.mailsNotDownloaded).isEqualTo(0)
+        assertThat(testSubject.state.value.download).isNull()
+    }
+
+    @Test
+    fun `mail that fails to download on opening should be left to the reader's button`() {
+        mailSource.notDownloaded = 3
+        mailSource.isDownloadFailing = true
+
+        testSubject.event(Event.LoadParcels)
+        testSubject.event(Event.Refresh)
+
+        assertThat(mailSource.calls).containsExactly("download since ${NOW - SCAN_WINDOW_DAYS * DAY}")
+        assertThat(testSubject.state.value.mailsNotDownloaded).isEqualTo(3)
+    }
+
     private fun mail(key: String, date: Long, subject: String, parcels: List<ParcelNumber>) =
         ShippingMail(key, date, "Shop", subject, parcels, subject)
 
     private class FakeMailSource(private val mails: List<ShippingMail>) : ShippingMailSource {
         val calls = mutableListOf<String>()
 
+        var notDownloaded = 0
+        var isDownloadFailing = false
+
         override suspend fun shippingMails(since: Long) = mails
-        override suspend fun notDownloadedCount(since: Long) = 0
-        override suspend fun downloadMails(since: Long, onProgress: (Int, Int) -> Unit) = 0
+        override suspend fun notDownloadedCount(since: Long) = notDownloaded
+        override suspend fun downloadMails(since: Long, onProgress: (Int, Int) -> Unit): Int {
+            calls += "download since $since"
+            if (isDownloadFailing) return 0
+            return notDownloaded.also { notDownloaded = 0 }
+        }
 
         override fun openMail(key: String) {
             calls += "open $key"

@@ -32,6 +32,7 @@ import kotlinx.coroutines.launch
 import net.thunderbird.app.common.feature.LoggerLifecycleObserver
 import net.thunderbird.app.common.feature.blocklist.DomainBlocklistScheduler
 import net.thunderbird.app.common.feature.impersonation.VerifiedSenderDomainsScheduler
+import net.thunderbird.app.common.feature.mailscan.RecentMailDownloadScheduler
 import net.thunderbird.app.common.feature.spamdigest.PendingSpamDigestImport
 import net.thunderbird.app.common.feature.spamdigest.SpamArrivalMessagingListener
 import net.thunderbird.app.common.feature.spamdigest.SpamDigestCatchUpListener
@@ -64,6 +65,7 @@ abstract class BaseApplication : Application(), WorkManagerConfiguration.Provide
     private val messageReclassifier: MessageReclassifier by inject()
     private val spamDigestScheduler: SpamDigestScheduler by inject()
     private val verifiedSenderDomainsScheduler: VerifiedSenderDomainsScheduler by inject()
+    private val recentMailDownloadScheduler: RecentMailDownloadScheduler by inject()
     private val domainBlocklistUpdater: DefaultBlocklistUpdater by inject()
     private val domainBlocklistScheduler: DomainBlocklistScheduler by inject()
     private val generalSettingsManager: GeneralSettingsManager by inject()
@@ -125,6 +127,10 @@ abstract class BaseApplication : Application(), WorkManagerConfiguration.Provide
 
         appCoroutineScope.launch(Dispatchers.IO) {
             verifiedSenderDomainsScheduler.ensureScheduled()
+        }
+
+        appCoroutineScope.launch(Dispatchers.IO) {
+            recentMailDownloadScheduler.ensureScheduled()
         }
 
         // Blocklists already on the device are put to use at once; missing or old ones are fetched in the

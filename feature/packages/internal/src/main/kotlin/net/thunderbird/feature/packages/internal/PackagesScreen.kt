@@ -190,16 +190,17 @@ private fun NotDownloadedNotice(
             .fillMaxWidth()
             .padding(horizontal = BoltTheme.spacings.double, vertical = BoltTheme.spacings.default),
     ) {
-        TextBodyMedium(text = pluralStringResource(R.plurals.packages_mails_not_downloaded, count, count))
-        ButtonText(
-            text = if (download != null && download.total > 0) {
-                stringResource(R.string.packages_downloading, download.done, download.total)
-            } else {
-                pluralStringResource(R.plurals.packages_download_mails, count, count)
-            },
-            onClick = { onEvent(Event.DownloadMailsClicked) },
-            enabled = download == null,
-        )
+        // Opening the screen starts the download itself, so while it runs only its progress is shown.
+        if (download != null) {
+            val total = if (download.total > 0) download.total else count
+            TextBodyMedium(text = stringResource(R.string.packages_downloading, download.done, total))
+        } else {
+            TextBodyMedium(text = pluralStringResource(R.plurals.packages_mails_not_downloaded, count, count))
+            ButtonText(
+                text = pluralStringResource(R.plurals.packages_download_mails, count, count),
+                onClick = { onEvent(Event.DownloadMailsClicked) },
+            )
+        }
     }
 }
 

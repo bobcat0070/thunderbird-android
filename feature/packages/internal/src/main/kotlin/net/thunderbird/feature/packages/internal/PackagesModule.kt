@@ -2,6 +2,7 @@ package net.thunderbird.feature.packages.internal
 
 import java.util.concurrent.TimeUnit
 import net.thunderbird.feature.packages.PackagesNavigation
+import net.thunderbird.feature.packages.ShippingMailDownloader
 import net.thunderbird.feature.packages.internal.carrier.CarrierApiTracker
 import net.thunderbird.feature.packages.internal.carrier.CarrierCredentialsStore
 import net.thunderbird.feature.packages.internal.carrier.LiveTracker
@@ -30,6 +31,7 @@ val featurePackagesModule = module {
             clock = get(),
         )
     }
+    factory<ShippingMailDownloader> { DefaultShippingMailDownloader(mailSource = get(), clock = get()) }
     viewModel { PackagesViewModel(mailSource = get(), marks = get(), liveTracker = get(), clock = get()) }
     viewModel { CarrierAccountsViewModel(credentialsStore = get()) }
 }

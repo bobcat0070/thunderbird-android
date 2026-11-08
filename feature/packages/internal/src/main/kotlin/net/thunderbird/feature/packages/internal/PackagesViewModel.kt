@@ -41,6 +41,12 @@ internal class PackagesViewModel(
 
     private var mails: List<ShippingMail> = emptyList()
 
+    /**
+     * Whether the mail not on the device was downloaded without asking, which is done once a visit: mail that fails
+     * to download is then left to the reader's button rather than tried again on every reload.
+     */
+    private var hasDownloadedOnOpen = false
+
     override fun event(event: Event) {
         when (event) {
             Event.LoadParcels -> handleOneTimeEvent(event) { load(isRefresh = false) }
@@ -51,7 +57,7 @@ internal class PackagesViewModel(
             is Event.SearchAllMail -> mailSource.searchAllMail(event.number)
             is Event.MarkDelivered -> markDelivered(event.number, event.isDelivered)
             is Event.RemoveParcel -> remove(event.number)
-            Event.DownloadMailsClicked -> downloadMails()
+            Event.DownloadMailsClicked -> downloadMails(isAsked = true)
             Event.CarrierAccountsClicked -> emitEffect(Effect.OpenCarrierAccounts)
             Event.BackClicked -> back()
         }
@@ -83,6 +89,10 @@ internal class PackagesViewModel(
                     mailsNotDownloaded = notDownloaded,
                     liveCarriers = liveTracker.carriers(),
                 )
+            }
+            if (notDownloaded > 0 && !hasDownloadedOnOpen) {
+                hasDownloadedOnOpen = true
+                downloadMails(isAsked = false)
             }
 
             askCarriers()
@@ -126,7 +136,10 @@ internal class PackagesViewModel(
         emitEffect(Effect.ShowNotice(Notice.Removed))
     }
 
-    private fun downloadMails() {
+    /**
+     * @param isAsked whether the reader asked, who is then told how many were downloaded.
+     */
+    private fun downloadMails(isAsked: Boolean) {
         if (state.value.download != null) return
         updateState { it.copy(download = DownloadProgress(done = 0, total = 0)) }
 
@@ -134,7 +147,7 @@ internal class PackagesViewModel(
             val count = mailSource.downloadMails(since()) { done, total ->
                 updateState { it.copy(download = DownloadProgress(done, total)) }
             }
-            emitEffect(Effect.ShowNotice(Notice.Downloaded(count)))
+            if (isAsked) emitEffect(Effect.ShowNotice(Notice.Downloaded(count)))
             updateState { it.copy(download = null) }
             load(isRefresh = false)
         }

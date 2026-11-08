@@ -92,6 +92,12 @@ internal class TripsViewModel(
      */
     private var loadedVersion: Int? = null
 
+    /**
+     * Whether the mail not on the device was downloaded without asking, which is done once a visit: mail that fails
+     * to download is then left to the reader's button rather than tried again on every reload.
+     */
+    private var hasDownloadedOnOpen = false
+
     override fun event(event: Event) {
         when (event) {
             // Sent each time the screen shows, as after the travel sender list, which may have changed.
@@ -103,7 +109,7 @@ internal class TripsViewModel(
 
             is Event.AddToCalendar -> emitEffect(Effect.OpenCalendar(event.reservation))
 
-            Event.DownloadMailsClicked -> downloadMails()
+            Event.DownloadMailsClicked -> downloadMails(isAsked = true)
 
             Event.TravelSendersClicked -> emitEffect(Effect.OpenTravelSenders)
 
@@ -136,6 +142,10 @@ internal class TripsViewModel(
                         .sortedByDescending { header -> header.date }
                         .map { header -> header.key },
                 )
+            }
+            if (state.value.notDownloaded.isNotEmpty() && !hasDownloadedOnOpen) {
+                hasDownloadedOnOpen = true
+                downloadMails(isAsked = false)
             }
         }
     }
@@ -177,7 +187,10 @@ internal class TripsViewModel(
         return reservations
     }
 
-    private fun downloadMails() {
+    /**
+     * @param isAsked whether the reader asked, who is then told how many were downloaded.
+     */
+    private fun downloadMails(isAsked: Boolean) {
         if (state.value.download != null) return
         val keys = state.value.notDownloaded
         if (keys.isEmpty()) return
@@ -187,7 +200,7 @@ internal class TripsViewModel(
             val count = mailSource.download(keys) { done, total ->
                 updateState { it.copy(download = DownloadProgress(done, total)) }
             }
-            emitEffect(Effect.Downloaded(count))
+            if (isAsked) emitEffect(Effect.Downloaded(count))
             updateState { it.copy(download = null) }
             load(isRefresh = false)
         }
