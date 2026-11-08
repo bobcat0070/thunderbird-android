@@ -15,6 +15,7 @@ internal val appCommonFeaturePackagesModule = module {
             messageStoreManager = get(),
             localStoreProvider = get(),
             messagingController = get(),
+            linkConfirmation = get(),
         )
     }
 }

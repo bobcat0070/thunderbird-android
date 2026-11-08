@@ -69,7 +69,7 @@ interface ShippingMailSource {
     fun searchAllMail(query: String)
 
     /**
-     * Opens [url] through the link check.
+     * Opens [url], the carrier's own tracking page, straight away; any other link goes through the link check.
      */
     fun openTrackingPage(url: String)
 }

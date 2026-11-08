@@ -14,6 +14,7 @@ import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.core.text.inSpans
 import androidx.core.view.isVisible
+import com.fsck.k9.message.extractors.isCarrierTrackingUrl
 import com.fsck.k9.message.html.StrippedLink
 import com.fsck.k9.message.html.canonicalWebLink
 import com.fsck.k9.message.html.clickTrackerHost
@@ -114,6 +115,20 @@ class LinkConfirmation(
     }
 
     /**
+     * Opens a carrier's tracking page that the app built from a tracking number, without asking: the site is the
+     * carrier's own, chosen here, and nothing in the link is the sender's, so there is nothing to check or strip.
+     *
+     * @return `false`, having opened nothing, when [url] is not such a page; it then belongs to [confirmAndOpen].
+     */
+    fun openTrackingPage(context: Context, url: String): Boolean {
+        if (!isCarrierTrackingUrl(url)) return false
+
+        // May be asked from a screen with only the application context, e.g. the Packages screen.
+        openUrl(context, Uri.parse(url), newTask = true)
+        return true
+    }
+
+    /**
      * Places to go instead of the link, reached without any of its tracking. First the address the link's text names,
      * when it names one, otherwise the sender's own website; then the root of the sender's domain when that is a
      * different site - mail often comes from a subdomain such as `care.onemedical.com` that is no website of its own.
@@ -209,13 +224,14 @@ class LinkConfirmation(
         }
     }
 
-    private fun openUrl(context: Context, uri: Uri) {
+    private fun openUrl(context: Context, uri: Uri, newTask: Boolean = false) {
         val intent = Intent(Intent.ACTION_VIEW, uri).apply {
             putExtra(Browser.EXTRA_APPLICATION_ID, context.packageName)
             putExtra(Browser.EXTRA_CREATE_NEW_TAB, true)
 
             addCategory(Intent.CATEGORY_BROWSABLE)
             addFlags(Intent.FLAG_ACTIVITY_NEW_DOCUMENT)
+            if (newTask) addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         }
 
         try {

@@ -18,7 +18,18 @@ enum class Carrier(val displayName: String, private val trackingPage: String) {
     ;
 
     fun trackingUrl(number: String): String = trackingPage + number
+
+    internal fun isTrackingUrl(url: String): Boolean =
+        url.startsWith(trackingPage) && url.substring(trackingPage.length).matches(TRACKING_NUMBER_CHARACTERS)
 }
+
+private val TRACKING_NUMBER_CHARACTERS = Regex("[0-9A-Z]+")
+
+/**
+ * Whether [url] is a carrier's tracking page as [TrackingNumber.url] builds it: the carrier's own address with only a
+ * tracking number after it, and so nothing of any sender's in it.
+ */
+fun isCarrierTrackingUrl(url: String): Boolean = Carrier.entries.any { carrier -> carrier.isTrackingUrl(url) }
 
 /**
  * @property number the tracking number without spaces, as the carrier's page takes it.

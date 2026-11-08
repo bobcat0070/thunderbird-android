@@ -489,8 +489,17 @@ public class MessageHeader extends LinearLayout implements OnClickListener, OnLo
 
         trackingNumberView.setText(getContext().getString(R.string.message_view_track_package,
             trackingNumber.getCarrier().getDisplayName(), trackingNumber.getNumber()));
-        trackingNumberView.setOnClickListener(view -> openThroughLinkCheck(trackingNumber.getUrl(), null));
+        trackingNumberView.setOnClickListener(view -> openTrackingPage(trackingNumber.getUrl()));
         trackingNumberView.setVisibility(View.VISIBLE);
+    }
+
+    /**
+     * The tracking page is built here, on the carrier's own site, so it opens without the link check.
+     */
+    private void openTrackingPage(String url) {
+        if (!DI.get(LinkConfirmation.class).openTrackingPage(getContext(), url)) {
+            openThroughLinkCheck(url, null);
+        }
     }
 
     private void openThroughLinkCheck(String link, String senderAddress) {

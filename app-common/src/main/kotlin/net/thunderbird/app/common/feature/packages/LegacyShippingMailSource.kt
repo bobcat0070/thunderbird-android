@@ -11,6 +11,7 @@ import com.fsck.k9.mailstore.LocalStoreProvider
 import com.fsck.k9.message.extractors.Carrier
 import com.fsck.k9.message.extractors.findTrackingNumbers
 import com.fsck.k9.message.extractors.messagePlainText
+import com.fsck.k9.view.LinkConfirmation
 import com.fsck.k9.view.LinkConfirmationActivity
 import java.util.concurrent.ConcurrentHashMap
 import kotlinx.coroutines.Dispatchers
@@ -64,6 +65,7 @@ internal class LegacyShippingMailSource(
     private val messageStoreManager: MessageStoreManager,
     private val localStoreProvider: LocalStoreProvider,
     private val messagingController: MessagingController,
+    private val linkConfirmation: LinkConfirmation,
 ) : ShippingMailSource {
     /**
      * Each mail read so far, or `null` for one that turned out to name no tracking number.
@@ -131,8 +133,13 @@ internal class LegacyShippingMailSource(
         context.startActivity(intent)
     }
 
+    /**
+     * Opens straight away a carrier's page built from a tracking number; anything else goes through the link check.
+     */
     override fun openTrackingPage(url: String) {
-        LinkConfirmationActivity.start(context, Uri.parse(url))
+        if (!linkConfirmation.openTrackingPage(context, url)) {
+            LinkConfirmationActivity.start(context, Uri.parse(url))
+        }
     }
 
     private fun headers(since: Long, downloadCondition: String): List<StoredMailHeader> = storedMailHeaders(

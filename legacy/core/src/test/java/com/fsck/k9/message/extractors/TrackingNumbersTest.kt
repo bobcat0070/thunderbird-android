@@ -80,4 +80,35 @@ class TrackingNumbersTest {
 
         assertThat(trackingNumber?.url).isEqualTo("https://www.ups.com/track?tracknum=1Z999AA10123456784")
     }
+
+    @Test
+    fun `a tracking page built for a number should be a carrier tracking URL`() {
+        val urls = listOf(
+            TrackingNumber(Carrier.UPS, "1Z999AA10123456784"),
+            TrackingNumber(Carrier.USPS, "EA123456785US"),
+            TrackingNumber(Carrier.FEDEX, "123456789012"),
+            TrackingNumber(Carrier.DHL, "1234567890"),
+        ).map { it.url }
+
+        val result = urls.map(::isCarrierTrackingUrl)
+
+        assertThat(result).containsExactly(true, true, true, true)
+    }
+
+    @Test
+    fun `a link that only starts like a carrier tracking page should not be a carrier tracking URL`() {
+        val urls = listOf(
+            "https://www.ups.com/track?tracknum=",
+            "https://www.ups.com/track?tracknum=1Z999AA10123456784&utm_source=mail",
+            "https://www.ups.com/track?tracknum=1Z999AA10123456784#x",
+            "https://www.ups.com/track?tracknum=1z999aa10123456784",
+            "https://www.ups.com.evil.example/track?tracknum=1Z999AA10123456784",
+            "http://www.ups.com/track?tracknum=1Z999AA10123456784",
+            "https://click.example/?u=https://www.ups.com/track?tracknum=1Z999AA10123456784",
+        )
+
+        val result = urls.map(::isCarrierTrackingUrl)
+
+        assertThat(result).containsExactly(false, false, false, false, false, false, false)
+    }
 }
