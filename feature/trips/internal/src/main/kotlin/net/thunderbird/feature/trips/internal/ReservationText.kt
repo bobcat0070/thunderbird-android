@@ -10,8 +10,18 @@ import java.time.ZoneId
  * Subjects that confirm a booking, rather than advertise one.
  */
 private val BOOKING_SUBJECT = Regex(
-    "(?i)\\b(?:confirm\\w*|reservation|reserved|booking|booked|itinerary|e-?tickets?|tickets?|your (?:trip|stay|" +
+    "(?i)\\b(?:confirm\\w*|reservation|reserved|booking|booked|itinerary|e-?tickets?|your (?:trip|stay|" +
         "flight|cruise|rental|table)|check-?in|boarding pass)\\b",
+)
+
+/**
+ * Subjects about the reader's own tickets: "Your Zoo Tickets: 4417", "You Got Tickets To ...", "Ticket Order
+ * Information". "Tickets" alone is what a seller's offers and listings say too - "$30 Tickets", "Tickets to ... and
+ * more" - and a support desk's "Ticket #5521".
+ */
+private val OWN_TICKETS_SUBJECT = Regex(
+    "(?i)\\b(?:(?:your|you(?:'ve| have)? got|here are|digital|mobile|print-at-home) (?:\\S+ ){0,4}?tickets?|" +
+        "tickets? (?:order|confirm\\w*|purchase|receipt))\\b",
 )
 
 /**
@@ -24,15 +34,16 @@ private val TRIP_SUBJECT = Regex(
 )
 
 /**
- * Subjects of offers, and of mail that follows a booking already over: a request to review the stay names it, and its
- * date, as a confirmation would.
+ * Subjects of offers, of mail that follows a booking already over - a request to review the stay names it, and its
+ * date, as a confirmation would - and of a support desk's tickets.
  */
 private val NOT_A_BOOKING = Regex(
     "(?i)\\b(?:sale|deals?|offers?|% off|\\d+ off|discount|bonus|book now|book today|your next|" +
         "last-minute|secure your|get your tickets|don't miss|presale|pre-sale|just announced|limited time|" +
         "newsletter|unsubscribe|win |sweepstakes|review|feedback|survey|" +
         "rate (?:your|us)|how was|how did we do|tell us|share your|" +
-        "thanks? (?:you )?for (?:staying|flying|sailing|dining|visiting)|folio)\\b",
+        "thanks? (?:you )?for (?:staying|flying|sailing|dining|visiting)|folio|" +
+        "ticket (?:has been |was |is )?(?:submitted|updated|closed|resolved))\\b",
 )
 
 /**
@@ -169,6 +180,7 @@ fun reservationFromText(
 
 private fun isBookingSubject(subject: String, isListedSender: Boolean): Boolean {
     val confirms = BOOKING_SUBJECT.containsMatchIn(subject) ||
+        OWN_TICKETS_SUBJECT.containsMatchIn(subject) ||
         (isListedSender && TRIP_SUBJECT.containsMatchIn(subject))
     return confirms && !NOT_A_BOOKING.containsMatchIn(subject)
 }

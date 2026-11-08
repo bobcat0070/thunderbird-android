@@ -2,6 +2,7 @@ package net.thunderbird.feature.trips.internal
 
 import assertk.assertThat
 import assertk.assertions.containsExactly
+import assertk.assertions.each
 import assertk.assertions.isEmpty
 import assertk.assertions.isEqualTo
 import assertk.assertions.isNotNull
@@ -227,6 +228,53 @@ class ReservationsTest {
         )
 
         assertThat(reservation).isNull()
+    }
+
+    @Test
+    fun `ticket offers, listings and support tickets should not be read as bookings`() {
+        val subjects = listOf(
+            "We Come to This Place for \$30 Tickets",
+            "Tickets to Example Band, Another Act, and more in Springfield",
+            "Open Mic Night and Show Tickets!",
+            "Your ticket has been submitted [Ticket#1234]",
+            "Example Store Customer Service, Ticket #5521",
+        )
+
+        val reservations = subjects.map { subject ->
+            reservationFromText(
+                subject = subject,
+                senderName = "Example Theatre",
+                text = "Saturday, December 12, 2026 at 2:00 PM",
+                mailKey = "mail12",
+                mailDate = MAIL_DATE,
+                zone = ZoneOffset.UTC,
+            )
+        }
+
+        assertThat(reservations).each { it.isNull() }
+    }
+
+    @Test
+    fun `the reader's own tickets should be read as event bookings`() {
+        val subjects = listOf(
+            "Your Example Zoo Tickets: 4417",
+            "You Got Tickets To Example Musical",
+            "Ticket Order Information",
+            "Example Cinema Digital Ticket",
+        )
+
+        val types = subjects.map { subject ->
+            reservationFromText(
+                subject = subject,
+                senderName = null,
+                text = "Saturday, December 12, 2026 at 2:00 PM",
+                mailKey = "mail13",
+                mailDate = MAIL_DATE,
+                zone = ZoneOffset.UTC,
+            )?.type
+        }
+
+        assertThat(types).each { it.isEqualTo(ReservationType.EVENT) }
     }
 
     @Test
