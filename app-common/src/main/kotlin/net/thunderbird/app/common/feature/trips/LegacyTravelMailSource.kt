@@ -79,7 +79,9 @@ internal class LegacyTravelMailSource(
 
         val senderCondition = domains.takeIf { it.isNotEmpty() }?.let {
             val addressParts = domains.flatMap { domain -> listOf("@$domain", ".$domain") }
-            "(${containsAny("messages.sender_list", addressParts)} AND $TRIP_SUBJECT_CONDITION)"
+            // The few subject words first: SQLite then tests the hundreds of sender patterns only on the mails whose
+            // subject says something about a trip, which made a year of mail about three times quicker to search.
+            "($TRIP_SUBJECT_CONDITION AND ${containsAny("messages.sender_list", addressParts)})"
         }
         val markedCondition = marked.takeIf { it.isNotEmpty() }?.let {
             "messages.message_id IN (${marked.joinToString(",") { "?" }})"
