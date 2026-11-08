@@ -1,5 +1,6 @@
 package com.fsck.k9.contacts.bimi
 
+import com.fsck.k9.contacts.readAtMost
 import java.util.zip.GZIPInputStream
 
 /**
@@ -23,6 +24,12 @@ private const val GZIP_MAGIC_SECOND = 0x8B.toByte().toInt() and 0xFF
 private const val BYTE_MASK = 0xFF
 private const val LENGTH_LONG_FORM = 0x80
 private const val MAX_NESTING_DEPTH = 16
+
+/**
+ * The largest mark taken once decompressed. BIMI's SVG profile caps a mark at 32 KB; a little more is allowed. The
+ * compressed bytes are small whatever they expand to, so without a cap a few kilobytes could fill the memory.
+ */
+internal const val MAX_LOGOTYPE_SVG_BYTES = 64 * 1024
 
 /**
  * A length encoded in more than four bytes is not something a certificate extension needs.
@@ -62,7 +69,7 @@ private fun ByteArray.isGzipped(): Boolean =
         (this[1].toInt() and BYTE_MASK) == GZIP_MAGIC_SECOND
 
 private fun ByteArray.gunzipOrNull(): ByteArray? =
-    runCatching { GZIPInputStream(inputStream()).use { it.readBytes() } }.getOrNull()
+    runCatching { GZIPInputStream(inputStream()).use { it.readAtMost(MAX_LOGOTYPE_SVG_BYTES) } }.getOrNull()
 
 /**
  * Walks the DER structure, descending into constructed values and collecting every string with [targetTag].

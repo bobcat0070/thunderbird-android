@@ -19,6 +19,7 @@ import net.thunderbird.feature.packages.internal.ParcelStatus
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.Response
+import okhttp3.ResponseBody
 
 /**
  * Where the carrier says a parcel is.
@@ -140,9 +141,24 @@ internal class CarrierApiTracker(
     private fun execute(request: Request): JsonElement {
         httpClient.newCall(request).execute().use { response: Response ->
             if (!response.isSuccessful) throw IOException("HTTP ${response.code}")
-            return json.parseToJsonElement(response.body.string())
+            return json.parseToJsonElement(response.body.readUtf8AtMost(MAX_RESPONSE_BYTES))
         }
     }
+}
+
+/**
+ * The most a carrier's answer may hold. A tracking answer is a few kilobytes; a server that sends without end is
+ * cut off rather than read into memory.
+ */
+internal const val MAX_RESPONSE_BYTES = 256L * 1024
+
+/**
+ * @throws IOException when the body holds more than [limit] bytes.
+ */
+internal fun ResponseBody.readUtf8AtMost(limit: Long): String {
+    val source = source()
+    if (source.request(limit + 1)) throw IOException("Response larger than $limit bytes")
+    return source.buffer.readUtf8()
 }
 
 internal fun JsonElement?.jsonObjectOrNull(): JsonObject? = this as? JsonObject

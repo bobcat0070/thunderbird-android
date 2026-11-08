@@ -1,11 +1,15 @@
 package net.thunderbird.feature.packages.internal.carrier
 
+import assertk.assertFailure
 import assertk.assertThat
 import assertk.assertions.isEqualTo
+import assertk.assertions.isInstanceOf
 import assertk.assertions.isNull
+import java.io.IOException
 import kotlin.test.Test
 import kotlinx.serialization.json.Json
 import net.thunderbird.feature.packages.internal.ParcelStatus
+import okhttp3.ResponseBody.Companion.toResponseBody
 
 class CarrierApisTest {
     @Test
@@ -88,5 +92,14 @@ class CarrierApisTest {
         assertThat(statusFromDescription("Delivery Exception")).isEqualTo(ParcelStatus.PROBLEM)
         assertThat(statusFromDescription("Will be delivered tomorrow")).isEqualTo(ParcelStatus.ON_ITS_WAY)
         assertThat(statusFromDescription("In Transit")).isEqualTo(ParcelStatus.ON_ITS_WAY)
+    }
+
+    @Test
+    fun `a carrier answer should be read only up to the size cap`() {
+        val small = "{\"status\":\"ok\"}".toResponseBody()
+        val large = "x".repeat(MAX_RESPONSE_BYTES.toInt() + 1).toResponseBody()
+
+        assertThat(small.readUtf8AtMost(MAX_RESPONSE_BYTES)).isEqualTo("{\"status\":\"ok\"}")
+        assertFailure { large.readUtf8AtMost(MAX_RESPONSE_BYTES) }.isInstanceOf<IOException>()
     }
 }

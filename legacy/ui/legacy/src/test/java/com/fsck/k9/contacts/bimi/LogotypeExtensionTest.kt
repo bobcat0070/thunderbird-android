@@ -159,6 +159,14 @@ class LogotypeExtensionTest : RobolectricTest() {
     }
 
     @Test
+    fun `should refuse a gzipped mark that expands past the size cap`() {
+        // A few kilobytes of zeros expand to megabytes; a sender's certificate must not be able to fill the memory.
+        val bomb = ByteArray(MAX_LOGOTYPE_SVG_BYTES * 16)
+
+        assertThat(extractLogotypeSvg(logotypeExtension(gzip(bomb)))).isNull()
+    }
+
+    @Test
     fun `should ignore a mark hosted elsewhere`() {
         // RFC 3709 allows a mark to live at a URL. Fetching one would mean a request to a host the sender's
         // own certificate names, so an external mark is simply not shown.
