@@ -36,8 +36,10 @@ class GraphFolderFetcherTest {
                 """.trimIndent(),
             ),
         )
+        // Graph answers every lookup in the batch; the folders other than the Inbox do not exist in this mailbox.
+        val notFound = (1..6).joinToString(",") { """{"id":"$it","status":404,"body":{}}""" }
         server.enqueue(
-            MockResponse().setBody("""{"responses":[{"id":"0","status":200,"body":{"id":"inbox-id"}}]}"""),
+            MockResponse().setBody("""{"responses":[{"id":"0","status":200,"body":{"id":"inbox-id"}},$notFound]}"""),
         )
 
         val result = createTestSubject().getFolders(GRAPH_SERVER_SETTINGS, FakeAuthStateStorage())

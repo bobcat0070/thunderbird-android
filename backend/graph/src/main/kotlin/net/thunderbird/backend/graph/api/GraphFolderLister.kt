@@ -2,6 +2,7 @@ package net.thunderbird.backend.graph.api
 
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.decodeFromJsonElement
+import net.thunderbird.core.common.exception.MessagingException
 import net.thunderbird.feature.mail.folder.api.FOLDER_DEFAULT_PATH_DELIMITER
 
 private const val FOLDER_SELECT = "id,displayName,parentFolderId,childFolderCount"
@@ -72,17 +73,41 @@ internal class GraphFolderLister(
      *
      * A parent with more children than [FOLDER_PAGE_SIZE] is truncated rather than paged, because batched requests do
      * not expose a follow-up link. This is not a practical limitation for mail folders.
+     *
+     * A parent that is no longer found was deleted after it was listed, and has no children to list. Any other failure
+     * fails the listing: its children would otherwise be missing from it, and every folder missing from the listing is
+     * deleted on the device along with its mail.
+     *
+     * @throws MessagingException if the children of a parent could not be listed.
      */
     private fun fetchChildFolders(parents: List<GraphMailFolder>): List<GraphMailFolder> {
         if (parents.isEmpty()) return emptyList()
 
-        val bodies = client.batchGet(
-            parents.map { parent ->
-                "/me/mailFolders/${parent.id}/childFolders?\$select=$FOLDER_SELECT&\$top=$FOLDER_PAGE_SIZE"
+        val responses = client.batchExecute(
+            parents.mapIndexed { index, parent ->
+                graphBatchItem(
+                    index = index,
+                    method = "GET",
+                    url = "/me/mailFolders/${parent.id}/childFolders?\$select=$FOLDER_SELECT&\$top=$FOLDER_PAGE_SIZE",
+                )
             },
         )
 
-        return bodies.values.flatMap { body -> body.toFolderList() }
+        return parents.indices.flatMap { index ->
+            val response = responses[index]
+            val body = response?.body
+
+            when {
+                response?.isSuccess == true && body != null -> body.toFolderList()
+
+                response?.status == HTTP_NOT_FOUND -> emptyList()
+
+                else -> throw MessagingException(
+                    "Microsoft Graph could not list child folders (HTTP ${response?.status ?: "no response"})",
+                    false,
+                )
+            }
+        }
     }
 
     private fun JsonObject.toFolderList(): List<GraphMailFolder> {
