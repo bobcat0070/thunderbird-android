@@ -73,6 +73,8 @@ import static net.thunderbird.core.preference.widget.WidgetSettingsKt.WIDGET_SET
 import static net.thunderbird.core.preference.widget.WidgetSettingsKt.WIDGET_SETTINGS_DEFAULT_SHOW_NOTIFICATIONS;
 import static net.thunderbird.core.preference.widget.WidgetSettingsKt.WIDGET_SETTINGS_DEFAULT_SHOW_PERSONAL;
 import static com.fsck.k9.preferences.ExternalSettingKeys.LEARNED_CLASSIFICATION_RULES_KEY;
+import static com.fsck.k9.preferences.ExternalSettingKeys.PARCELS_MARKED_DELIVERED_KEY;
+import static com.fsck.k9.preferences.ExternalSettingKeys.PARCELS_REMOVED_KEY;
 import static com.fsck.k9.preferences.ExternalSettingKeys.REMOTE_IMAGE_TRUSTED_DOMAINS_KEY;
 import static com.fsck.k9.preferences.ExternalSettingKeys.REMOTE_IMAGE_TRUSTED_SENDERS_KEY;
 import static com.fsck.k9.preferences.ExternalSettingKeys.SPAM_ALERT_ACCOUNTS_KEY;
@@ -80,6 +82,9 @@ import static com.fsck.k9.preferences.ExternalSettingKeys.SPAM_DIGEST_EXCLUDED_A
 import static com.fsck.k9.preferences.ExternalSettingKeys.SPAM_DIGEST_FIELDS_KEY;
 import static com.fsck.k9.preferences.ExternalSettingKeys.SPAM_DIGEST_SENDER_ACCOUNT_KEY;
 import static com.fsck.k9.preferences.ExternalSettingKeys.SPAM_DIGEST_SEND_TIME_KEY;
+import static com.fsck.k9.preferences.ExternalSettingKeys.TRAVEL_MAIL_MARKED_KEY;
+import static com.fsck.k9.preferences.ExternalSettingKeys.TRAVEL_SENDERS_ADDED_KEY;
+import static com.fsck.k9.preferences.ExternalSettingKeys.TRAVEL_SENDERS_REMOVED_KEY;
 import static net.thunderbird.core.preference.display.inboxSettings.DisplayInboxSettingsKt.DISPLAY_SETTINGS_DEFAULT_IS_MESSAGE_LIST_SENDER_ABOVE_SUBJECT;
 import static net.thunderbird.core.preference.display.inboxSettings.DisplayInboxSettingsKt.DISPLAY_SETTINGS_DEFAULT_IS_SHOW_COMPOSE_BUTTON_ON_MESSAGE_LIST;
 import static net.thunderbird.core.preference.display.inboxSettings.DisplayInboxSettingsKt.DISPLAY_SETTINGS_DEFAULT_IS_SHOW_MESSAGE_LIST_STAR;
@@ -467,6 +472,22 @@ class GeneralSettingsDescriptions {
         ));
         s.put("tripsEnabled", Settings.versions(
             new V(117, new BooleanSetting(INTERACTION_SETTINGS_DEFAULT_TRIPS_ENABLED))
+        ));
+        // Kept in the Packages and Trips stores; see ExternalGlobalSettings.
+        s.put(PARCELS_MARKED_DELIVERED_KEY, Settings.versions(
+            new V(119, new StringSetting(""))
+        ));
+        s.put(PARCELS_REMOVED_KEY, Settings.versions(
+            new V(119, new StringSetting(""))
+        ));
+        s.put(TRAVEL_SENDERS_ADDED_KEY, Settings.versions(
+            new V(119, new StringSetting(""))
+        ));
+        s.put(TRAVEL_SENDERS_REMOVED_KEY, Settings.versions(
+            new V(119, new StringSetting(""))
+        ));
+        s.put(TRAVEL_MAIL_MARKED_KEY, Settings.versions(
+            new V(119, new StringSetting(""))
         ));
 
         // TODO: Add a way to properly support feature-specific settings.

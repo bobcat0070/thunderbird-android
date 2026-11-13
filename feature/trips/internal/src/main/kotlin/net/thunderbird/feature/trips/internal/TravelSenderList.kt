@@ -3,6 +3,8 @@ package net.thunderbird.feature.trips.internal
 import android.content.Context
 import androidx.core.content.edit
 import java.util.concurrent.atomic.AtomicInteger
+import net.thunderbird.feature.trips.TravelSenderSettings
+import net.thunderbird.feature.trips.TravelSenderSnapshot
 import net.thunderbird.feature.trips.TravelSenders
 
 /**
@@ -81,6 +83,11 @@ private const val MAX_DOMAIN_LENGTH = 253
 private const val MAX_MARKED_MAILS = 300
 
 /**
+ * The longest Message-ID taken in from a settings import; RFC 5322 limits a header line to 998 characters.
+ */
+private const val MAX_MESSAGE_ID_LENGTH = 998
+
+/**
  * [domain] lower-cased, when it is a plain domain name such as `example.com`; anything else is refused, as the
  * list ends up in a database query.
  */
@@ -145,9 +152,11 @@ internal interface TravelSenderStore : TravelSenders {
 
 /**
  * The built-in senders, less those the reader removed, and the senders and mails the reader added, kept on the
- * device only.
+ * device and carried by settings export.
  */
-internal class SharedPreferencesTravelSenderStore(context: Context) : TravelSenderStore {
+// One store behind the interfaces Trips, the message view and settings export each read it through.
+@Suppress("TooManyFunctions")
+internal class SharedPreferencesTravelSenderStore(context: Context) : TravelSenderStore, TravelSenderSettings {
     private val preferences = context.getSharedPreferences(PREFERENCES_NAME, Context.MODE_PRIVATE)
     private val changes = AtomicInteger()
 
@@ -190,6 +199,36 @@ internal class SharedPreferencesTravelSenderStore(context: Context) : TravelSend
         preferences.edit { putString(KEY_MARKED, updated.joinToString("\n")) }
         changes.incrementAndGet()
     }
+
+    override fun exportSenders(): TravelSenderSnapshot = TravelSenderSnapshot(
+        added = stringSet(KEY_ADDED),
+        removed = stringSet(KEY_REMOVED),
+        markedMessageIds = markedMessageIdList(),
+    )
+
+    override fun importSenders(senders: TravelSenderSnapshot) {
+        // Only domains that could have been listed here are taken in: a built-in one can only be removed, any other
+        // only added, and never a mail provider, which would take in everyone's mail.
+        val added = senders.added.mapNotNull(::normalizedDomain)
+            .filter { it !in BUILT_IN_TRAVEL_SENDERS && it !in MAIL_PROVIDERS }
+        val removed = senders.removed.mapNotNull(::normalizedDomain).filter { it in BUILT_IN_TRAVEL_SENDERS }
+        // Stored one per line, so a value holding a line break would turn into several.
+        val marked = senders.markedMessageIds.map { it.trim() }
+            .filter { it.isNotEmpty() && it.length <= MAX_MESSAGE_ID_LENGTH && it.none(Char::isISOControl) }
+        if (added.isEmpty() && removed.isEmpty() && marked.isEmpty()) return
+
+        val markedHere = markedMessageIdList()
+        val mergedMarked = (markedHere + marked.filter { it !in markedHere }).distinct().takeLast(MAX_MARKED_MAILS)
+        preferences.edit {
+            putStringSet(KEY_ADDED, stringSet(KEY_ADDED) + added)
+            putStringSet(KEY_REMOVED, stringSet(KEY_REMOVED) + removed)
+            putString(KEY_MARKED, mergedMarked.joinToString("\n"))
+        }
+        changes.incrementAndGet()
+    }
+
+    private fun markedMessageIdList(): List<String> =
+        preferences.getString(KEY_MARKED, null)?.lines()?.filter { it.isNotBlank() }.orEmpty()
 
     override fun listed(): List<ListedSender> {
         val added = stringSet(KEY_ADDED)

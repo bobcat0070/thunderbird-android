@@ -11,6 +11,7 @@ import net.thunderbird.app.common.feature.mail.appCommonFeatureMailModule
 import net.thunderbird.app.common.feature.newsletter.appCommonFeatureNewsletterModule
 import net.thunderbird.app.common.feature.packages.appCommonFeaturePackagesModule
 import net.thunderbird.app.common.feature.settings.DefaultFolderPinSettings
+import net.thunderbird.app.common.feature.settings.PackagesAndTripsExternalSettings
 import net.thunderbird.app.common.feature.settings.RemoteImageSendersExternalSettings
 import net.thunderbird.app.common.feature.spamdigest.appCommonFeatureSpamDigestModule
 import net.thunderbird.app.common.feature.trips.appCommonFeatureTripsModule
@@ -59,6 +60,9 @@ internal val appCommonFeatureModule = module {
     // several definitions bind ExternalGlobalSettings and Koin refuses a second unnamed one at startup.
     factory(named("remoteImageSendersExternalSettings")) {
         RemoteImageSendersExternalSettings(store = get())
+    } bind ExternalGlobalSettings::class
+    factory(named("packagesAndTripsExternalSettings")) {
+        PackagesAndTripsExternalSettings(parcelMarks = get(), travelSenders = get())
     } bind ExternalGlobalSettings::class
     factory<FolderPinSettings> {
         DefaultFolderPinSettings(

@@ -68,4 +68,9 @@ object ExternalSettingKeys {
     const val SPAM_DIGEST_EXCLUDED_ACCOUNTS_KEY = "spamDigestExcludedAccounts"
     const val SPAM_ALERT_ACCOUNTS_KEY = "spamAlertAccounts"
     const val SPAM_DIGEST_FIELDS_KEY = "spamDigestFields"
+    const val PARCELS_MARKED_DELIVERED_KEY = "parcelsMarkedDelivered"
+    const val PARCELS_REMOVED_KEY = "parcelsRemoved"
+    const val TRAVEL_SENDERS_ADDED_KEY = "travelSendersAdded"
+    const val TRAVEL_SENDERS_REMOVED_KEY = "travelSendersRemoved"
+    const val TRAVEL_MAIL_MARKED_KEY = "travelMailMarked"
 }

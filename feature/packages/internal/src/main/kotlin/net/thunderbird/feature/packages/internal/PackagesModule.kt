@@ -2,6 +2,7 @@ package net.thunderbird.feature.packages.internal
 
 import java.util.concurrent.TimeUnit
 import net.thunderbird.feature.packages.PackagesNavigation
+import net.thunderbird.feature.packages.ParcelMarkSettings
 import net.thunderbird.feature.packages.ShippingMailDownloader
 import net.thunderbird.feature.packages.internal.carrier.CarrierApiTracker
 import net.thunderbird.feature.packages.internal.carrier.CarrierCredentialsStore
@@ -10,6 +11,7 @@ import net.thunderbird.feature.packages.internal.carrier.SharedPreferencesCarrie
 import okhttp3.OkHttpClient
 import org.koin.android.ext.koin.androidContext
 import org.koin.core.module.dsl.viewModel
+import org.koin.dsl.binds
 import org.koin.dsl.module
 
 private const val CARRIER_CALL_TIMEOUT_SECONDS = 30L
@@ -20,7 +22,8 @@ private const val CARRIER_CALL_TIMEOUT_SECONDS = 30L
 val featurePackagesModule = module {
     single<PackagesNavigation> { DefaultPackagesNavigation() }
     single<CarrierCredentialsStore> { SharedPreferencesCarrierCredentialsStore(context = androidContext()) }
-    single<ParcelMarks> { SharedPreferencesParcelMarks(context = androidContext(), clock = get()) }
+    single { SharedPreferencesParcelMarks(context = androidContext(), clock = get()) } binds
+        arrayOf(ParcelMarks::class, ParcelMarkSettings::class)
     single<LiveTracker> {
         CarrierApiTracker(
             httpClient = OkHttpClient.Builder()

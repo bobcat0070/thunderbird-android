@@ -1,6 +1,7 @@
 package net.thunderbird.feature.trips.internal
 
 import net.thunderbird.feature.trips.TravelMailDownloader
+import net.thunderbird.feature.trips.TravelSenderSettings
 import net.thunderbird.feature.trips.TravelSenders
 import net.thunderbird.feature.trips.TripsNavigation
 import org.koin.android.ext.koin.androidContext
@@ -15,7 +16,7 @@ val featureTripsModule = module {
     single<TripsNavigation> { DefaultTripsNavigation() }
     single { ReservationCache(context = androidContext()) }
     single { SharedPreferencesTravelSenderStore(context = androidContext()) } binds
-        arrayOf(TravelSenderStore::class, TravelSenders::class)
+        arrayOf(TravelSenderStore::class, TravelSenders::class, TravelSenderSettings::class)
     factory<TravelMailDownloader> { DefaultTravelMailDownloader(mailSource = get(), senders = get(), clock = get()) }
     viewModel { TripsViewModel(mailSource = get(), cache = get(), senders = get(), clock = get()) }
     viewModel { TravelSendersViewModel(senders = get()) }
