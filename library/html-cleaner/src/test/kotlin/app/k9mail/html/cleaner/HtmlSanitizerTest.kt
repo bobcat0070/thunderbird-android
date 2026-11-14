@@ -530,6 +530,113 @@ class HtmlSanitizerTest {
         assertThat(result.select("a").text()).isEqualTo("Link text")
     }
 
+    @Test
+    fun `should remove script elements in head, body and svg`() {
+        val html =
+            """
+            <html>
+              <head><script>alert(1)</script></head>
+              <body>
+                <script src="https://example.com/x.js"></script>
+                <svg><script>alert(2)</script></svg>
+                <math><script>alert(3)</script></math>
+                Message
+              </body>
+            </html>
+            """.compactHtml()
+
+        val result = htmlSanitizer.sanitize(html)
+
+        assertThat(result.select("script").size).isEqualTo(0)
+        assertThat(result.select("svg, math").size).isEqualTo(0)
+        // Inside svg and math the script's code is parsed as text, so what is left of it is shown, not run.
+        assertThat(result.head().html().contains("alert")).isEqualTo(false)
+        assertThat(result.select("[src]").size).isEqualTo(0)
+    }
+
+    @Test
+    fun `should remove event handler attributes`() {
+        val html =
+            """
+            <html>
+              <head></head>
+              <body onload="alert(1)" bgcolor="#ffffff">
+                <img src="https://example.com/a.png" onerror="alert(2)">
+                <div onclick="alert(3)" onmouseover="alert(4)">Text</div>
+                <a href="https://example.com/" onfocus="alert(5)">Link</a>
+              </body>
+            </html>
+            """.compactHtml()
+
+        val result = htmlSanitizer.sanitize(html)
+
+        assertThat(result.html().contains("alert")).isEqualTo(false)
+        assertThat(result.body().attr("bgcolor")).isEqualTo("#ffffff")
+        assertThat(result.select("img").attr("src")).isEqualTo("https://example.com/a.png")
+    }
+
+    @Test
+    fun `should remove scripted image sources`() {
+        val html =
+            """
+            <html>
+              <head></head>
+              <body>
+                <img src="javascript:alert(1)">
+                <img src="vbscript:msgbox(1)">
+                <img src="cid:part1@example.com">
+              </body>
+            </html>
+            """.compactHtml()
+
+        val result = htmlSanitizer.sanitize(html)
+
+        assertThat(result.select("img").map { it.attr("src") })
+            .isEqualTo(listOf("", "", "cid:part1@example.com"))
+    }
+
+    @Test
+    fun `should remove embedded content and forms`() {
+        val html =
+            """
+            <html>
+              <head></head>
+              <body>
+                <object data="https://example.com/x.swf"></object>
+                <embed src="https://example.com/x.swf">
+                <frameset><frame src="https://example.com/"></frameset>
+                <form action="https://example.com/login"><input name="password" type="password"></form>
+                <button formaction="https://example.com/">Go</button>
+                Message
+              </body>
+            </html>
+            """.compactHtml()
+
+        val result = htmlSanitizer.sanitize(html)
+
+        assertThat(result.select("object, embed, frame, frameset, form, input, button").size).isEqualTo(0)
+        assertThat(result.html().contains("example.com")).isEqualTo(false)
+    }
+
+    @Test
+    fun `should not let markup in noscript or style turn into elements`() {
+        val html =
+            """
+            <html>
+              <head></head>
+              <body>
+                <noscript><p title="</noscript><img src=x onerror=alert(1)>"></noscript>
+                <style><img src=x onerror=alert(2)></style>
+              </body>
+            </html>
+            """.compactHtml()
+
+        val result = htmlSanitizer.sanitize(html)
+
+        assertThat(result.select("[onerror]").size).isEqualTo(0)
+        assertThat(result.select("noscript").size).isEqualTo(0)
+    }
+
     private fun assertTagsNotStripped(element: String) {
         val html = """<$element>some text</$element>"""
 
