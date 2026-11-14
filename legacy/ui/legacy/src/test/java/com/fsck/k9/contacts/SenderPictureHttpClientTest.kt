@@ -1,11 +1,12 @@
 package com.fsck.k9.contacts
 
+import assertk.assertFailure
 import assertk.assertThat
 import assertk.assertions.isEqualTo
+import assertk.assertions.isInstanceOf
 import java.net.UnknownHostException
 import kotlin.test.AfterTest
 import kotlin.test.Test
-import kotlin.test.assertFailsWith
 import okhttp3.Request
 import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
@@ -26,9 +27,9 @@ class SenderPictureHttpClientTest {
         server.enqueue(MockResponse().setBody("reached"))
         server.start()
 
-        assertFailsWith<UnknownHostException> {
+        assertFailure {
             testSubject.newCall(Request.Builder().url("http://127.0.0.1:${server.port}/logo.svg").build()).execute()
-        }
+        }.isInstanceOf<UnknownHostException>()
 
         assertThat(server.requestCount).isEqualTo(0)
     }
@@ -38,9 +39,9 @@ class SenderPictureHttpClientTest {
         server.enqueue(MockResponse().setBody("reached"))
         server.start()
 
-        assertFailsWith<UnknownHostException> {
+        assertFailure {
             testSubject.newCall(Request.Builder().url("http://localhost:${server.port}/logo.svg").build()).execute()
-        }
+        }.isInstanceOf<UnknownHostException>()
 
         assertThat(server.requestCount).isEqualTo(0)
     }

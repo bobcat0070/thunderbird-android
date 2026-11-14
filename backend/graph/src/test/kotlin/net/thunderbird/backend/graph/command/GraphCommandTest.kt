@@ -1,16 +1,17 @@
 package net.thunderbird.backend.graph.command
 
+import assertk.assertFailure
 import assertk.assertThat
 import assertk.assertions.contains
 import assertk.assertions.hasSize
 import assertk.assertions.isEmpty
 import assertk.assertions.isEqualTo
+import assertk.assertions.isInstanceOf
 import assertk.assertions.isNotNull
 import assertk.assertions.isNull
 import java.util.concurrent.TimeUnit
 import kotlin.test.AfterTest
 import kotlin.test.Test
-import kotlin.test.assertFailsWith
 import net.thunderbird.backend.graph.FakeOAuth2TokenProvider
 import net.thunderbird.backend.graph.api.GraphApiClient
 import net.thunderbird.core.common.exception.MessagingException
@@ -228,11 +229,11 @@ class GraphCommandTest {
     fun `a flag change the server failed should be reported so it is tried again`() {
         server.enqueue(batchResponse("""{"id":"0","status":500}"""))
 
-        val exception = assertFailsWith<MessagingException> {
+        val exception = assertFailure {
             CommandSetFlag(createClient()).setFlag(listOf("m1"), Flag.SEEN, true)
-        }
+        }.isInstanceOf<MessagingException>()
 
-        assertThat(exception.isPermanentFailure).isEqualTo(false)
+        exception.transform { it.isPermanentFailure }.isEqualTo(false)
     }
 
     @Test

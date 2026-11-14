@@ -1,7 +1,9 @@
 package net.thunderbird.backend.graph.command
 
+import assertk.assertFailure
 import assertk.assertThat
 import assertk.assertions.isEqualTo
+import assertk.assertions.isInstanceOf
 import assertk.assertions.isNotNull
 import assertk.assertions.isNull
 import com.fsck.k9.mail.internet.BinaryTempFileBody
@@ -12,7 +14,6 @@ import kotlin.io.path.createTempDirectory
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
-import kotlin.test.assertFailsWith
 import net.thunderbird.backend.graph.FakeOAuth2TokenProvider
 import net.thunderbird.backend.graph.api.GraphApiClient
 import net.thunderbird.core.common.exception.MessagingException
@@ -68,11 +69,11 @@ class CommandSendMessageTest {
         // Attachments can be moved out of the way, but text this large has nowhere to go.
         val oversizedMessage = message("x".repeat(5 * 1024 * 1024))
 
-        val exception = assertFailsWith<MessagingException> {
+        val exception = assertFailure {
             CommandSendMessage(createClient()).sendMessage(oversizedMessage)
-        }
+        }.isInstanceOf<MessagingException>()
 
-        assertThat(exception.isPermanentFailure).isEqualTo(true)
+        exception.transform { it.isPermanentFailure }.isEqualTo(true)
         assertThat(server.requestCount).isEqualTo(0)
     }
 
@@ -128,9 +129,9 @@ class CommandSendMessageTest {
         server.enqueue(MockResponse().setResponseCode(400))
         server.enqueue(MockResponse().setResponseCode(204))
 
-        assertFailsWith<MessagingException> {
+        assertFailure {
             smallLimitSender().sendMessage(messageWithAttachment(ByteArray(6000)))
-        }
+        }.isInstanceOf<MessagingException>()
 
         server.takeRequest()
         server.takeRequest()
@@ -146,9 +147,9 @@ class CommandSendMessageTest {
         server.enqueue(MockResponse().setResponseCode(204))
         val attachment = ByteArray(MAX_DIRECT_ATTACHMENT_BYTES + 1000)
 
-        assertFailsWith<MessagingException> {
+        assertFailure {
             smallLimitSender().sendMessage(messageWithAttachment(attachment))
-        }
+        }.isInstanceOf<MessagingException>()
 
         server.takeRequest()
         server.takeRequest()

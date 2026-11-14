@@ -1,5 +1,6 @@
 package net.thunderbird.backend.graph.api
 
+import assertk.assertFailure
 import assertk.assertThat
 import assertk.assertions.isEqualTo
 import assertk.assertions.isFalse
@@ -9,7 +10,6 @@ import com.fsck.k9.mail.AuthenticationFailedException
 import java.util.concurrent.TimeUnit
 import kotlin.test.AfterTest
 import kotlin.test.Test
-import kotlin.test.assertFailsWith
 import net.thunderbird.backend.graph.FakeOAuth2TokenProvider
 import net.thunderbird.core.common.exception.MessagingException
 import okhttp3.OkHttpClient
@@ -97,11 +97,11 @@ class GraphApiClientTest {
         server.enqueue(MockResponse().setSocketPolicy(SocketPolicy.DISCONNECT_AT_START))
 
         // A pending command that fails with anything but a MessagingException is dropped instead of retried.
-        val exception = assertFailsWith<MessagingException> {
+        val exception = assertFailure {
             testSubject.getString(testSubject.url("me/mailFolders"))
-        }
+        }.isInstanceOf<MessagingException>()
 
-        assertThat(exception.isPermanentFailure).isEqualTo(false)
+        exception.transform { it.isPermanentFailure }.isEqualTo(false)
     }
 
     @Test
@@ -113,11 +113,11 @@ class GraphApiClientTest {
             MockResponse().setResponseCode(401).setBody("""{"error":{"code":"InvalidAuthenticationToken"}}"""),
         )
 
-        val exception = assertFailsWith<AuthenticationFailedException> {
+        val exception = assertFailure {
             testSubject.getString(testSubject.url("me/mailFolders/inbox"))
-        }
+        }.isInstanceOf<AuthenticationFailedException>()
 
-        assertThat(exception.messageFromServer).isEqualTo("InvalidAuthenticationToken")
+        exception.transform { it.messageFromServer }.isEqualTo("InvalidAuthenticationToken")
         assertThat(server.requestCount).isEqualTo(2)
     }
 
@@ -138,12 +138,12 @@ class GraphApiClientTest {
         val testSubject = createTestSubject()
         server.enqueue(MockResponse().setResponseCode(500).setBody("""{"error":{"code":"InternalServerError"}}"""))
 
-        val exception = assertFailsWith<MessagingException> {
+        val exception = assertFailure {
             testSubject.getString(testSubject.url("me/mailFolders/inbox"))
-        }
+        }.isInstanceOf<MessagingException>()
 
         // A permanent failure would stop the account from syncing until the user intervenes.
-        assertThat(exception.isPermanentFailure).isEqualTo(false)
+        exception.transform { it.isPermanentFailure }.isEqualTo(false)
     }
 
     @Test
@@ -151,11 +151,11 @@ class GraphApiClientTest {
         val testSubject = createTestSubject()
         server.enqueue(MockResponse().setResponseCode(403).setBody("""{"error":{"code":"ErrorAccessDenied"}}"""))
 
-        val exception = assertFailsWith<AuthenticationFailedException> {
+        val exception = assertFailure {
             testSubject.getString(testSubject.url("me/mailFolders/inbox"))
-        }
+        }.isInstanceOf<AuthenticationFailedException>()
 
-        assertThat(exception.messageFromServer).isEqualTo("ErrorAccessDenied")
+        exception.transform { it.messageFromServer }.isEqualTo("ErrorAccessDenied")
     }
 
     @Test
@@ -163,12 +163,11 @@ class GraphApiClientTest {
         val testSubject = createTestSubject()
         server.enqueue(MockResponse().setResponseCode(400).setBody("not json"))
 
-        val exception = assertFailsWith<MessagingException> {
+        val exception = assertFailure {
             testSubject.getString(testSubject.url("me/mailFolders/inbox"))
-        }
+        }.isInstanceOf<MessagingException>()
 
-        assertThat(exception).isInstanceOf<MessagingException>()
-        assertThat(exception.isPermanentFailure).isTrue()
+        exception.transform { it.isPermanentFailure }.isTrue()
     }
 
     @Test
@@ -198,7 +197,7 @@ class GraphApiClientTest {
     @Test
     fun `a dot-segment ID should be refused`() {
         // URL resolution removes a dot segment however it is encoded, so the only safe answer is to refuse it.
-        assertFailsWith<MessagingException> { pathSegment("..") }
+        assertFailure { pathSegment("..") }.isInstanceOf<MessagingException>()
     }
 
     @Test
@@ -206,9 +205,9 @@ class GraphApiClientTest {
         // The access token goes to whatever URL is requested.
         val testSubject = createTestSubject()
 
-        assertFailsWith<MessagingException> {
+        assertFailure {
             testSubject.absoluteUrl("https://attacker.example/v1.0/me/messages?\$skiptoken=x")
-        }
+        }.isInstanceOf<MessagingException>()
     }
 
     @Test
@@ -225,11 +224,11 @@ class GraphApiClientTest {
         val testSubject = createTestSubject(callTimeoutMillis = 500)
         server.enqueue(MockResponse().setBody("""{"value":[]}""").throttleBody(1, 200, TimeUnit.MILLISECONDS))
 
-        val exception = assertFailsWith<MessagingException> {
+        val exception = assertFailure {
             testSubject.getString(testSubject.url("me/mailFolders/inbox/messages/delta"))
-        }
+        }.isInstanceOf<MessagingException>()
 
-        assertThat(exception.isPermanentFailure).isFalse()
+        exception.transform { it.isPermanentFailure }.isFalse()
     }
 
     @Test

@@ -1,8 +1,10 @@
 package net.thunderbird.backend.graph
 
+import assertk.assertFailure
 import assertk.assertThat
 import assertk.assertions.containsExactlyInAnyOrder
 import assertk.assertions.isEqualTo
+import assertk.assertions.isInstanceOf
 import com.fsck.k9.mail.AuthType
 import com.fsck.k9.mail.ConnectionSecurity
 import com.fsck.k9.mail.FolderType
@@ -11,7 +13,6 @@ import com.fsck.k9.mail.folders.FolderFetcherException
 import com.fsck.k9.mail.oauth.AuthStateStorage
 import kotlin.test.AfterTest
 import kotlin.test.Test
-import kotlin.test.assertFailsWith
 import okhttp3.OkHttpClient
 import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
@@ -53,28 +54,28 @@ class GraphFolderFetcherTest {
     fun `should reject settings for another protocol`() {
         val imapSettings = GRAPH_SERVER_SETTINGS.copy(type = "imap")
 
-        assertFailsWith<IllegalArgumentException> {
+        assertFailure {
             createTestSubject().getFolders(imapSettings, FakeAuthStateStorage())
-        }
+        }.isInstanceOf<IllegalArgumentException>()
     }
 
     @Test
     fun `should fail cleanly without an authorization state`() {
         // Graph has no password fallback, so there is nothing to attempt without OAuth.
-        assertFailsWith<FolderFetcherException> {
+        assertFailure {
             createTestSubject().getFolders(GRAPH_SERVER_SETTINGS, authStateStorage = null)
-        }
+        }.isInstanceOf<FolderFetcherException>()
     }
 
     @Test
     fun `server error should be reported as a folder fetcher failure`() {
         server.enqueue(MockResponse().setResponseCode(403).setBody("""{"error":{"code":"ErrorAccessDenied"}}"""))
 
-        val exception = assertFailsWith<FolderFetcherException> {
+        val exception = assertFailure {
             createTestSubject().getFolders(GRAPH_SERVER_SETTINGS, FakeAuthStateStorage())
-        }
+        }.isInstanceOf<FolderFetcherException>()
 
-        assertThat(exception.messageFromServer).isEqualTo("ErrorAccessDenied")
+        exception.transform { it.messageFromServer }.isEqualTo("ErrorAccessDenied")
     }
 
     private fun createTestSubject() = GraphFolderFetcher(

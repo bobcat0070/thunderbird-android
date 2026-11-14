@@ -1,11 +1,13 @@
 package net.thunderbird.backend.graph.command
 
 import app.k9mail.backend.testing.InMemoryBackendStorage
+import assertk.assertFailure
 import assertk.assertThat
 import assertk.assertions.containsExactly
 import assertk.assertions.containsExactlyInAnyOrder
 import assertk.assertions.isEmpty
 import assertk.assertions.isEqualTo
+import assertk.assertions.isInstanceOf
 import assertk.assertions.isNull
 import com.fsck.k9.backend.api.BackendFolder
 import com.fsck.k9.backend.api.FolderInfo
@@ -13,7 +15,6 @@ import com.fsck.k9.mail.FolderType
 import com.fsck.k9.mail.MessageDownloadState
 import kotlin.test.AfterTest
 import kotlin.test.Test
-import kotlin.test.assertFailsWith
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonArray
@@ -221,9 +222,9 @@ class GraphImmutableIdMigrationTest {
         val folder = createFolderWithStored("old-1")
         graph.isFailing = true
 
-        assertFailsWith<MessagingException> {
+        assertFailure {
             testSubject.migrateIfNeeded(FOLDER_ID, folder, removeMissing = true)
-        }
+        }.isInstanceOf<MessagingException>()
 
         assertThat(folder.getMessageServerIds()).containsExactlyInAnyOrder("old-1")
         assertThat(folder.getFolderExtraString(FOLDER_EXTRA_ID_FORMAT)).isNull()
@@ -234,7 +235,9 @@ class GraphImmutableIdMigrationTest {
         graph.add("old-1", "immutable-1", receivedDateTime = "2026-01-01T00:00:00Z")
         val folder = createFolderWithStored("old-1")
         graph.isFailing = true
-        assertFailsWith<MessagingException> { testSubject.migrateIfNeeded(FOLDER_ID, folder, removeMissing = true) }
+        assertFailure {
+            testSubject.migrateIfNeeded(FOLDER_ID, folder, removeMissing = true)
+        }.isInstanceOf<MessagingException>()
         graph.isFailing = false
 
         testSubject.migrateIfNeeded(FOLDER_ID, folder, removeMissing = true)
