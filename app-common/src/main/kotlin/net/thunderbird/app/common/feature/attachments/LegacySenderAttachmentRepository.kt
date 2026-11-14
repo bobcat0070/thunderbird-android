@@ -213,9 +213,10 @@ internal class LegacySenderAttachmentRepository(
     }
 
     private suspend fun downloadAttachment(message: LocalMessage, part: Part): Boolean {
+        val accountId = message.accountId ?: return false
         return suspendCancellableCoroutine { continuation ->
             messagingController.loadAttachment(
-                message.accountId,
+                accountId,
                 message,
                 part,
                 object : SimpleMessagingListener() {

@@ -100,7 +100,7 @@ import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import net.jcip.annotations.GuardedBy
+import androidx.annotation.GuardedBy
 import net.thunderbird.core.android.account.Expunge
 import net.thunderbird.core.android.account.LegacyAccount
 import net.thunderbird.feature.account.AccountId

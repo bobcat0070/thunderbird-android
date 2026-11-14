@@ -42,7 +42,6 @@ import com.fsck.k9.mailstore.OutboxState;
 import com.fsck.k9.mailstore.OutboxStateRepository;
 import com.fsck.k9.mailstore.SaveMessageDataCreator;
 import com.fsck.k9.mailstore.SendState;
-import com.fsck.k9.mailstore.SpecialLocalFoldersCreator;
 import com.fsck.k9.notification.NotificationController;
 import com.fsck.k9.notification.NotificationStrategy;
 import net.thunderbird.components.core.logging.Logger;
@@ -118,8 +117,6 @@ public class MessagingControllerTest extends K9RobolectricTest {
     @Mock
     private SaveMessageDataCreator saveMessageDataCreator;
     @Mock
-    private SpecialLocalFoldersCreator specialLocalFoldersCreator;
-    @Mock
     private SimpleMessagingListener listener;
     @Mock
     private LocalFolder localFolder;
@@ -184,12 +181,12 @@ public class MessagingControllerTest extends K9RobolectricTest {
             backendManager,
             messageStoreManager,
             saveMessageDataCreator,
-            specialLocalFoldersCreator,
             noOpLocalDeleteOperationDecider,
             fakeLocalMessageUidPrefixProvider,
             recipientIndex,
             Collections.<ControllerExtension>emptyList(),
             featureFlagProvider,
+            syncLogger,
             syncLogger,
             notificationManager,
             outboxFolderManager,

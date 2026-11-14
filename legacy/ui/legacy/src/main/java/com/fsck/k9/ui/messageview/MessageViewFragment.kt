@@ -1193,7 +1193,7 @@ class MessageViewFragment :
         invalidateMenu()
     }
 
-    private fun copyMessage(reference: MessageReference?, folderId: Long) {
+    private fun copyMessage(reference: MessageReference, folderId: Long) {
         messagingController.copyMessage(account.id, messageReference.folderId, reference, folderId)
     }
 
