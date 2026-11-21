@@ -35,7 +35,7 @@ class MessageListLiveData(
         scope = coroutineScope + Dispatchers.Main,
         loadContext = Dispatchers.IO,
         load = { messageListLoader.getMessageList(config) },
-        onLoaded = { messageList -> value = messageList },
+        onLoaded = { messageList -> value = value.afterLoad(messageList) },
         pauseAfterLoadMillis = PAUSE_BETWEEN_LOADS_MILLIS,
     )
 
@@ -81,7 +81,9 @@ class MessageListLiveData(
             val newestMessages = withContext(Dispatchers.IO) {
                 messageListLoader.getMessageList(config, limit = FIRST_LOAD_LIMIT)
             }
-            if (value == null && newestMessages.canStandInForWholeList(config.activeMessage)) value = newestMessages
+            if (value == null && newestMessages?.canStandInForWholeList(config.activeMessage) == true) {
+                value = newestMessages
+            }
 
             loadMessageListAsync()
         }
@@ -113,6 +115,22 @@ class MessageListLiveData(
  */
 internal fun MessageListInfo.canStandInForWholeList(activeMessage: MessageReference?): Boolean {
     return activeMessage == null || messageListItems.any { it.messageReference == activeMessage }
+}
+
+/**
+ * The list to show once a load has finished: the one it read or, when the read failed, this one, already on screen.
+ *
+ * A read fails when mail is saved or removed while it runs, and the next load, which that change sets off, reads the
+ * list again. Showing an empty list in between blanked the whole screen for a second each time a deleted message
+ * left a large list. Only with nothing on screen yet does a failed read show the list as empty.
+ */
+internal fun MessageListInfo?.afterLoad(loaded: MessageListInfo?): MessageListInfo {
+    return loaded ?: this ?: MessageListInfo(
+        messageListItems = emptyList(),
+        hasMoreMessages = false,
+        hasUnsyncedFolders = false,
+        hasRemoteFolders = true,
+    )
 }
 
 private const val PAUSE_BETWEEN_LOADS_MILLIS = 500L

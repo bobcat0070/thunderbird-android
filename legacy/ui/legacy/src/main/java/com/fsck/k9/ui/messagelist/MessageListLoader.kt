@@ -50,20 +50,17 @@ class MessageListLoader(
 
     /**
      * @param limit the most messages to load, the first ones in the list's order; `null` for all of them.
+     * @return the list, or `null` when it could not be read. A read fails when mail is saved or removed while it
+     *   runs: a long list is read in parts, and a part that no longer lines up with the first throws. The change
+     *   that broke the read is announced once it is saved, so another load follows.
      */
-    fun getMessageList(config: MessageListConfig, limit: Int? = null): MessageListInfo {
+    @Suppress("TooGenericExceptionCaught")
+    fun getMessageList(config: MessageListConfig, limit: Int? = null): MessageListInfo? {
         return try {
             getMessageListInfo(config, limit)
         } catch (e: Exception) {
             Log.e(TAG, e, "Error while fetching message list")
-
-            // TODO: Return an error object instead of an empty list
-            MessageListInfo(
-                messageListItems = emptyList(),
-                hasMoreMessages = false,
-                hasUnsyncedFolders = false,
-                hasRemoteFolders = true,
-            )
+            null
         }
     }
 

@@ -2,7 +2,9 @@ package com.fsck.k9.ui.messagelist
 
 import app.k9mail.legacy.message.controller.MessageReference
 import assertk.assertThat
+import assertk.assertions.isEmpty
 import assertk.assertions.isFalse
+import assertk.assertions.isSameInstanceAs
 import assertk.assertions.isTrue
 import net.thunderbird.core.android.account.LegacyAccount
 import net.thunderbird.core.android.account.SortType
@@ -101,6 +103,42 @@ class MessageListLiveDataTest {
 
         assertThat(result).isFalse()
     }
+
+    @Test
+    fun `a failed load should leave the list on screen as it was`() {
+        // Deleting a message from a large unified inbox broke the read running at the time, and the empty list
+        // shown for the failed load blanked the screen until the next load.
+        val testSubject = info(item(1), item(2))
+
+        val result = testSubject.afterLoad(loaded = null)
+
+        assertThat(result).isSameInstanceAs(testSubject)
+    }
+
+    @Test
+    fun `a load should replace the list on screen`() {
+        val loaded = info(item(2))
+
+        val result = info(item(1), item(2)).afterLoad(loaded)
+
+        assertThat(result).isSameInstanceAs(loaded)
+    }
+
+    @Test
+    fun `a failed first load should show an empty list`() {
+        val testSubject: MessageListInfo? = null
+
+        val result = testSubject.afterLoad(loaded = null)
+
+        assertThat(result.messageListItems).isEmpty()
+    }
+
+    private fun info(vararg items: MessageListItem) = MessageListInfo(
+        items.toList(),
+        hasMoreMessages = false,
+        hasUnsyncedFolders = false,
+        hasRemoteFolders = true,
+    )
 
     private fun config(
         search: LocalMessageSearch = SEARCH,
