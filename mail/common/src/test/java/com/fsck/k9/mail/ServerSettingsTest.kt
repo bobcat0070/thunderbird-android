@@ -26,15 +26,8 @@ class ServerSettingsTest {
     @Test
     fun `type that is not all lower case should throw`() {
         assertFailure {
-            ServerSettings(
-                type = "IMAP",
-                host = "imap.domain.example",
-                port = 993,
-                connectionSecurity = ConnectionSecurity.SSL_TLS_REQUIRED,
-                authenticationType = AuthType.PLAIN,
-                username = "user",
-                password = "123456",
-                clientCertificateAlias = null,
+            validServerSettings.copy(
+                type = "IMAP"
             )
         }.isInstanceOf<IllegalArgumentException>()
             .hasMessage("type must be all lower case")
@@ -43,15 +36,8 @@ class ServerSettingsTest {
     @Test
     fun `username containing LF should throw`() {
         assertFailure {
-            ServerSettings(
-                type = "imap",
-                host = "imap.domain.example",
-                port = 993,
-                connectionSecurity = ConnectionSecurity.SSL_TLS_REQUIRED,
-                authenticationType = AuthType.PLAIN,
-                username = "user\nname",
-                password = "123456",
-                clientCertificateAlias = null,
+            validServerSettings.copy(
+                username = "user\nname"
             )
         }.isInstanceOf<IllegalArgumentException>()
             .hasMessage("username must not contain line break")
@@ -60,15 +46,8 @@ class ServerSettingsTest {
     @Test
     fun `username containing CR should throw`() {
         assertFailure {
-            ServerSettings(
-                type = "imap",
-                host = "imap.domain.example",
-                port = 993,
-                connectionSecurity = ConnectionSecurity.SSL_TLS_REQUIRED,
-                authenticationType = AuthType.PLAIN,
-                username = "user\rname",
-                password = "123456",
-                clientCertificateAlias = null,
+            validServerSettings.copy(
+                username = "user\rname"
             )
         }.isInstanceOf<IllegalArgumentException>()
             .hasMessage("username must not contain line break")
@@ -77,15 +56,8 @@ class ServerSettingsTest {
     @Test
     fun `password containing LF should throw`() {
         assertFailure {
-            ServerSettings(
-                type = "imap",
-                host = "imap.domain.example",
-                port = 993,
-                connectionSecurity = ConnectionSecurity.SSL_TLS_REQUIRED,
-                authenticationType = AuthType.PLAIN,
-                username = "user",
-                password = "123456\n",
-                clientCertificateAlias = null,
+            validServerSettings.copy(
+                password = "123456\n"
             )
         }.isInstanceOf<IllegalArgumentException>()
             .hasMessage("password must not contain line break")
@@ -94,39 +66,42 @@ class ServerSettingsTest {
     @Test
     fun `password containing CR should throw`() {
         assertFailure {
-            ServerSettings(
-                type = "imap",
-                host = "imap.domain.example",
-                port = 993,
-                connectionSecurity = ConnectionSecurity.SSL_TLS_REQUIRED,
-                authenticationType = AuthType.PLAIN,
-                username = "user",
-                password = "123456\r",
-                clientCertificateAlias = null,
+            validServerSettings.copy(
+                password = "123456\r"
             )
         }.isInstanceOf<IllegalArgumentException>()
             .hasMessage("password must not contain line break")
     }
 
     @Test
-    fun `toString should leave out the credentials`() {
-        val testSubject = ServerSettings(
-            type = "imap",
-            host = "imap.domain.example",
-            port = 993,
-            connectionSecurity = ConnectionSecurity.SSL_TLS_REQUIRED,
+    fun `sensitive information should not appear in toString`() {
+        assertThat(validServerSettings.toString())
+            .doesNotContain(validServerSettings.password!!)
+    }
+
+    @Test
+    fun `toString should leave out the user name and extra values`() {
+        val testSubject = validServerSettings.copy(
             authenticationType = AuthType.XOAUTH2,
             username = "user@domain.example",
-            password = "secret-password",
-            clientCertificateAlias = null,
             extra = mapOf("token" to "secret-extra"),
         )
 
         val result = testSubject.toString()
 
         assertThat(result).contains("imap.domain.example")
-        assertThat(result).doesNotContain("secret-password")
         assertThat(result).doesNotContain("secret-extra")
         assertThat(result).doesNotContain("user@domain.example")
     }
+
+    private val validServerSettings get() = ServerSettings(
+        type = "imap",
+        host = "imap.domain.example",
+        port = 993,
+        connectionSecurity = ConnectionSecurity.SSL_TLS_REQUIRED,
+        authenticationType = AuthType.PLAIN,
+        username = "user",
+        password = "123456",
+        clientCertificateAlias = null,
+    )
 }

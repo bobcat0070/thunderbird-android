@@ -35,13 +35,10 @@ data class ServerSettings @JvmOverloads constructor(
         return this.copy(authenticationType = authType)
     }
 
-    /**
-     * Leaves out the user name, the password and the extra values, so settings that end up in a log or an error
-     * message do not carry credentials with them.
-     */
-    override fun toString(): String =
-        "ServerSettings(type=$type, host=$host, port=$port, connectionSecurity=$connectionSecurity, " +
-            "authenticationType=$authenticationType)"
+    override fun toString(): String {
+        return "ServerSettings(type=$type, host=$host, port=$port, " +
+            "connectionSecurity=$connectionSecurity, authenticationType=$authenticationType)"
+    }
 
     companion object {
         private val LINE_BREAK = "[\\r\\n]".toRegex()
