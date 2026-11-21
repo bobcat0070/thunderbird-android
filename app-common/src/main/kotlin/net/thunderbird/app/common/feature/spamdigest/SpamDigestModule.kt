@@ -53,6 +53,7 @@ internal val appCommonFeatureSpamDigestModule = module {
             recipientIndex = get(),
             impersonationChecker = get(),
             domainBlocklist = get(),
+            plusAddressLeakChecker = get(),
         )
     }
 

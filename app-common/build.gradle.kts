@@ -65,6 +65,8 @@ dependencies {
     implementation(projects.feature.packages.internal)
     implementation(projects.feature.trips.api)
     implementation(projects.feature.trips.internal)
+    implementation(projects.feature.plusaddress.api)
+    implementation(projects.feature.plusaddress.internal)
     implementation(projects.feature.mail.message.classification.api)
     implementation(projects.feature.widget.messageList)
 

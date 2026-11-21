@@ -4,6 +4,7 @@ import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
 import net.thunderbird.feature.impersonation.Impersonation
+import net.thunderbird.feature.spamdigest.LeakedPlusAddress
 import net.thunderbird.feature.spamdigest.SenderCheck
 import net.thunderbird.feature.spamdigest.SpamDigestAccount
 import net.thunderbird.feature.spamdigest.SpamDigestField
@@ -46,6 +47,7 @@ internal interface SpamDigestStrings {
     fun accountLine(account: String): String
     fun impersonation(impersonation: Impersonation): String
     fun threatListed(domain: String): String
+    fun plusAddressLeak(leak: LeakedPlusAddress): String
     fun checksNotReported(): String
     fun legend(): String
 }
@@ -232,6 +234,9 @@ internal class SpamDigestComposer(
             }
             message.threatListedDomain?.let { domain ->
                 add("$WARNING_MARK ${strings.threatListed(domain).sanitized(MAX_SUBJECT_LENGTH)}")
+            }
+            message.leakedPlusAddress?.let { leak ->
+                add("$WARNING_MARK ${strings.plusAddressLeak(leak).sanitized(MAX_SUBJECT_LENGTH)}")
             }
 
             if (SpamDigestField.SUBJECT in shown) {

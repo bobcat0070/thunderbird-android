@@ -84,6 +84,10 @@ import net.thunderbird.feature.blocklist.BlocklistMatch;
 import net.thunderbird.feature.blocklist.DomainBlocklist;
 import net.thunderbird.feature.impersonation.Impersonation;
 import net.thunderbird.feature.impersonation.ImpersonationChecker;
+import net.thunderbird.feature.plusaddress.PlusAddressDecisions;
+import net.thunderbird.feature.plusaddress.PlusAddressLeak;
+import net.thunderbird.feature.plusaddress.PlusAddressLeakChecker;
+import com.fsck.k9.ui.messageview.PlusAddressLeakNote;
 import com.fsck.k9.ui.servercategories.MessageLabels;
 
 
@@ -122,6 +126,9 @@ public class MessageHeader extends LinearLayout implements OnClickListener, OnLo
     private String currentSenderDomain;
     private MaterialTextView impersonationWarningView;
     private MaterialTextView blocklistNoteView;
+    private MaterialTextView plusAddressLeakView;
+    /** The sender and recipients last checked for a plus address leak, so a late answer for another is dropped. */
+    private String currentPlusAddressCheck;
     private MaterialTextView verificationCodeView;
     private MaterialTextView signInLinkView;
     private MaterialTextView trackingNumberView;
@@ -168,6 +175,7 @@ public class MessageHeader extends LinearLayout implements OnClickListener, OnLo
         markVerificationView = findViewById(R.id.mark_verification);
         impersonationWarningView = findViewById(R.id.impersonation_warning);
         blocklistNoteView = findViewById(R.id.blocklist_note);
+        plusAddressLeakView = findViewById(R.id.plus_address_leak);
         verificationCodeView = findViewById(R.id.verification_code);
         signInLinkView = findViewById(R.id.sign_in_link);
         trackingNumberView = findViewById(R.id.tracking_number);
@@ -303,6 +311,49 @@ public class MessageHeader extends LinearLayout implements OnClickListener, OnLo
             deliveredToView.setText(getContext().getString(R.string.message_view_delivered_to, deliveryAddress));
             deliveredToView.setVisibility(View.VISIBLE);
         }
+    }
+
+    /**
+     * Says when the message came on one of the reader's plus addresses from a sender it was not given to, which
+     * means that sender got the address from the one it was given to.
+     *
+     * Worked out off the main thread, because the first check after a while reads stored mail, and only shown if the
+     * header still shows the same message by the time the answer arrives.
+     */
+    private void showPlusAddressLeak(Message message, LegacyAccount account, Address fromAddress) {
+        plusAddressLeakView.setVisibility(View.GONE);
+        plusAddressLeakView.setOnClickListener(null);
+        currentPlusAddressCheck = null;
+
+        if (fromAddress == null || fromAddress.getAddress() == null) {
+            return;
+        }
+
+        String senderAddress = fromAddress.getAddress();
+        List<String> recipients = PlusAddressLeakNote.recipientsOf(message, account);
+        String check = senderAddress + "\n" + recipients;
+        currentPlusAddressCheck = check;
+
+        markVerificationExecutor.execute(() -> {
+            PlusAddressLeak leak = DI.get(PlusAddressLeakChecker.class).check(recipients, senderAddress);
+            if (leak == null) {
+                return;
+            }
+
+            post(() -> {
+                if (!check.equals(currentPlusAddressCheck)) {
+                    return;
+                }
+                plusAddressLeakView.setText(PlusAddressLeakNote.text(getContext(), leak));
+                plusAddressLeakView.setOnClickListener(view -> PlusAddressLeakNote.showDialog(
+                    getContext(),
+                    leak,
+                    DI.get(PlusAddressDecisions.class),
+                    () -> plusAddressLeakView.setVisibility(View.GONE)
+                ));
+                plusAddressLeakView.setVisibility(View.VISIBLE);
+            });
+        });
     }
 
     /**
@@ -813,6 +864,7 @@ public class MessageHeader extends LinearLayout implements OnClickListener, OnLo
         showDeliveryAddress(message, account);
         boolean isThreatListed = showBlocklistNote(message, fromAddress);
         isSenderThreatListed = isThreatListed;
+        showPlusAddressLeak(message, account, fromAddress);
         showImpersonationWarning(fromAddress, isThreatListed ? null : findVerificationCode(message));
 
         importance = MessageImportanceKt.getImportance(message);

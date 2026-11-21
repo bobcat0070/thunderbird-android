@@ -54,6 +54,8 @@ public data class SenderCheck(
  * @param impersonation what the sender appears to be impersonating, if anything.
  * @param threatListedDomain the domain the sender wrote from, or the message was verified as sent through, when it
  *   is on the threat blocklist; `null` otherwise.
+ * @param leakedPlusAddress the reader's plus address the message was sent to, when the sender is not who it was
+ *   given to; `null` otherwise.
  */
 public data class SpamMessage(
     val senderName: String?,
@@ -64,6 +66,20 @@ public data class SpamMessage(
     val isFromKnownSender: Boolean = false,
     val impersonation: Impersonation? = null,
     val threatListedDomain: String? = null,
+    val leakedPlusAddress: LeakedPlusAddress? = null,
+)
+
+/**
+ * One of the reader's plus addresses, used by a sender it was not given to.
+ *
+ * @param plusAddress the address the message was sent to.
+ * @param givenTo the domains of the senders it was given to.
+ * @param senderDomain the domain of the sender that has it anyway.
+ */
+public data class LeakedPlusAddress(
+    val plusAddress: String,
+    val givenTo: Set<String>,
+    val senderDomain: String,
 )
 
 /**

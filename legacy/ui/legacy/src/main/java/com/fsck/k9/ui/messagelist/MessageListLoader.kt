@@ -23,6 +23,7 @@ import net.thunderbird.core.preference.display.visualSettings.message.list.Messa
 import net.thunderbird.feature.blocklist.DomainBlocklist
 import net.thunderbird.feature.impersonation.ImpersonationChecker
 import net.thunderbird.feature.mail.folder.api.OutboxFolderManager
+import net.thunderbird.feature.plusaddress.PlusAddressLeakChecker
 import net.thunderbird.feature.search.legacy.LocalMessageSearch
 import net.thunderbird.feature.search.legacy.api.MessageSearchField
 import net.thunderbird.feature.search.legacy.SearchConditionTreeNode
@@ -44,6 +45,7 @@ class MessageListLoader(
     private val impersonationChecker: ImpersonationChecker,
     private val mailActionHold: MailActionHold,
     private val domainBlocklist: DomainBlocklist? = null,
+    private val plusAddressLeakChecker: PlusAddressLeakChecker? = null,
 ) {
 
     /**
@@ -138,6 +140,7 @@ class MessageListLoader(
             },
             impersonationChecker = impersonationChecker,
             domainBlocklist = domainBlocklist,
+            plusAddressLeakChecker = plusAddressLeakChecker,
         )
 
         return when {

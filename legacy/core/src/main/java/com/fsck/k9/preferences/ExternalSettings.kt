@@ -73,4 +73,6 @@ object ExternalSettingKeys {
     const val TRAVEL_SENDERS_ADDED_KEY = "travelSendersAdded"
     const val TRAVEL_SENDERS_REMOVED_KEY = "travelSendersRemoved"
     const val TRAVEL_MAIL_MARKED_KEY = "travelMailMarked"
+    const val PLUS_ADDRESS_ALLOWED_SENDERS_KEY = "plusAddressAllowedSenders"
+    const val PLUS_ADDRESS_IGNORED_KEY = "plusAddressIgnored"
 }

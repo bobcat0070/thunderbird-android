@@ -10,6 +10,7 @@ import net.thunderbird.app.common.feature.blocklist.appCommonFeatureBlocklistMod
 import net.thunderbird.app.common.feature.mail.appCommonFeatureMailModule
 import net.thunderbird.app.common.feature.newsletter.appCommonFeatureNewsletterModule
 import net.thunderbird.app.common.feature.packages.appCommonFeaturePackagesModule
+import net.thunderbird.app.common.feature.plusaddress.appCommonFeaturePlusAddressModule
 import net.thunderbird.app.common.feature.settings.DefaultFolderPinSettings
 import net.thunderbird.app.common.feature.settings.PackagesAndTripsExternalSettings
 import net.thunderbird.app.common.feature.settings.RemoteImageSendersExternalSettings
@@ -37,6 +38,7 @@ internal val appCommonFeatureModule = module {
     includes(appCommonFeaturePackagesModule)
     includes(appCommonFeatureTripsModule)
     includes(appCommonFeatureBlocklistModule)
+    includes(appCommonFeaturePlusAddressModule)
 
     factory<FeatureLauncherExternalContract.MessageListLauncher> {
         MessageListLauncher(

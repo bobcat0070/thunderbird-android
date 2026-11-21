@@ -15,6 +15,8 @@ import kotlin.time.Instant
 import net.thunderbird.feature.blocklist.BlocklistKind
 import net.thunderbird.feature.blocklist.DomainBlocklist
 import net.thunderbird.feature.impersonation.ImpersonationChecker
+import net.thunderbird.feature.plusaddress.PlusAddressLeakChecker
+import net.thunderbird.feature.spamdigest.LeakedPlusAddress
 import net.thunderbird.feature.spamdigest.SenderCheck
 import net.thunderbird.feature.spamdigest.SenderCheckMethod
 import net.thunderbird.feature.spamdigest.SpamMessage
@@ -36,13 +38,20 @@ internal class SpamSenderAssessor(
     private val recipientIndex: RecipientIndex,
     private val impersonationChecker: ImpersonationChecker,
     private val domainBlocklist: DomainBlocklist,
+    private val plusAddressLeakChecker: PlusAddressLeakChecker,
 ) {
+    /**
+     * @param recipientAddresses the To and Cc addresses, checked for a plus address of the reader's that the sender
+     *   was not given.
+     */
+    @Suppress("LongParameterList")
     fun assess(
         accountId: String,
         sender: Address?,
         subject: String?,
         receivedAt: Instant,
         authenticationResults: List<String>,
+        recipientAddresses: List<String> = emptyList(),
     ): SpamMessage {
         val address = sender?.address
         val domain = senderDomainOf(address)
@@ -64,6 +73,9 @@ internal class SpamSenderAssessor(
             isFromKnownSender = address != null && !isForged && isKnown(address),
             impersonation = impersonation,
             threatListedDomain = threatListedDomain,
+            leakedPlusAddress = plusAddressLeakChecker.check(recipientAddresses, address)?.let { leak ->
+                LeakedPlusAddress(leak.plusAddress, leak.givenTo, leak.senderDomain)
+            },
         )
     }
 

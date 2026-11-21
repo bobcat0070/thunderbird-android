@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+    <string name="plusaddress_title">Plus addresses</string>
+    <string name="plusaddress_intro">Each plus address you have mail on, the sender it was given to, and anyone else who has used it. Mail on a plus address from somebody it was not given to means the address got to them: sold, shared or leaked.</string>
+    <string name="plusaddress_empty">No mail on a plus address yet. When you sign up somewhere as you+site@your address, mail on it shows up here, and anyone else using it is pointed out.</string>
+    <string name="plusaddress_given_to_by_tag">Given to <xliff:g id="domains" example="shop.example">%s</xliff:g> (named in the address)</string>
+    <string name="plusaddress_given_to_first_verified">Given to <xliff:g id="domains" example="shop.example">%s</xliff:g> (its first verified sender)</string>
+    <string name="plusaddress_given_to_by_reader">Given to <xliff:g id="domains" example="shop.example">%s</xliff:g> (as you said)</string>
+    <string name="plusaddress_owner_unknown">Not known yet who this was given to: no sender is named in it, and none has passed the sender check</string>
+    <string name="plusaddress_not_checked">Not checked</string>
+    <plurals name="plusaddress_message_count">
+        <item quantity="one"><xliff:g id="count" example="1">%d</xliff:g> message</item>
+        <item quantity="other"><xliff:g id="count" example="12">%d</xliff:g> messages</item>
+    </plurals>
+    <plurals name="plusaddress_also_used_by">
+        <item quantity="one">Also used by <xliff:g id="domain" example="other.example">%1$s</xliff:g> (<xliff:g id="count" example="1">%2$d</xliff:g> message)</item>
+        <item quantity="other">Also used by <xliff:g id="domain" example="other.example">%1$s</xliff:g> (<xliff:g id="count" example="3">%2$d</xliff:g> messages)</item>
+    </plurals>
+    <plurals name="plusaddress_used_by">
+        <item quantity="one">Used by <xliff:g id="domain" example="other.example">%1$s</xliff:g> (<xliff:g id="count" example="1">%2$d</xliff:g> message)</item>
+        <item quantity="other">Used by <xliff:g id="domain" example="other.example">%1$s</xliff:g> (<xliff:g id="count" example="3">%2$d</xliff:g> messages)</item>
+    </plurals>
+    <string name="plusaddress_sender_is_fine">Sender is fine</string>
+    <string name="plusaddress_given_to_this_sender">Given to them</string>
+    <string name="plusaddress_stop_checking">Stop checking this address</string>
+    <string name="plusaddress_check_again">Check this address again</string>
+</resources>

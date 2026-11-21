@@ -521,6 +521,12 @@
             android:title="@string/general_settings_domain_blocklist_threats_title"
             />
 
+        <Preference
+            android:key="plus_addresses"
+            android:summary="@string/general_settings_plus_addresses_summary"
+            android:title="@string/general_settings_plus_addresses_title"
+            />
+
         <SwitchPreference
             android:defaultValue="true"
             android:key="packages_enabled"

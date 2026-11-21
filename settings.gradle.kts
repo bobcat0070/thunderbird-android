@@ -216,6 +216,11 @@ include(
 )
 
 include(
+    ":feature:plusaddress:api",
+    ":feature:plusaddress:internal",
+)
+
+include(
     ":feature:newsletter:api",
     ":feature:newsletter:internal",
 )

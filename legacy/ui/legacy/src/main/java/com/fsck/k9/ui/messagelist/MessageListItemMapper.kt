@@ -11,6 +11,7 @@ import net.thunderbird.core.preference.display.visualSettings.message.list.Messa
 import net.thunderbird.feature.blocklist.DomainBlocklist
 import net.thunderbird.feature.impersonation.ImpersonationChecker
 import net.thunderbird.feature.mail.folder.api.OutboxFolderManager
+import net.thunderbird.feature.plusaddress.PlusAddressLeakChecker
 
 class MessageListItemMapper(
     private val messageHelper: MessageHelper,
@@ -20,6 +21,7 @@ class MessageListItemMapper(
     private val contactLetterBitmapCreator: ContactLetterBitmapCreator?,
     private val impersonationChecker: ImpersonationChecker? = null,
     private val domainBlocklist: DomainBlocklist? = null,
+    private val plusAddressLeakChecker: PlusAddressLeakChecker? = null,
 ) : MessageMapper<MessageListItem> {
 
     override fun map(message: MessageDetailsAccessor): MessageListItem {
@@ -76,6 +78,10 @@ class MessageListItemMapper(
                 impersonationChecker?.check(displayAddress.personal, displayAddress.address) != null,
             senderBlocklistKind = displayAddress?.address?.takeIf { !showRecipients }
                 ?.let { address -> domainBlocklist?.match(address)?.kind },
+            isPlusAddressLeak = !showRecipients && plusAddressLeakChecker?.check(
+                (toAddresses + message.ccAddresses).mapNotNull { it.address },
+                fromAddresses.firstOrNull()?.address,
+            ) != null,
         )
     }
 

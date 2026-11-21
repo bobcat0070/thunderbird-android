@@ -83,6 +83,8 @@ import static com.fsck.k9.preferences.ExternalSettingKeys.SPAM_DIGEST_FIELDS_KEY
 import static com.fsck.k9.preferences.ExternalSettingKeys.SPAM_DIGEST_SENDER_ACCOUNT_KEY;
 import static com.fsck.k9.preferences.ExternalSettingKeys.SPAM_DIGEST_SEND_TIME_KEY;
 import static com.fsck.k9.preferences.ExternalSettingKeys.TRAVEL_MAIL_MARKED_KEY;
+import static com.fsck.k9.preferences.ExternalSettingKeys.PLUS_ADDRESS_ALLOWED_SENDERS_KEY;
+import static com.fsck.k9.preferences.ExternalSettingKeys.PLUS_ADDRESS_IGNORED_KEY;
 import static com.fsck.k9.preferences.ExternalSettingKeys.TRAVEL_SENDERS_ADDED_KEY;
 import static com.fsck.k9.preferences.ExternalSettingKeys.TRAVEL_SENDERS_REMOVED_KEY;
 import static net.thunderbird.core.preference.display.inboxSettings.DisplayInboxSettingsKt.DISPLAY_SETTINGS_DEFAULT_IS_MESSAGE_LIST_SENDER_ABOVE_SUBJECT;
@@ -488,6 +490,13 @@ class GeneralSettingsDescriptions {
         ));
         s.put(TRAVEL_MAIL_MARKED_KEY, Settings.versions(
             new V(119, new StringSetting(""))
+        ));
+        // Kept in the plus address decision store; see ExternalGlobalSettings.
+        s.put(PLUS_ADDRESS_ALLOWED_SENDERS_KEY, Settings.versions(
+            new V(120, new StringSetting(""))
+        ));
+        s.put(PLUS_ADDRESS_IGNORED_KEY, Settings.versions(
+            new V(120, new StringSetting(""))
         ));
 
         // TODO: Add a way to properly support feature-specific settings.

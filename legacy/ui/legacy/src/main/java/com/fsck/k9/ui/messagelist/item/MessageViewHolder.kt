@@ -169,7 +169,7 @@ class MessageViewHolder(
             attachmentView.isVisible = hasAttachments
             attachmentView.setColorFilter(foregroundColor)
 
-            bindImportance(importance, isPossibleImpersonation, senderBlocklistKind, foregroundColor)
+            bindImportance(importance, isPossibleImpersonation, senderBlocklistKind, isPlusAddressLeak, foregroundColor)
 
             val statusHolder = buildStatusHolder(isForwarded, isAnswered)
             if (statusHolder != null) {
@@ -251,14 +251,16 @@ class MessageViewHolder(
 
     /**
      * The slot beside the date shows the strongest signal: a possible impersonation, then a sender on the threat
-     * blocklist, outrank the sender's own claim of importance; a sender on the general blocklist, which holds plenty
-     * of ordinary mailing domains, only shows when nothing else does.
+     * blocklist, then a plus address used by a sender it was not given to, outrank the sender's own claim of
+     * importance; a sender on the general blocklist, which holds plenty of ordinary mailing domains, only shows when
+     * nothing else does.
      */
-    @Suppress("ReturnCount")
+    @Suppress("ReturnCount", "LongMethod")
     private fun bindImportance(
         importance: MessageImportance,
         isPossibleImpersonation: Boolean,
         senderBlocklistKind: BlocklistKind?,
+        isPlusAddressLeak: Boolean,
         foregroundColor: Int,
     ) {
         val errorColor = MaterialColors.getColor(importanceView, androidx.appcompat.R.attr.colorError)
@@ -274,6 +276,14 @@ class MessageViewHolder(
             importanceView.setImageResource(Icons.Outlined.Report)
             importanceView.setColorFilter(errorColor)
             importanceView.contentDescription = res.getString(R.string.message_list_sender_on_threat_list)
+            importanceView.isVisible = true
+            return
+        }
+
+        if (isPlusAddressLeak) {
+            importanceView.setImageResource(Icons.Outlined.Mail)
+            importanceView.setColorFilter(errorColor)
+            importanceView.contentDescription = res.getString(R.string.message_list_plus_address_leak)
             importanceView.isVisible = true
             return
         }

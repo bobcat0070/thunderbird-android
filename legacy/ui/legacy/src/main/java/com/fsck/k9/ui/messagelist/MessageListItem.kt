@@ -48,6 +48,11 @@ data class MessageListItem(
      */
     val senderBlocklistKind: BlocklistKind? = null,
     /**
+     * Whether the message came on one of the reader's plus addresses from a sender it was not given to; see
+     * [net.thunderbird.feature.plusaddress.PlusAddressLeak].
+     */
+    val isPlusAddressLeak: Boolean = false,
+    /**
      * The folder the message is in, named only when the list holds mail from more than one folder; see
      * [withFolderNames].
      */

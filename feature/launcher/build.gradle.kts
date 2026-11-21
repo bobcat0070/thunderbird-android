@@ -26,6 +26,7 @@ dependencies {
     implementation(projects.feature.attachments.api)
     implementation(projects.feature.packages.api)
     implementation(projects.feature.trips.api)
+    implementation(projects.feature.plusaddress.api)
     implementation(projects.feature.debugSettings)
 
     implementation(libs.androidx.activity.compose)

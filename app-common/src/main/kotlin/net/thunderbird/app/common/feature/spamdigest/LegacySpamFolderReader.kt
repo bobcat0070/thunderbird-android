@@ -48,6 +48,7 @@ internal class LegacySpamFolderReader(
                         sender = message.fromAddresses.firstOrNull(),
                         subject = message.subject,
                         internalDate = message.internalDate,
+                        recipients = (message.toAddresses + message.ccAddresses).mapNotNull { it.address },
                     )
                 },
             )
@@ -60,6 +61,7 @@ internal class LegacySpamFolderReader(
                         subject = stored.subject,
                         receivedAt = Instant.fromEpochMilliseconds(stored.internalDate),
                         authenticationResults = authenticationResults(messageStore, folderId, stored.serverId),
+                        recipientAddresses = stored.recipients,
                     )
                 },
                 isRefreshed = isRefreshed,
@@ -95,5 +97,6 @@ internal class LegacySpamFolderReader(
         val sender: Address?,
         val subject: String?,
         val internalDate: Long,
+        val recipients: List<String>,
     )
 }

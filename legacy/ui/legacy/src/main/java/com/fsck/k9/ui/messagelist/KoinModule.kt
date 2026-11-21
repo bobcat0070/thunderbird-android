@@ -28,6 +28,7 @@ val messageListUiModule = module {
             impersonationChecker = get(),
             mailActionHold = get(),
             domainBlocklist = get(),
+            plusAddressLeakChecker = get(),
         )
     }
     factory {

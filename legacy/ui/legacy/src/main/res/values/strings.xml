@@ -488,6 +488,8 @@
     <string name="general_settings_domain_blocklist_off">Off</string>
     <string name="general_settings_domain_blocklist_threats_title">Threat list</string>
     <string name="general_settings_domain_blocklist_threats_summary">Also check HaGeZi\'s threat intelligence feeds of malware, phishing and scam domains, and warn more strongly about those</string>
+    <string name="general_settings_plus_addresses_title">Plus addresses</string>
+    <string name="general_settings_plus_addresses_summary">The sender each of your plus addresses went to, and anyone else using it</string>
     <string name="link_dialog_title">Open this link?</string>
     <string name="link_dialog_dont_open">Don\'t open</string>
     <string name="link_dialog_open_as_is">Open as is</string>
@@ -747,6 +749,13 @@
     <string name="one_click_unsubscribe_done">Unsubscribe request sent</string>
     <string name="one_click_unsubscribe_failed">The sender did not accept the request. Opening their unsubscribe page instead.</string>
     <string name="message_list_possible_impersonation">Possible impersonation</string>
+    <string name="message_list_plus_address_leak">Sent to a plus address by someone it was not given to</string>
+    <string name="message_view_plus_address_leak">Sent to <xliff:g id="plus_address" example="you+shop@example.com">%1$s</xliff:g>, which you gave to <xliff:g id="given_to" example="shop.example">%2$s</xliff:g>, not <xliff:g id="sender_domain" example="other.example">%3$s</xliff:g></string>
+    <string name="message_view_plus_address_leak_dialog_title">Plus address used by someone else</string>
+    <string name="message_view_plus_address_leak_dialog_message"><xliff:g id="sender_domain" example="other.example">%3$s</xliff:g> has <xliff:g id="plus_address" example="you+shop@example.com">%1$s</xliff:g>, which you gave to <xliff:g id="given_to" example="shop.example">%2$s</xliff:g>. They may have sold or shared it, or lost it in a breach.</string>
+    <string name="message_view_plus_address_sender_is_fine">Sender is fine</string>
+    <string name="message_view_plus_address_stop_checking">Stop checking address</string>
+    <string name="message_view_plus_address_show_all">All plus addresses</string>
     <string name="notification_possible_impersonation">Possible impersonation</string>
     <string name="notification_sender_on_threat_list">Sender is on a threat blocklist</string>
     <string name="account_settings_spam_digest_exact_alarm_label">Allow exact alarms</string>

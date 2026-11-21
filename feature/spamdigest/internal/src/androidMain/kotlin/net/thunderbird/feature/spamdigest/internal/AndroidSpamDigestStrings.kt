@@ -10,6 +10,7 @@ import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.atStartOfDayIn
 import net.thunderbird.feature.impersonation.Impersonation
+import net.thunderbird.feature.spamdigest.LeakedPlusAddress
 
 private const val HALF_DAY_MILLIS = 12L * 60 * 60 * 1000
 
@@ -59,6 +60,13 @@ internal class AndroidSpamDigestStrings(
 
     override fun threatListed(domain: String): String =
         resources.getString(R.string.spam_digest_threat_listed, domain)
+
+    override fun plusAddressLeak(leak: LeakedPlusAddress): String = resources.getString(
+        R.string.spam_digest_plus_address_leak,
+        leak.plusAddress,
+        leak.givenTo.sorted().joinToString(", "),
+        leak.senderDomain,
+    )
 
     override fun impersonation(impersonation: Impersonation): String = when (impersonation) {
         is Impersonation.AddressInName -> resources.getString(

@@ -8,6 +8,7 @@ import kotlin.test.Test
 import kotlin.time.Instant
 import kotlinx.datetime.LocalDate
 import net.thunderbird.feature.impersonation.Impersonation
+import net.thunderbird.feature.spamdigest.LeakedPlusAddress
 import net.thunderbird.feature.spamdigest.SenderCheck
 import net.thunderbird.feature.spamdigest.SenderCheckMethod
 import net.thunderbird.feature.spamdigest.SpamDigestAccount
@@ -145,6 +146,29 @@ class SpamDigestComposerTest {
         val result = testSubject.compose(day, accounts)
 
         assertThat(result.body.lines().any { it.trim() == "⚠ bad.example is on a threat list" }).isTrue()
+    }
+
+    @Test
+    fun `compose should say when spam came on a plus address its sender was not given`() {
+        val leaked = spamMessage(senderName = "Deals", senderAddress = "deals@broker.example", subject = "Offer")
+            .copy(
+                leakedPlusAddress = LeakedPlusAddress(
+                    plusAddress = "reader+shop@mail.example",
+                    givenTo = setOf("shop.example"),
+                    senderDomain = "broker.example",
+                ),
+            )
+        val accounts = listOf(
+            AccountSpam(work, SpamFolderResult.Read(SpamFolderContents(listOf(leaked), isRefreshed = true))),
+        )
+
+        val result = testSubject.compose(day, accounts)
+
+        assertThat(
+            result.body.lines().any {
+                it.trim() == "⚠ reader+shop@mail.example was given to shop.example, not broker.example"
+            },
+        ).isTrue()
     }
 
     @Test

@@ -204,6 +204,28 @@
             />
 
         <com.google.android.material.textview.MaterialTextView
+            android:id="@+id/plus_address_leak"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="16dp"
+            android:layout_marginTop="2dp"
+            android:layout_marginEnd="8dp"
+            android:background="?attr/selectableItemBackground"
+            android:drawablePadding="4dp"
+            android:maxLines="3"
+            android:textAppearance="?attr/textAppearanceLabelMedium"
+            android:textColor="?attr/colorError"
+            android:visibility="gone"
+            app:drawableStartCompat="@drawable/ic_warning"
+            app:drawableTint="?attr/colorError"
+            app:layout_constraintEnd_toStartOf="@+id/menu_primary_action"
+            app:layout_constraintStart_toEndOf="@id/contact_picture"
+            app:layout_constraintTop_toBottomOf="@+id/blocklist_note"
+            tools:text="Sent to you+shop@example.com, which you gave to shop.example, not other.example"
+            tools:visibility="visible"
+            />
+
+        <com.google.android.material.textview.MaterialTextView
             android:id="@+id/verification_code"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
@@ -222,7 +244,7 @@
             app:drawableTint="?attr/colorPrimary"
             app:layout_constraintEnd_toStartOf="@+id/menu_primary_action"
             app:layout_constraintStart_toEndOf="@id/contact_picture"
-            app:layout_constraintTop_toBottomOf="@+id/blocklist_note"
+            app:layout_constraintTop_toBottomOf="@+id/plus_address_leak"
             tools:text="Copy code 482913"
             tools:visibility="visible"
             />

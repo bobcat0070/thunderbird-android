@@ -28,6 +28,7 @@ import net.thunderbird.feature.navigation.changelog.api.ChangelogNavigation
 import net.thunderbird.feature.newsletter.NewsletterNavigation
 import net.thunderbird.feature.packages.PackagesNavigation
 import net.thunderbird.feature.packages.PackagesRoute
+import net.thunderbird.feature.plusaddress.PlusAddressNavigation
 import net.thunderbird.feature.thundermail.navigation.ThundermailNavigation
 import net.thunderbird.feature.thundermail.navigation.ThundermailRoute
 import net.thunderbird.feature.trips.TripsNavigation
@@ -52,6 +53,7 @@ fun FeatureLauncherNavHost(
     attachmentsNavigation: AttachmentsNavigation = koinInject(),
     packagesNavigation: PackagesNavigation = koinInject(),
     tripsNavigation: TripsNavigation = koinInject(),
+    plusAddressNavigation: PlusAddressNavigation = koinInject(),
     secretDebugSettingsNavigation: SecretDebugSettingsNavigation = koinInject(),
     thundermailNavigation: ThundermailNavigation = koinInject(),
     changelogNavigation: ChangelogNavigation = koinInject(),
@@ -176,6 +178,12 @@ fun FeatureLauncherNavHost(
             onFinish = { route ->
                 if (route == TripsRoute.TravelSenders) navController.navigate(route) else onBack()
             },
+        )
+
+        plusAddressNavigation.registerRoutes(
+            navGraphBuilder = this,
+            onBack = onBack,
+            onFinish = { onBack() },
         )
 
         secretDebugSettingsNavigation.registerRoutes(

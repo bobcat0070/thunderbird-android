@@ -78,13 +78,21 @@ class GeneralSettingsFragment : PreferenceFragmentCompat() {
             }
         }
 
-    private fun initializeCarrierTrackingAccounts() {
+    /**
+     * The settings that open a screen of a feature: carrier accounts for Packages, and the plus address overview.
+     */
+    private fun initializeFeatureScreens() {
         findPreference<Preference>("carrier_tracking_accounts")?.onPreferenceClickListener =
             Preference.OnPreferenceClickListener {
                 FeatureLauncherActivity.launch(
                     context = requireContext(),
                     target = FeatureLauncherTarget.PackageCarrierAccounts,
                 )
+                true
+            }
+        findPreference<Preference>("plus_addresses")?.onPreferenceClickListener =
+            Preference.OnPreferenceClickListener {
+                FeatureLauncherActivity.launch(context = requireContext(), target = FeatureLauncherTarget.PlusAddresses)
                 true
             }
     }
@@ -105,7 +113,7 @@ class GeneralSettingsFragment : PreferenceFragmentCompat() {
                 context?.let { NotificationActionsSettingsActivity.start(it) }
                 true
             }
-        initializeCarrierTrackingAccounts()
+        initializeFeatureScreens()
         findPreference<Preference>("remote_feature_flag")?.onPreferenceClickListener =
             Preference.OnPreferenceClickListener {
                 FeatureLauncherActivity.launch(

@@ -2,6 +2,7 @@ package net.thunderbird.feature.spamdigest.internal
 
 import kotlinx.datetime.LocalDate
 import net.thunderbird.feature.impersonation.Impersonation
+import net.thunderbird.feature.spamdigest.LeakedPlusAddress
 
 internal class FakeSpamDigestStrings : SpamDigestStrings {
     override fun formatDate(date: LocalDate): String = date.toString()
@@ -13,6 +14,8 @@ internal class FakeSpamDigestStrings : SpamDigestStrings {
     override fun noOtherMessages(): String = "No other spam."
     override fun accountLine(account: String): String = "In: $account"
     override fun threatListed(domain: String): String = "$domain is on a threat list"
+    override fun plusAddressLeak(leak: LeakedPlusAddress): String =
+        "${leak.plusAddress} was given to ${leak.givenTo.sorted().joinToString()}, not ${leak.senderDomain}"
     override fun impersonation(impersonation: Impersonation): String = when (impersonation) {
         is Impersonation.LookalikeDomain -> "${impersonation.senderDomain} looks like ${impersonation.knownDomain}"
         else -> impersonation.toString()

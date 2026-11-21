@@ -48,6 +48,10 @@ internal class SpamArrivalMessagingListener(
                 subject = message.subject,
                 receivedAt = receivedAt,
                 authenticationResults = authenticationResults,
+                recipientAddresses = sequenceOf(Message.RecipientType.TO, Message.RecipientType.CC)
+                    .flatMap { type -> message.getRecipients(type).orEmpty().asSequence() }
+                    .mapNotNull { it.address }
+                    .toList(),
             )
 
             spamArrivalListener.onSpamArrived(accountId.toString(), spamFolderId, message.uid, spamMessage)
