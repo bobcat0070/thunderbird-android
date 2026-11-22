@@ -7,6 +7,8 @@
 scripts/check-before-push.sh eol=lf
 scripts/install-git-hooks.sh eol=lf
 scripts/git-hooks/* eol=lf
+# Compared byte for byte with the badging the build writes, which has LF line endings on every OS.
+app-*/badging/*.txt eol=lf
 
 app-k9mail/build.gradle.kts merge=merge_gradle
 app-thunderbird/build.gradle.kts merge=merge_gradle
