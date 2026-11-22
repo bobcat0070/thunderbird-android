@@ -527,6 +527,12 @@
             android:title="@string/general_settings_plus_addresses_title"
             />
 
+        <Preference
+            android:key="mailbox_rules"
+            android:summary="@string/general_settings_mailbox_rules_summary"
+            android:title="@string/general_settings_mailbox_rules_title"
+            />
+
         <SwitchPreference
             android:defaultValue="true"
             android:key="packages_enabled"

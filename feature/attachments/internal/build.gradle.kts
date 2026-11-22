@@ -13,6 +13,7 @@ dependencies {
     implementation(projects.core.ui.contract)
     implementation(projects.core.ui.compose.common)
 
+    testImplementation(projects.core.testing)
     testImplementation(projects.core.ui.compose.testing)
 }
 

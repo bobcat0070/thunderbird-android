@@ -489,6 +489,8 @@
     <string name="general_settings_domain_blocklist_threats_title">Threat list</string>
     <string name="general_settings_domain_blocklist_threats_summary">Also check HaGeZi\'s threat intelligence feeds of malware, phishing and scam domains, and warn more strongly about those</string>
     <string name="general_settings_plus_addresses_title">Plus addresses</string>
+    <string name="general_settings_mailbox_rules_title">Microsoft 365 mailbox rules</string>
+    <string name="general_settings_mailbox_rules_summary">Check for Outlook rules that forward your mail away or delete it</string>
     <string name="general_settings_plus_addresses_summary">The sender each of your plus addresses went to, and anyone else using it</string>
     <string name="link_dialog_title">Open this link?</string>
     <string name="link_dialog_dont_open">Don\'t open</string>

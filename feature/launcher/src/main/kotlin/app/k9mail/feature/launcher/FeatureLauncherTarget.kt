@@ -11,7 +11,9 @@ import net.thunderbird.feature.account.AccountId
 import net.thunderbird.feature.account.settings.api.AccountSettingsRoute
 import net.thunderbird.feature.attachments.AttachmentsRoute
 import net.thunderbird.feature.debug.settings.navigation.SecretDebugSettingsRoute
+import net.thunderbird.feature.expiredmail.ExpiredMailRoute
 import net.thunderbird.feature.funding.api.FundingRoute
+import net.thunderbird.feature.mailboxrules.MailboxRulesRoute
 import net.thunderbird.feature.navigation.changelog.api.ChangeLogMode
 import net.thunderbird.feature.navigation.changelog.api.ChangelogRoute
 import net.thunderbird.feature.newsletter.NewsletterRoute
@@ -81,6 +83,18 @@ sealed class FeatureLauncherTarget(
 
     data class SenderAttachments(val address: String) : FeatureLauncherTarget(
         deepLinkUri = AttachmentsRoute.Sender(address).route().toUri(),
+    )
+
+    data object AllAttachments : FeatureLauncherTarget(
+        deepLinkUri = AttachmentsRoute.All.route().toUri(),
+    )
+
+    data object ExpiredMail : FeatureLauncherTarget(
+        deepLinkUri = ExpiredMailRoute.Overview.route().toUri(),
+    )
+
+    data object MailboxRules : FeatureLauncherTarget(
+        deepLinkUri = MailboxRulesRoute.Rules.route().toUri(),
     )
 
     data object Packages : FeatureLauncherTarget(

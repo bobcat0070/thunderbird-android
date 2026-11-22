@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+    <!-- Title of the screen listing mail whose use is over: old sign-in codes, shipping mail of delivered parcels -->
+    <string name="expiredmail_title">Expired mail</string>
+    <string name="expiredmail_empty">Nothing has expired. Old sign-in codes and the shipping mail of delivered parcels show up here.</string>
+    <plurals name="expiredmail_group_sign_in">
+        <item quantity="one"><xliff:g id="count">%d</xliff:g> sign-in code</item>
+        <item quantity="other"><xliff:g id="count">%d</xliff:g> sign-in codes</item>
+    </plurals>
+    <string name="expiredmail_group_sign_in_explanation">Sign-in and verification mail more than a day old</string>
+    <plurals name="expiredmail_group_delivered">
+        <item quantity="one"><xliff:g id="count">%d</xliff:g> delivered parcel mail</item>
+        <item quantity="other"><xliff:g id="count">%d</xliff:g> delivered parcel mails</item>
+    </plurals>
+    <string name="expiredmail_group_delivered_explanation">Shipping mail for parcels delivered more than two weeks ago</string>
+    <string name="expiredmail_archive_all">Archive all</string>
+    <string name="expiredmail_delete_all">Delete all</string>
+    <!-- Content descriptions of the buttons on one mail -->
+    <string name="expiredmail_archive">Archive</string>
+    <string name="expiredmail_delete">Delete</string>
+    <string name="expiredmail_no_subject">(No subject)</string>
+    <string name="expiredmail_cancel">Cancel</string>
+    <plurals name="expiredmail_archive_all_confirm">
+        <item quantity="one">Archive <xliff:g id="count">%d</xliff:g> mail?</item>
+        <item quantity="other">Archive <xliff:g id="count">%d</xliff:g> mails?</item>
+    </plurals>
+    <plurals name="expiredmail_delete_all_confirm">
+        <item quantity="one">Move <xliff:g id="count">%d</xliff:g> mail to the trash?</item>
+        <item quantity="other">Move <xliff:g id="count">%d</xliff:g> mails to the trash?</item>
+    </plurals>
+    <plurals name="expiredmail_archived">
+        <item quantity="one"><xliff:g id="count">%d</xliff:g> mail archived</item>
+        <item quantity="other"><xliff:g id="count">%d</xliff:g> mails archived</item>
+    </plurals>
+    <plurals name="expiredmail_deleted">
+        <item quantity="one"><xliff:g id="count">%d</xliff:g> mail moved to the trash</item>
+        <item quantity="other"><xliff:g id="count">%d</xliff:g> mails moved to the trash</item>
+    </plurals>
+</resources>

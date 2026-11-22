@@ -23,7 +23,9 @@ import net.thunderbird.feature.account.settings.api.AccountSettingsRoute
 import net.thunderbird.feature.attachments.AttachmentsNavigation
 import net.thunderbird.feature.debug.settings.navigation.SecretDebugSettingsNavigation
 import net.thunderbird.feature.debug.settings.navigation.SecretDebugSettingsRoute
+import net.thunderbird.feature.expiredmail.ExpiredMailNavigation
 import net.thunderbird.feature.funding.api.FundingNavigation
+import net.thunderbird.feature.mailboxrules.MailboxRulesNavigation
 import net.thunderbird.feature.navigation.changelog.api.ChangelogNavigation
 import net.thunderbird.feature.newsletter.NewsletterNavigation
 import net.thunderbird.feature.packages.PackagesNavigation
@@ -51,6 +53,8 @@ fun FeatureLauncherNavHost(
     fundingNavigation: FundingNavigation = koinInject(),
     newsletterNavigation: NewsletterNavigation = koinInject(),
     attachmentsNavigation: AttachmentsNavigation = koinInject(),
+    expiredMailNavigation: ExpiredMailNavigation = koinInject(),
+    mailboxRulesNavigation: MailboxRulesNavigation = koinInject(),
     packagesNavigation: PackagesNavigation = koinInject(),
     tripsNavigation: TripsNavigation = koinInject(),
     plusAddressNavigation: PlusAddressNavigation = koinInject(),
@@ -157,6 +161,18 @@ fun FeatureLauncherNavHost(
         )
 
         attachmentsNavigation.registerRoutes(
+            navGraphBuilder = this,
+            onBack = onBack,
+            onFinish = { onBack() },
+        )
+
+        expiredMailNavigation.registerRoutes(
+            navGraphBuilder = this,
+            onBack = onBack,
+            onFinish = { onBack() },
+        )
+
+        mailboxRulesNavigation.registerRoutes(
             navGraphBuilder = this,
             onBack = onBack,
             onFinish = { onBack() },

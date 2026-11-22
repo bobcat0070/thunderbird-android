@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+    <!-- Title of the screen listing a Microsoft 365 mailbox's inbox rules -->
+    <string name="mailboxrules_title">Mailbox rules</string>
+    <string name="mailboxrules_no_accounts">There is no Microsoft 365 account in this app.</string>
+    <!-- Above the button that reads the rules. Example address: alex@example.com -->
+    <string name="mailboxrules_intro">Someone who gets into <xliff:g id="address" example="alex@example.com">%s</xliff:g> can add an Outlook rule that forwards your mail to them or deletes warnings, and it keeps working after you change your password. Reading the rules needs a one-time sign-in that asks only to read your mailbox settings; nothing from it is kept.</string>
+    <string name="mailboxrules_check">Check rules</string>
+    <string name="mailboxrules_sign_in_unavailable">The sign-in could not be started.</string>
+    <string name="mailboxrules_refused">Microsoft did not allow reading the mailbox settings. Your organisation may need to approve it.</string>
+    <string name="mailboxrules_failed">The rules could not be read. Check the connection and try again.</string>
+    <string name="mailboxrules_none">This mailbox has no inbox rules.</string>
+    <string name="mailboxrules_all_fine">No rule forwards mail outside your domain, deletes it, or hides it.</string>
+    <plurals name="mailboxrules_need_look">
+        <item quantity="one"><xliff:g id="count">%d</xliff:g> rule is worth a look. If you did not set it up, delete it in Outlook and change your password.</item>
+        <item quantity="other"><xliff:g id="count">%d</xliff:g> rules are worth a look. If you did not set them up, delete them in Outlook and change your password.</item>
+    </plurals>
+    <string name="mailboxrules_unnamed">(Unnamed rule)</string>
+    <string name="mailboxrules_off">Turned off</string>
+    <string name="mailboxrules_forwards_outside">Forwards mail outside your domain, to <xliff:g id="addresses" example="someone@example.net">%s</xliff:g></string>
+    <string name="mailboxrules_forwards_inside">Forwards mail to <xliff:g id="addresses" example="team@example.com">%s</xliff:g></string>
+    <string name="mailboxrules_deletes">Deletes mail as it arrives</string>
+    <string name="mailboxrules_hides">Moves mail away and marks it read, so it never shows as new</string>
+</resources>

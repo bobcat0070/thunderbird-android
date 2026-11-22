@@ -25,9 +25,11 @@ import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
 import net.thunderbird.app.common.feature.newsletter.NAME_SEPARATOR
 import net.thunderbird.app.common.feature.newsletter.SENDER_ADDRESS_CONDITION
+import net.thunderbird.core.android.account.LegacyAccount
 import net.thunderbird.core.android.account.LegacyAccountManager
 import net.thunderbird.core.common.exception.MessagingException
 import net.thunderbird.feature.account.AccountId
+import net.thunderbird.feature.attachments.AttachmentQuery
 import net.thunderbird.feature.attachments.OpenOutcome
 import net.thunderbird.feature.attachments.SenderAttachmentRepository
 import net.thunderbird.feature.attachments.SenderAttachments
@@ -38,8 +40,8 @@ import net.thunderbird.legacy.logging.Log
 private const val TAG = "SenderAttachments"
 
 /**
- * How many of a sender's messages with files are read for the list, newest first. Each is loaded with its structure,
- * so a sender who has sent thousands is cut off rather than slowing the screen down.
+ * How many messages with files are read for the list, newest first. Each is loaded with its structure, so a sender who
+ * has sent thousands, or a whole mailbox, is cut off rather than slowing the screen down.
  */
 private const val MAX_MESSAGES = 200
 
@@ -59,13 +61,13 @@ private class AttachmentLocation(val reference: MessageReference)
 private class SenderMessage(val reference: MessageReference, val date: Long, val subject: String?)
 
 /**
- * Lists, opens and downloads one sender's files from the stores of every account.
+ * Lists, opens and downloads one sender's files, or everyone's, from the stores of every account.
  *
  * Mail in the trash and in spam is left out, as in the list of all mail from the sender. A file is listed once its
  * message's structure is on the device, which for IMAP is when it is synchronized and for Microsoft 365 when it is
  * opened or downloaded from this screen; a file whose content is still on the server is downloaded when opened.
  */
-@Suppress("LongParameterList")
+@Suppress("LongParameterList", "TooManyFunctions")
 internal class LegacySenderAttachmentRepository(
     private val context: Context,
     private val accountManager: LegacyAccountManager,
@@ -81,8 +83,9 @@ internal class LegacySenderAttachmentRepository(
      */
     private val locations = ConcurrentHashMap<String, AttachmentLocation>()
 
-    override suspend fun attachments(address: String): SenderAttachments = withContext(Dispatchers.IO) {
-        val messages = senderMessages(address, HAS_ATTACHMENTS_CONDITION).take(MAX_MESSAGES)
+    override suspend fun attachments(query: AttachmentQuery): SenderAttachments = withContext(Dispatchers.IO) {
+        val withFiles = queryMessages(query, HAS_ATTACHMENTS_CONDITION, limit = MAX_MESSAGES + 1)
+        val messages = withFiles.take(MAX_MESSAGES)
         val attachments = messages.flatMap { senderMessage ->
             val message = loadMessage(senderMessage.reference) ?: return@flatMap emptyList()
             attachmentsOf(message).mapNotNull { info -> storedAttachment(senderMessage, info) }
@@ -90,17 +93,18 @@ internal class LegacySenderAttachmentRepository(
 
         SenderAttachments(
             attachments = attachments,
-            messagesNotDownloaded = senderMessages(address, NOT_DOWNLOADED_CONDITION).size,
+            messagesNotDownloaded = countMessages(query, NOT_DOWNLOADED_CONDITION),
+            isLimited = withFiles.size > MAX_MESSAGES,
         )
     }
 
     override suspend fun downloadMessages(
-        address: String,
+        query: AttachmentQuery,
         limit: Int,
         onProgress: (done: Int, total: Int) -> Unit,
     ): Int {
         val messages = withContext(Dispatchers.IO) {
-            senderMessages(address, NOT_DOWNLOADED_CONDITION).take(limit)
+            queryMessages(query, NOT_DOWNLOADED_CONDITION, limit)
         }
 
         var downloaded = 0
@@ -161,22 +165,14 @@ internal class LegacySenderAttachmentRepository(
     }
 
     /**
-     * The sender's messages in every account matching [condition], newest first.
+     * The newest [limit] messages in every account that [query] asks about and match [condition], newest first.
      */
-    private fun senderMessages(address: String, condition: String): List<SenderMessage> {
-        val senderArgument = address.trim().lowercase() + NAME_SEPARATOR
-
+    private fun queryMessages(query: AttachmentQuery, condition: String, limit: Int): List<SenderMessage> {
         return accountManager.findAll().flatMap { account ->
-            val excludedIds = EXCLUDED_FOLDERS.mapNotNull { account.specialFolderId(it) }
-            val folderCondition = if (excludedIds.isEmpty()) {
-                ""
-            } else {
-                " AND messages.folder_id NOT IN (${excludedIds.joinToString(",") { "?" }})"
-            }
-
+            val (selection, arguments) = selectionFor(account, query, condition)
             messageStoreManager.getMessageStore(account.id).getMessages(
-                selection = SENDER_ADDRESS_CONDITION + condition + folderCondition,
-                selectionArgs = (listOf(senderArgument) + excludedIds.map { it.toString() }).toTypedArray(),
+                selection = selection,
+                selectionArgs = arguments,
                 sortOrder = "messages.date DESC",
                 messageMapper = { message ->
                     SenderMessage(
@@ -185,8 +181,55 @@ internal class LegacySenderAttachmentRepository(
                         subject = message.subject,
                     )
                 },
+                limit = limit,
             )
-        }.sortedByDescending { it.date }
+        }.sortedByDescending { it.date }.take(limit)
+    }
+
+    /**
+     * How many messages in every account [query] asks about and match [condition].
+     */
+    private fun countMessages(query: AttachmentQuery, condition: String): Int {
+        return accountManager.findAll().sumOf { account ->
+            val (selection, arguments) = selectionFor(account, query, condition)
+            messageStoreManager.getMessageStore(account.id).getMessages(
+                selection = selection,
+                selectionArgs = arguments,
+                sortOrder = "messages.id",
+                messageMapper = { },
+            ).size
+        }
+    }
+
+    private fun selectionFor(
+        account: LegacyAccount,
+        query: AttachmentQuery,
+        condition: String,
+    ): Pair<String, Array<String>> {
+        val selection = StringBuilder()
+        val arguments = mutableListOf<String>()
+
+        val sender = query.senderAddress?.trim()?.lowercase()
+        if (sender == null) {
+            selection.append("1 = 1")
+        } else {
+            selection.append(SENDER_ADDRESS_CONDITION)
+            arguments += sender + NAME_SEPARATOR
+        }
+        selection.append(condition)
+
+        query.since?.let { since ->
+            selection.append(" AND messages.date >= ?")
+            arguments += since.toString()
+        }
+
+        val excludedIds = EXCLUDED_FOLDERS.mapNotNull { account.specialFolderId(it) }
+        if (excludedIds.isNotEmpty()) {
+            selection.append(" AND messages.folder_id NOT IN (${excludedIds.joinToString(",") { "?" }})")
+            arguments += excludedIds.map { it.toString() }
+        }
+
+        return selection.toString() to arguments.toTypedArray()
     }
 
     private fun loadMessage(reference: MessageReference): LocalMessage? {

@@ -7,7 +7,9 @@ import com.fsck.k9.preferences.FolderPinSettings
 import net.thunderbird.app.common.feature.account.appCommonFeatureAccountModule
 import net.thunderbird.app.common.feature.attachments.appCommonFeatureAttachmentsModule
 import net.thunderbird.app.common.feature.blocklist.appCommonFeatureBlocklistModule
+import net.thunderbird.app.common.feature.expiredmail.appCommonFeatureExpiredMailModule
 import net.thunderbird.app.common.feature.mail.appCommonFeatureMailModule
+import net.thunderbird.app.common.feature.mailboxrules.appCommonFeatureMailboxRulesModule
 import net.thunderbird.app.common.feature.newsletter.appCommonFeatureNewsletterModule
 import net.thunderbird.app.common.feature.packages.appCommonFeaturePackagesModule
 import net.thunderbird.app.common.feature.plusaddress.appCommonFeaturePlusAddressModule
@@ -36,6 +38,8 @@ internal val appCommonFeatureModule = module {
     includes(appCommonFeatureNewsletterModule)
     includes(appCommonFeatureAttachmentsModule)
     includes(appCommonFeaturePackagesModule)
+    includes(appCommonFeatureExpiredMailModule)
+    includes(appCommonFeatureMailboxRulesModule)
     includes(appCommonFeatureTripsModule)
     includes(appCommonFeatureBlocklistModule)
     includes(appCommonFeaturePlusAddressModule)

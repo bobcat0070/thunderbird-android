@@ -95,6 +95,11 @@ class GeneralSettingsFragment : PreferenceFragmentCompat() {
                 FeatureLauncherActivity.launch(context = requireContext(), target = FeatureLauncherTarget.PlusAddresses)
                 true
             }
+        findPreference<Preference>("mailbox_rules")?.onPreferenceClickListener =
+            Preference.OnPreferenceClickListener {
+                FeatureLauncherActivity.launch(context = requireContext(), target = FeatureLauncherTarget.MailboxRules)
+                true
+            }
     }
 
     override fun onCreatePreferencesFix(savedInstanceState: Bundle?, rootKey: String?) {

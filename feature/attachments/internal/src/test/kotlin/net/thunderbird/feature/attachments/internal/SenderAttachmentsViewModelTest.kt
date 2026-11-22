@@ -8,10 +8,14 @@ import assertk.assertions.isNull
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
+import kotlin.time.Duration.Companion.days
+import kotlin.time.Instant
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
 import net.thunderbird.components.ui.testing.coroutines.MainDispatcherHelper
+import net.thunderbird.core.testing.TestClock
+import net.thunderbird.feature.attachments.AttachmentQuery
 import net.thunderbird.feature.attachments.OpenOutcome
 import net.thunderbird.feature.attachments.SenderAttachmentRepository
 import net.thunderbird.feature.attachments.SenderAttachments
@@ -30,7 +34,8 @@ class SenderAttachmentsViewModelTest {
     private val scan = attachment(key = "2", fileName = "scan.jpg", isDownloaded = false)
 
     private val repository = FakeRepository(SenderAttachments(listOf(invoice, scan), messagesNotDownloaded = 30))
-    private val testSubject by lazy { SenderAttachmentsViewModel(repository) }
+    private val clock = TestClock(Instant.parse("2026-11-21T12:00:00Z"))
+    private val testSubject by lazy { SenderAttachmentsViewModel(repository, clock) }
 
     @BeforeTest
     fun setUp() {
@@ -108,6 +113,34 @@ class SenderAttachmentsViewModelTest {
         assertThat(testSubject.state.value.download).isNull()
     }
 
+    @Test
+    fun `everyone's files should be listed without a sender`() {
+        testSubject.event(Event.LoadAttachments(address = null))
+
+        assertThat(repository.queries).containsExactly(AttachmentQuery(senderAddress = null, since = null))
+    }
+
+    @Test
+    fun `a file type should narrow the list without reading it again`() {
+        testSubject.event(Event.LoadAttachments(ADDRESS))
+
+        testSubject.event(Event.TypeClicked(AttachmentType.IMAGES))
+
+        assertThat(testSubject.state.value.shownAttachments).containsExactly(scan)
+        assertThat(repository.calls).containsExactly("attachments $ADDRESS")
+    }
+
+    @Test
+    fun `a period should read the files sent since then`() {
+        testSubject.event(Event.LoadAttachments(ADDRESS))
+
+        testSubject.event(Event.PeriodClicked(AttachmentPeriod.LAST_30_DAYS))
+
+        assertThat(repository.queries.last()).isEqualTo(
+            AttachmentQuery(ADDRESS, since = (clock.now() - 30.days).toEpochMilliseconds()),
+        )
+    }
+
     private fun attachment(key: String, fileName: String, isDownloaded: Boolean) = StoredAttachment(
         key = key,
         fileName = fileName,
@@ -122,17 +155,20 @@ class SenderAttachmentsViewModelTest {
         val calls = mutableListOf<String>()
         var openOutcome = OpenOutcome.OPENED
 
-        override suspend fun attachments(address: String): SenderAttachments {
-            calls += "attachments $address"
+        val queries = mutableListOf<AttachmentQuery>()
+
+        override suspend fun attachments(query: AttachmentQuery): SenderAttachments {
+            calls += "attachments ${query.senderAddress}"
+            queries += query
             return senderAttachments
         }
 
         override suspend fun downloadMessages(
-            address: String,
+            query: AttachmentQuery,
             limit: Int,
             onProgress: (done: Int, total: Int) -> Unit,
         ): Int {
-            calls += "download $address $limit"
+            calls += "download ${query.senderAddress} $limit"
             onProgress(limit, limit)
             return limit
         }

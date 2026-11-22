@@ -19,13 +19,27 @@ data class StoredAttachment(
 )
 
 /**
+ * Which files to list.
+ *
+ * @param senderAddress whose files; `null` for everyone's.
+ * @param since the earliest a file's message may have been sent, in milliseconds since the epoch; `null` for any time.
+ */
+data class AttachmentQuery(
+    val senderAddress: String?,
+    val since: Long? = null,
+)
+
+/**
  * @param attachments the files, newest message first.
- * @param messagesNotDownloaded how many of the sender's messages are known only by their envelope, as Microsoft 365
+ * @param messagesNotDownloaded how many of the messages asked about are known only by their envelope, as Microsoft 365
  *   mail is until it is opened, so whether they hold files cannot be told.
+ * @param isLimited whether there were more messages with files than are read for one list, so older files are left
+ *   out.
  */
 data class SenderAttachments(
     val attachments: List<StoredAttachment>,
     val messagesNotDownloaded: Int,
+    val isLimited: Boolean = false,
 )
 
 /**
@@ -43,20 +57,20 @@ enum class OpenOutcome {
 }
 
 /**
- * Reads, opens and downloads the files someone sent the reader, across every account. Mail in the trash and in spam
- * is left out, as in the list of all mail from a sender.
+ * Reads, opens and downloads the files that came with the reader's mail, one sender's or everyone's, across every
+ * account. Mail in the trash and in spam is left out, as in the list of all mail from a sender.
  */
 interface SenderAttachmentRepository {
-    suspend fun attachments(address: String): SenderAttachments
+    suspend fun attachments(query: AttachmentQuery): SenderAttachments
 
     /**
-     * Downloads the newest [limit] of the sender's messages that are known only by their envelope, so their files
-     * can be listed.
+     * Downloads the newest [limit] of the messages [query] asks about that are known only by their envelope, so their
+     * files can be listed.
      *
      * @param onProgress called after each message, with how many are done and how many there are.
      * @return how many messages were downloaded.
      */
-    suspend fun downloadMessages(address: String, limit: Int, onProgress: (done: Int, total: Int) -> Unit): Int
+    suspend fun downloadMessages(query: AttachmentQuery, limit: Int, onProgress: (done: Int, total: Int) -> Unit): Int
 
     /**
      * Opens [attachment] in an app that can show it, downloading it first when it is not on the device.

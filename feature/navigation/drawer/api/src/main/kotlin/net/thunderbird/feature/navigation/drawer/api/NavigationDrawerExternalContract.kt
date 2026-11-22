@@ -25,6 +25,8 @@ interface NavigationDrawerExternalContract {
     enum class DrawerShortcut {
         PACKAGES,
         TRIPS,
+        ATTACHMENTS,
+        EXPIRED_MAIL,
     }
 
     /**

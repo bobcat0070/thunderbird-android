@@ -13,6 +13,16 @@ private val PATH_RESERVED = setOf('%', '/', '?', '#', ' ')
 
 sealed interface AttachmentsRoute : Route {
     /**
+     * Every file in the reader's mail, across accounts, newest first.
+     */
+    @Serializable
+    data object All : AttachmentsRoute {
+        override val basePath: String = "$ATTACHMENTS_BASE_DEEP_LINK/all"
+
+        override fun route(): String = basePath
+    }
+
+    /**
      * Every file [address] has sent the reader, across accounts, newest first.
      */
     @Serializable

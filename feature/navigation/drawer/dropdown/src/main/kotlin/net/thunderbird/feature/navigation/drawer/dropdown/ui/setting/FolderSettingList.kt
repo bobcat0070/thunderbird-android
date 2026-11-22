@@ -51,17 +51,9 @@ internal fun FolderSettingList(
         shortcuts.forEach { shortcut ->
             item(span = { if (hideText) GridItemSpan(1) else GridItemSpan(maxLineSpan) }) {
                 SettingListItem(
-                    label = stringResource(
-                        id = when (shortcut) {
-                            DrawerShortcut.PACKAGES -> R.string.navigation_drawer_dropdown_action_packages
-                            DrawerShortcut.TRIPS -> R.string.navigation_drawer_dropdown_action_trips
-                        },
-                    ),
+                    label = stringResource(id = shortcut.labelResource()),
                     onClick = { onShortcutClick(shortcut) },
-                    icon = when (shortcut) {
-                        DrawerShortcut.PACKAGES -> Icons.Outlined.LocalShipping
-                        DrawerShortcut.TRIPS -> Icons.Outlined.Flight
-                    },
+                    icon = shortcut.icon(),
                 )
             }
         }
@@ -92,4 +84,18 @@ internal fun FolderSettingList(
             )
         }
     }
+}
+
+private fun DrawerShortcut.labelResource(): Int = when (this) {
+    DrawerShortcut.PACKAGES -> R.string.navigation_drawer_dropdown_action_packages
+    DrawerShortcut.TRIPS -> R.string.navigation_drawer_dropdown_action_trips
+    DrawerShortcut.ATTACHMENTS -> R.string.navigation_drawer_dropdown_action_attachments
+    DrawerShortcut.EXPIRED_MAIL -> R.string.navigation_drawer_dropdown_action_expired_mail
+}
+
+private fun DrawerShortcut.icon() = when (this) {
+    DrawerShortcut.PACKAGES -> Icons.Outlined.LocalShipping
+    DrawerShortcut.TRIPS -> Icons.Outlined.Flight
+    DrawerShortcut.ATTACHMENTS -> Icons.Outlined.Attachment
+    DrawerShortcut.EXPIRED_MAIL -> Icons.Outlined.Archive
 }

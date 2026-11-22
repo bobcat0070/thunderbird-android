@@ -26,6 +26,26 @@
         <item quantity="one"><xliff:g id="count">%d</xliff:g> message downloaded</item>
         <item quantity="other"><xliff:g id="count">%d</xliff:g> messages downloaded</item>
     </plurals>
+    <!-- Title of the screen listing every file in the reader's mail -->
+    <string name="attachments_all_title">All attachments</string>
+    <string name="attachments_all_empty">No attachments here.</string>
+    <!-- Above the list when only the newest messages with files were read -->
+    <string name="attachments_limited">Showing files from the newest 200 messages with attachments. Pick a shorter time to see others.</string>
+    <!-- File type filter -->
+    <string name="attachments_type_all">All</string>
+    <string name="attachments_type_pdf">PDF</string>
+    <string name="attachments_type_images">Images</string>
+    <string name="attachments_type_documents">Docs</string>
+    <string name="attachments_type_other">Other</string>
+    <!-- Time filter -->
+    <string name="attachments_period_any">Any time</string>
+    <string name="attachments_period_30_days">30 days</string>
+    <string name="attachments_period_year">A year</string>
+    <!-- Above the list of all attachments, when some mail is known only by its envelope, as Microsoft 365 mail is until it is opened -->
+    <plurals name="attachments_all_messages_not_downloaded">
+        <item quantity="one"><xliff:g id="count">%d</xliff:g> message hasn\'t been downloaded, so any files in it aren\'t listed.</item>
+        <item quantity="other"><xliff:g id="count">%d</xliff:g> messages haven\'t been downloaded, so any files in them aren\'t listed.</item>
+    </plurals>
     <string name="attachments_no_viewer">No app on this device can open this file</string>
     <string name="attachments_open_failed">The file could not be opened</string>
 </resources>

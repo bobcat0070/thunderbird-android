@@ -10,5 +10,5 @@ import org.koin.dsl.module
  */
 val featureAttachmentsModule = module {
     single<AttachmentsNavigation> { DefaultAttachmentsNavigation() }
-    viewModel { SenderAttachmentsViewModel(repository = get()) }
+    viewModel { SenderAttachmentsViewModel(repository = get(), clock = get()) }
 }

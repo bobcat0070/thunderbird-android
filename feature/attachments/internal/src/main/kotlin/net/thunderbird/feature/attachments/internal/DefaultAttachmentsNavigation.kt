@@ -13,6 +13,9 @@ internal class DefaultAttachmentsNavigation : AttachmentsNavigation {
         onFinish: (AttachmentsRoute) -> Unit,
     ) {
         with(navGraphBuilder) {
+            deepLinkComposable<AttachmentsRoute.All>(AttachmentsRoute.All.basePath) {
+                SenderAttachmentsScreen(address = null, onBack = onBack)
+            }
             deepLinkComposable<AttachmentsRoute.Sender>(AttachmentsRoute.Sender.BASE_PATH) { backStackEntry ->
                 val route = backStackEntry.toRoute<AttachmentsRoute.Sender>()
                 SenderAttachmentsScreen(address = route.address, onBack = onBack)

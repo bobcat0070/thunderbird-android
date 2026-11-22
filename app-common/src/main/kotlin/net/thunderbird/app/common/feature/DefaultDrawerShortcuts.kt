@@ -12,7 +12,8 @@ import net.thunderbird.feature.navigation.drawer.api.NavigationDrawerExternalCon
 import net.thunderbird.feature.navigation.drawer.api.NavigationDrawerExternalContract.DrawerShortcuts
 
 /**
- * The drawer's Packages and Trips entries, each shown while its switch in General settings is on.
+ * The drawer's shortcuts: Packages and Trips, each shown while its switch in General settings is on, then Attachments
+ * and Expired mail, always.
  */
 internal class DefaultDrawerShortcuts(
     private val generalSettingsManager: GeneralSettingsManager,
@@ -25,6 +26,8 @@ internal class DefaultDrawerShortcuts(
             buildList {
                 if (settings.interaction.isPackagesEnabled) add(DrawerShortcut.PACKAGES)
                 if (settings.interaction.isTripsEnabled) add(DrawerShortcut.TRIPS)
+                add(DrawerShortcut.ATTACHMENTS)
+                add(DrawerShortcut.EXPIRED_MAIL)
             }
         }
         .distinctUntilChanged()
@@ -33,6 +36,8 @@ internal class DefaultDrawerShortcuts(
         val target = when (shortcut) {
             DrawerShortcut.PACKAGES -> FeatureLauncherTarget.Packages
             DrawerShortcut.TRIPS -> FeatureLauncherTarget.Trips
+            DrawerShortcut.ATTACHMENTS -> FeatureLauncherTarget.AllAttachments
+            DrawerShortcut.EXPIRED_MAIL -> FeatureLauncherTarget.ExpiredMail
         }
         context.startActivity(FeatureLauncherActivity.getIntent(context, target))
     }

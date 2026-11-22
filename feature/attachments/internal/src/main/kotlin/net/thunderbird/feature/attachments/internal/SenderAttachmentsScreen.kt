@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.items
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -22,8 +23,10 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
+import kotlinx.collections.immutable.toPersistentList
 import net.thunderbird.components.ui.bolt.atom.DividerHorizontal
 import net.thunderbird.components.ui.bolt.atom.button.ButtonIcon
+import net.thunderbird.components.ui.bolt.atom.button.ButtonSegmentedSingleChoice
 import net.thunderbird.components.ui.bolt.atom.button.ButtonText
 import net.thunderbird.components.ui.bolt.atom.icon.Icon
 import net.thunderbird.components.ui.bolt.atom.icon.Icons
@@ -43,9 +46,12 @@ import net.thunderbird.feature.attachments.internal.SenderAttachmentsContract.St
 import net.thunderbird.feature.attachments.internal.SenderAttachmentsContract.ViewModel
 import org.koin.compose.viewmodel.koinViewModel
 
+/**
+ * @param address whose files to list; `null` for everyone's.
+ */
 @Composable
 internal fun SenderAttachmentsScreen(
-    address: String,
+    address: String?,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: ViewModel = koinViewModel<SenderAttachmentsViewModel>(),
@@ -85,7 +91,9 @@ internal fun SenderAttachmentsScreen(
     Scaffold(
         topBar = {
             TopAppBarWithBackButton(
-                title = stringResource(R.string.attachments_sender_title),
+                title = stringResource(
+                    if (address == null) R.string.attachments_all_title else R.string.attachments_sender_title,
+                ),
                 onBackClick = { dispatch(Event.BackClicked) },
             )
         },
@@ -114,35 +122,9 @@ private fun SenderAttachmentsContent(
         modifier = Modifier.fillMaxSize(),
         contentPadding = contentPadding,
     ) {
-        item(key = "sender") {
-            TextBodyMedium(
-                text = stringResource(R.string.attachments_sender_subtitle, state.address),
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.padding(
-                    horizontal = BoltTheme.spacings.double,
-                    vertical = BoltTheme.spacings.default,
-                ),
-            )
-        }
+        headerItems(state, onEvent)
 
-        if (state.messagesNotDownloaded > 0) {
-            item(key = "not_downloaded") {
-                NotDownloadedNotice(state = state, onEvent = onEvent)
-                DividerHorizontal()
-            }
-        }
-
-        if (state.attachments.isEmpty()) {
-            item(key = "empty") {
-                TextBodyLarge(
-                    text = stringResource(R.string.attachments_sender_empty),
-                    modifier = Modifier.padding(BoltTheme.spacings.double),
-                )
-            }
-        }
-
-        items(state.attachments, key = { it.key }) { attachment ->
+        items(state.shownAttachments, key = { it.key }) { attachment ->
             AttachmentRow(
                 attachment = attachment,
                 isOpening = attachment.key == state.openingKey,
@@ -152,6 +134,107 @@ private fun SenderAttachmentsContent(
         }
     }
 }
+
+/**
+ * What the list shows above the files: whose they are, the filters, and notes on what is missing from it.
+ */
+private fun LazyListScope.headerItems(state: State, onEvent: (Event) -> Unit) {
+    state.address?.let { address ->
+        item(key = "sender") {
+            TextBodyMedium(
+                text = stringResource(R.string.attachments_sender_subtitle, address),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.padding(
+                    horizontal = BoltTheme.spacings.double,
+                    vertical = BoltTheme.spacings.default,
+                ),
+            )
+        }
+    }
+
+    item(key = "filters") {
+        Filters(state = state, onEvent = onEvent)
+    }
+
+    if (state.isLimited) {
+        item(key = "limited") {
+            TextBodyMedium(
+                text = stringResource(R.string.attachments_limited),
+                modifier = Modifier.padding(
+                    horizontal = BoltTheme.spacings.double,
+                    vertical = BoltTheme.spacings.half,
+                ),
+            )
+        }
+    }
+
+    if (state.messagesNotDownloaded > 0) {
+        item(key = "not_downloaded") {
+            NotDownloadedNotice(state = state, onEvent = onEvent)
+            DividerHorizontal()
+        }
+    }
+
+    if (state.shownAttachments.isEmpty()) {
+        item(key = "empty") {
+            TextBodyLarge(
+                text = stringResource(
+                    if (state.address ==
+                        null
+                    ) {
+                        R.string.attachments_all_empty
+                    } else {
+                        R.string.attachments_sender_empty
+                    },
+                ),
+                modifier = Modifier.padding(BoltTheme.spacings.double),
+            )
+        }
+    }
+}
+
+@Composable
+private fun Filters(
+    state: State,
+    onEvent: (Event) -> Unit,
+) {
+    val typeTitles = mapOf(
+        AttachmentType.ALL to stringResource(R.string.attachments_type_all),
+        AttachmentType.PDF to stringResource(R.string.attachments_type_pdf),
+        AttachmentType.IMAGES to stringResource(R.string.attachments_type_images),
+        AttachmentType.DOCUMENTS to stringResource(R.string.attachments_type_documents),
+        AttachmentType.OTHER to stringResource(R.string.attachments_type_other),
+    )
+    val periodTitles = mapOf(
+        AttachmentPeriod.ANY_TIME to stringResource(R.string.attachments_period_any),
+        AttachmentPeriod.LAST_30_DAYS to stringResource(R.string.attachments_period_30_days),
+        AttachmentPeriod.LAST_YEAR to stringResource(R.string.attachments_period_year),
+    )
+    val modifier = Modifier
+        .fillMaxWidth()
+        .padding(horizontal = BoltTheme.spacings.double, vertical = BoltTheme.spacings.half)
+
+    Column {
+        ButtonSegmentedSingleChoice(
+            onClick = { onEvent(Event.TypeClicked(it)) },
+            options = ATTACHMENT_TYPES,
+            optionTitle = { typeTitles.getValue(it) },
+            selectedOption = state.type,
+            modifier = modifier,
+        )
+        ButtonSegmentedSingleChoice(
+            onClick = { onEvent(Event.PeriodClicked(it)) },
+            options = ATTACHMENT_PERIODS,
+            optionTitle = { periodTitles.getValue(it) },
+            selectedOption = state.period,
+            modifier = modifier,
+        )
+    }
+}
+
+private val ATTACHMENT_TYPES = AttachmentType.entries.toPersistentList()
+private val ATTACHMENT_PERIODS = AttachmentPeriod.entries.toPersistentList()
 
 @Composable
 private fun NotDownloadedNotice(
@@ -167,7 +250,17 @@ private fun NotDownloadedNotice(
             .fillMaxWidth()
             .padding(horizontal = BoltTheme.spacings.double, vertical = BoltTheme.spacings.default),
     ) {
-        TextBodyMedium(text = pluralStringResource(R.plurals.attachments_messages_not_downloaded, count, count))
+        TextBodyMedium(
+            text = pluralStringResource(
+                if (state.address == null) {
+                    R.plurals.attachments_all_messages_not_downloaded
+                } else {
+                    R.plurals.attachments_messages_not_downloaded
+                },
+                count,
+                count,
+            ),
+        )
         ButtonText(
             text = if (download != null && download.total > 0) {
                 stringResource(R.string.attachments_downloading, download.done, download.total)

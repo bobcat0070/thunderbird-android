@@ -226,6 +226,16 @@ include(
 )
 
 include(
+    ":feature:expiredmail:api",
+    ":feature:expiredmail:internal",
+)
+
+include(
+    ":feature:mailboxrules:api",
+    ":feature:mailboxrules:internal",
+)
+
+include(
     ":feature:spamdigest:api",
     ":feature:spamdigest:internal",
 )
