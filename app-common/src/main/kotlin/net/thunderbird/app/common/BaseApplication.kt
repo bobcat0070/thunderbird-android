@@ -36,6 +36,7 @@ import net.thunderbird.app.common.feature.mailscan.RecentMailDownloadScheduler
 import net.thunderbird.app.common.feature.spamdigest.PendingSpamDigestImport
 import net.thunderbird.app.common.feature.spamdigest.SpamArrivalMessagingListener
 import net.thunderbird.app.common.feature.spamdigest.SpamDigestCatchUpListener
+import net.thunderbird.app.common.feature.todaysummary.TodaySummaryScheduler
 import net.thunderbird.components.core.logging.Logger
 import net.thunderbird.components.core.logging.file.FileLogSink
 import net.thunderbird.core.android.account.LegacyAccountManager
@@ -66,6 +67,7 @@ abstract class BaseApplication : Application(), WorkManagerConfiguration.Provide
     private val spamDigestScheduler: SpamDigestScheduler by inject()
     private val verifiedSenderDomainsScheduler: VerifiedSenderDomainsScheduler by inject()
     private val recentMailDownloadScheduler: RecentMailDownloadScheduler by inject()
+    private val todaySummaryScheduler: TodaySummaryScheduler by inject()
     private val domainBlocklistUpdater: DefaultBlocklistUpdater by inject()
     private val domainBlocklistScheduler: DomainBlocklistScheduler by inject()
     private val generalSettingsManager: GeneralSettingsManager by inject()
@@ -132,6 +134,15 @@ abstract class BaseApplication : Application(), WorkManagerConfiguration.Provide
         appCoroutineScope.launch(Dispatchers.IO) {
             recentMailDownloadScheduler.ensureScheduled()
         }
+
+        // The summary of the day is set for its time at startup, and again whenever it is turned on or off or its
+        // time changes.
+        generalSettingsManager.getConfigFlow()
+            .map { it.interaction.isTodaySummaryEnabled to it.interaction.todaySummaryTime }
+            .distinctUntilChanged()
+            .onEach { todaySummaryScheduler.update() }
+            .flowOn(Dispatchers.IO)
+            .launchIn(appCoroutineScope)
 
         // Blocklists already on the device are put to use at once; missing or old ones are fetched in the
         // background. A change of tier or threat list is acted on straight away.

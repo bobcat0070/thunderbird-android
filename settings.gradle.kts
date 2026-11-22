@@ -241,6 +241,11 @@ include(
 )
 
 include(
+    ":feature:todaysummary:api",
+    ":feature:todaysummary:internal",
+)
+
+include(
     ":feature:spamdigest:api",
     ":feature:spamdigest:internal",
 )

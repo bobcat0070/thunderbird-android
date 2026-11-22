@@ -4,6 +4,7 @@ import java.util.concurrent.TimeUnit
 import net.thunderbird.feature.packages.DeliveredParcelMail
 import net.thunderbird.feature.packages.PackagesNavigation
 import net.thunderbird.feature.packages.ParcelMarkSettings
+import net.thunderbird.feature.packages.ParcelsArrivingToday
 import net.thunderbird.feature.packages.ShippingMailDownloader
 import net.thunderbird.feature.packages.internal.carrier.CarrierApiTracker
 import net.thunderbird.feature.packages.internal.carrier.CarrierCredentialsStore
@@ -37,6 +38,7 @@ val featurePackagesModule = module {
     }
     factory<ShippingMailDownloader> { DefaultShippingMailDownloader(mailSource = get(), clock = get()) }
     factory<DeliveredParcelMail> { DefaultDeliveredParcelMail(mailSource = get(), marks = get()) }
+    factory<ParcelsArrivingToday> { DefaultParcelsArrivingToday(mailSource = get(), marks = get()) }
     viewModel { PackagesViewModel(mailSource = get(), marks = get(), liveTracker = get(), clock = get()) }
     viewModel { CarrierAccountsViewModel(credentialsStore = get()) }
 }

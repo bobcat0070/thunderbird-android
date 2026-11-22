@@ -43,6 +43,8 @@ const val INTERACTION_SETTINGS_DEFAULT_PACKAGES_ENABLED = true
  * Whether the Trips screen is offered: upcoming bookings gathered from confirmations in the reader's mail.
  */
 const val INTERACTION_SETTINGS_DEFAULT_TRIPS_ENABLED = true
+const val INTERACTION_SETTINGS_DEFAULT_TODAY_SUMMARY_ENABLED = false
+const val INTERACTION_SETTINGS_DEFAULT_TODAY_SUMMARY_TIME = "07:30"
 
 data class InteractionSettings(
     val useVolumeKeysForNavigation: Boolean = INTERACTION_SETTINGS_DEFAULT_USE_VOLUME_KEYS_NAVIGATION,
@@ -61,6 +63,9 @@ data class InteractionSettings(
     val isAttachmentReminderEnabled: Boolean = INTERACTION_SETTINGS_DEFAULT_ATTACHMENT_REMINDER_ENABLED,
     val isPackagesEnabled: Boolean = INTERACTION_SETTINGS_DEFAULT_PACKAGES_ENABLED,
     val isTripsEnabled: Boolean = INTERACTION_SETTINGS_DEFAULT_TRIPS_ENABLED,
+    val isTodaySummaryEnabled: Boolean = INTERACTION_SETTINGS_DEFAULT_TODAY_SUMMARY_ENABLED,
+    /** When the summary of the day is shown, as "HH:mm" in the phone's time zone. */
+    val todaySummaryTime: String = INTERACTION_SETTINGS_DEFAULT_TODAY_SUMMARY_TIME,
 )
 
 /**

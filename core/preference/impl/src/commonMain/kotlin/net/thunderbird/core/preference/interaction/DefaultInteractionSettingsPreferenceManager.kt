@@ -116,6 +116,14 @@ class DefaultInteractionSettingsPreferenceManager(
             InteractionSettingKey.TripsEnabled.value,
             INTERACTION_SETTINGS_DEFAULT_TRIPS_ENABLED,
         ),
+        isTodaySummaryEnabled = storage.getBoolean(
+            InteractionSettingKey.TodaySummaryEnabled.value,
+            INTERACTION_SETTINGS_DEFAULT_TODAY_SUMMARY_ENABLED,
+        ),
+        todaySummaryTime = storage.getStringOrDefault(
+            InteractionSettingKey.TodaySummaryTime.value,
+            INTERACTION_SETTINGS_DEFAULT_TODAY_SUMMARY_TIME,
+        ),
     )
 
     private fun writeConfig(config: InteractionSettings) {
@@ -160,6 +168,11 @@ class DefaultInteractionSettingsPreferenceManager(
                 )
                 storageEditor.putBoolean(InteractionSettingKey.PackagesEnabled.value, config.isPackagesEnabled)
                 storageEditor.putBoolean(InteractionSettingKey.TripsEnabled.value, config.isTripsEnabled)
+                storageEditor.putBoolean(
+                    InteractionSettingKey.TodaySummaryEnabled.value,
+                    config.isTodaySummaryEnabled,
+                )
+                storageEditor.putString(InteractionSettingKey.TodaySummaryTime.value, config.todaySummaryTime)
                 storageEditor.commit().also { commited ->
                     logger.verbose(TAG) { "writeConfig: storageEditor.commit() resulted in: $commited" }
                 }

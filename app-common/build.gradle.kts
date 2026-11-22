@@ -67,6 +67,8 @@ dependencies {
     implementation(projects.feature.mailboxrules.internal)
     implementation(projects.feature.conversation.api)
     implementation(projects.feature.conversation.internal)
+    implementation(projects.feature.todaysummary.api)
+    implementation(projects.feature.todaysummary.internal)
     implementation(libs.appauth)
     implementation(libs.okhttp)
     implementation(projects.feature.packages.api)

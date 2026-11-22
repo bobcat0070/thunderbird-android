@@ -92,12 +92,15 @@ class GeneralSettingsDataStore(
             "attachment_reminder_enabled" -> interactionSettings.isAttachmentReminderEnabled
             "packages_enabled" -> interactionSettings.isPackagesEnabled
             "trips_enabled" -> interactionSettings.isTripsEnabled
+            "today_summary_enabled" -> interactionSettings.isTodaySummaryEnabled
             "domain_blocklist_threats" -> config.domainBlocklist.isThreatListEnabled
             "enable_telemetry" -> K9.isTelemetryEnabled
             else -> defValue
         }
     }
 
+    // One branch per switch, as in getBoolean.
+    @Suppress("LongMethod", "CyclomaticComplexMethod")
     override fun putBoolean(key: String, value: Boolean) {
         when (key) {
             "fixed_message_view_theme" -> setFixedMessageViewTheme(value)
@@ -157,6 +160,7 @@ class GeneralSettingsDataStore(
             "attachment_reminder_enabled" -> updateInteractionSettings { it.copy(isAttachmentReminderEnabled = value) }
             "packages_enabled" -> updateInteractionSettings { it.copy(isPackagesEnabled = value) }
             "trips_enabled" -> updateInteractionSettings { it.copy(isTripsEnabled = value) }
+            "today_summary_enabled" -> updateInteractionSettings { it.copy(isTodaySummaryEnabled = value) }
             "domain_blocklist_threats" -> updateDomainBlocklistSettings { it.copy(isThreatListEnabled = value) }
             "enable_telemetry" -> setTelemetryEnabled(value)
             else -> return
@@ -196,6 +200,7 @@ class GeneralSettingsDataStore(
         val messageListSettings = visualSettings.messageListSettings
         return when (key) {
             "language" -> appLanguageManager.getAppLanguage()
+            "today_summary_time" -> interactionSettings.todaySummaryTime
             "theme" -> appThemeToString(coreSettings.appTheme)
             "animations" -> animationPreferenceToString(visualSettings.animationPreference)
             "message_compose_theme" -> subThemeToString(coreSettings.messageComposeTheme)
@@ -241,6 +246,7 @@ class GeneralSettingsDataStore(
             }
 
             "theme" -> setTheme(value)
+            "today_summary_time" -> updateInteractionSettings { it.copy(todaySummaryTime = value) }
             "animations" -> setAnimationPreference(stringToAnimationPreference(value))
             "message_compose_theme" -> setMessageComposeTheme(value)
             "messageViewTheme" -> setMessageViewTheme(value)

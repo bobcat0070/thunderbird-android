@@ -18,6 +18,7 @@ import net.thunderbird.app.common.feature.settings.DefaultFolderPinSettings
 import net.thunderbird.app.common.feature.settings.PackagesAndTripsExternalSettings
 import net.thunderbird.app.common.feature.settings.RemoteImageSendersExternalSettings
 import net.thunderbird.app.common.feature.spamdigest.appCommonFeatureSpamDigestModule
+import net.thunderbird.app.common.feature.todaysummary.appCommonFeatureTodaySummaryModule
 import net.thunderbird.app.common.feature.trips.appCommonFeatureTripsModule
 import net.thunderbird.feature.account.avatar.di.featureAccountAvatarModule
 import net.thunderbird.feature.mail.message.composer.internal.featureMessageComposerModule
@@ -42,6 +43,7 @@ internal val appCommonFeatureModule = module {
     includes(appCommonFeatureExpiredMailModule)
     includes(appCommonFeatureMailboxRulesModule)
     includes(appCommonFeatureConversationModule)
+    includes(appCommonFeatureTodaySummaryModule)
     includes(appCommonFeatureTripsModule)
     includes(appCommonFeatureBlocklistModule)
     includes(appCommonFeaturePlusAddressModule)

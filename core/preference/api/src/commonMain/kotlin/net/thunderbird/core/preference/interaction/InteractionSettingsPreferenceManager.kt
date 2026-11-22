@@ -20,6 +20,8 @@ enum class InteractionSettingKey(val value: String) {
     AttachmentReminderEnabled("attachmentReminderEnabled"),
     PackagesEnabled("packagesEnabled"),
     TripsEnabled("tripsEnabled"),
+    TodaySummaryEnabled("todaySummaryEnabled"),
+    TodaySummaryTime("todaySummaryTime"),
 }
 
 interface InteractionSettingsPreferenceManager : PreferenceManager<InteractionSettings>
