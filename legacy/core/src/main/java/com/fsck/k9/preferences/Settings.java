@@ -42,8 +42,9 @@ public class Settings {
     // upstream builds at 112 no longer do, and the upgrade leaves them alone. 115 added the fork's link check and
     // attachment reminder switches, 116 the domain blocklist tier and threat list, 117 the packages and trips
     // switches. Upstream's 113 (folders' "integrate" setting removed) runs here as 118. 119 added the parcels marked
-    // in Packages and the travel sender changes in Trips, 120 the reader's decisions about their plus addresses.
-    public static final int VERSION = 120;
+    // in Packages and the travel sender changes in Trips, 120 the reader's decisions about their plus addresses, 121
+    // the senders the reader unsubscribed from.
+    public static final int VERSION = 121;
 
     static Map<String, Object> validate(int version, Map<String, TreeMap<Integer, SettingsDescription<?>>> settings,
             Map<String, String> importedSettings, boolean useDefaultValues) {

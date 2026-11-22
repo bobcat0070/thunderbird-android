@@ -4,9 +4,11 @@ import kotlin.concurrent.Volatile
 import kotlin.time.Clock
 import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Instant
+import net.thunderbird.feature.impersonation.FirstTimeSenderChecker
 import net.thunderbird.feature.impersonation.Impersonation
 import net.thunderbird.feature.impersonation.ImpersonationChecker
 import net.thunderbird.feature.impersonation.KnownSendersSource
+import net.thunderbird.feature.impersonation.ReplyToChecker
 import org.koin.dsl.module
 
 /**
@@ -74,10 +76,16 @@ internal class CachingImpersonationChecker(
 }
 
 /**
- * Binds the impersonation check. [KnownSendersSource] is bound by the app.
+ * Binds the impersonation, reply-to and first-time sender checks. [KnownSendersSource] and
+ * [net.thunderbird.feature.impersonation.StoredMailCounter] are bound by the app.
  */
 val featureImpersonationModule = module {
     single<ImpersonationChecker> {
         CachingImpersonationChecker(knownSendersSource = get(), clock = get())
+    }
+    single { Correspondents(knownSendersSource = get(), clock = get()) }
+    single<ReplyToChecker> { CorrespondentsReplyToChecker(correspondents = get()) }
+    single<FirstTimeSenderChecker> {
+        StoredMailFirstTimeSenderChecker(correspondents = get(), storedMailCounter = get())
     }
 }

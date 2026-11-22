@@ -6,6 +6,7 @@ import com.fsck.k9.view.LinkConfirmation
 import com.fsck.k9.ui.unsubscribe.OneClickUnsubscriber
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import net.thunderbird.feature.mail.message.classification.api.MessageClass
+import net.thunderbird.feature.newsletter.UnsubscribeHistory
 import android.app.SearchManager
 import android.content.Context
 import android.content.Intent
@@ -92,6 +93,7 @@ import com.google.android.material.snackbar.BaseTransientBottomBar.BaseCallback
 import com.google.android.material.snackbar.Snackbar
 import com.google.android.material.textview.MaterialTextView
 import java.util.concurrent.Future
+import kotlin.time.Clock
 import kotlin.time.ExperimentalTime
 import kotlinx.collections.immutable.persistentSetOf
 import kotlinx.coroutines.Dispatchers
@@ -206,6 +208,8 @@ class LegacyMessageListFragment :
     private val messagingControllerRegistry: MessagingControllerRegistry by inject()
     private val messageRepository: MessageRepository by inject()
     private val oneClickUnsubscriber: OneClickUnsubscriber by inject()
+    private val unsubscribeHistory: UnsubscribeHistory by inject()
+    private val clock: Clock by inject()
     private val accountManager: LegacyAccountManager by inject()
     private val lastSelectedFolderStore: LastSelectedFolderStore by inject()
     private val connectivityManager: ConnectivityManager by inject()
@@ -2222,7 +2226,10 @@ class LegacyMessageListFragment :
      * message, so this costs a database read rather than a fetch.
      */
     private fun onUnsubscribeSelected() {
-        val messageReference = adapter.selectedMessages.singleOrNull()?.messageReference ?: return
+        val selected = adapter.selectedMessages.singleOrNull() ?: return
+        val messageReference = selected.messageReference
+        // The row names the sender: only mail received from a list says how to leave it.
+        val sender = selected.displayAddress?.address
 
         viewLifecycleOwner.lifecycleScope.launch {
             val unsubscribeUri = withContext(Dispatchers.IO) {
@@ -2234,8 +2241,17 @@ class LegacyMessageListFragment :
                 return@launch
             }
 
+            sender?.let(::recordUnsubscribe)
             startUnsubscribe(messageReference, unsubscribeUri)
         }
+    }
+
+    /**
+     * Notes the unsubscribe, so mail the sender keeps sending is pointed out. Recorded when the request is sent or the
+     * sender's page or address is opened, which is as far as the app can follow.
+     */
+    private fun recordUnsubscribe(senderAddress: String) {
+        unsubscribeHistory.recordUnsubscribe(senderAddress, clock.now().toEpochMilliseconds())
     }
 
     /**
@@ -2286,30 +2302,33 @@ class LegacyMessageListFragment :
                 runCatching { messageRepository.getOneClickUnsubscribeUri(newest) }.getOrNull()
             }
             if (oneClickUri == null) {
-                unsubscribeElsewhere(newest)
+                unsubscribeElsewhere(newest, address)
                 return@launch
             }
 
             MaterialAlertDialogBuilder(requireContext())
                 .setMessage(getString(R.string.one_click_unsubscribe_confirm, address))
-                .setPositiveButton(R.string.unsubscribe_action) { _, _ -> sendOneClickUnsubscribe(newest, oneClickUri) }
+                .setPositiveButton(R.string.unsubscribe_action) { _, _ ->
+                    sendOneClickUnsubscribe(newest, oneClickUri, address)
+                }
                 .setNegativeButton(BaseR.string.cancel_action, null)
                 .show()
         }
     }
 
-    private fun sendOneClickUnsubscribe(messageReference: MessageReference, uri: Uri) {
+    private fun sendOneClickUnsubscribe(messageReference: MessageReference, uri: Uri, senderAddress: String) {
         viewLifecycleOwner.lifecycleScope.launch {
             if (oneClickUnsubscriber.unsubscribe(uri)) {
+                recordUnsubscribe(senderAddress)
                 Toast.makeText(activity, R.string.one_click_unsubscribe_done, Toast.LENGTH_SHORT).show()
             } else {
                 Toast.makeText(activity, R.string.one_click_unsubscribe_failed, Toast.LENGTH_LONG).show()
-                unsubscribeElsewhere(messageReference)
+                unsubscribeElsewhere(messageReference, senderAddress)
             }
         }
     }
 
-    private suspend fun unsubscribeElsewhere(messageReference: MessageReference) {
+    private suspend fun unsubscribeElsewhere(messageReference: MessageReference, senderAddress: String) {
         val unsubscribeUri = withContext(Dispatchers.IO) {
             runCatching { messageRepository.getUnsubscribeUri(messageReference) }.getOrNull()
         }
@@ -2317,6 +2336,7 @@ class LegacyMessageListFragment :
         if (unsubscribeUri == null) {
             Toast.makeText(activity, R.string.unsubscribe_unavailable, Toast.LENGTH_SHORT).show()
         } else {
+            recordUnsubscribe(senderAddress)
             startUnsubscribe(messageReference, unsubscribeUri)
         }
     }

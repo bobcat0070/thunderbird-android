@@ -80,6 +80,7 @@ import com.fsck.k9.ui.messageview.MessageCryptoPresenter.MessageCryptoMvpView
 import com.fsck.k9.ui.settings.account.AccountSettingsActivity
 import com.fsck.k9.ui.share.ShareIntentBuilder
 import java.util.Locale
+import kotlin.time.Clock
 import kotlin.time.ExperimentalTime
 import kotlin.time.Instant
 import kotlinx.collections.immutable.persistentListOf
@@ -99,6 +100,7 @@ import net.thunderbird.core.featureflag.FeatureFlagProvider
 import net.thunderbird.core.featureflag.keys.GeneratedFeatureFlagKey
 import net.thunderbird.components.core.logging.Logger
 import net.thunderbird.feature.mail.message.classification.api.MessageClass
+import net.thunderbird.feature.newsletter.UnsubscribeHistory
 import net.thunderbird.feature.mail.message.classification.api.RuleScope
 import net.thunderbird.core.preference.GeneralSettingsManager
 import net.thunderbird.core.preference.interaction.InteractionSettings
@@ -143,6 +145,8 @@ class MessageViewFragment :
     private val authenticationServerTrust: AuthenticationServerTrust by inject()
     private val messagingController: MessagingController by inject()
     private val mailActionHold: MailActionHold by inject()
+    private val unsubscribeHistory: UnsubscribeHistory by inject()
+    private val clock: Clock by inject()
     private val attachmentLoadingController: AttachmentLoadingController by inject()
     private val shareIntentBuilder: ShareIntentBuilder by inject()
     private val generalSettingsManager: GeneralSettingsManager by inject()
@@ -797,6 +801,9 @@ class MessageViewFragment :
                 R.id.edit_as_new_message -> onEditAsNewMessage()
                 R.id.share -> onSendAlternate()
                 R.id.server_categories -> onServerCategories()
+                // From the note on mail that kept coming after an unsubscribe.
+                R.id.spam -> onSpam()
+                R.id.all_mail_from_sender -> onShowAllMailFromSender()
                 else -> error("Missing handler for reply menu item $itemId")
             }
         }
@@ -1306,7 +1313,11 @@ class MessageViewFragment :
     }
 
     private fun onUnsubscribe() {
-        val intent = when (val unsubscribeUri = preferredUnsubscribeUri) {
+        val unsubscribeUri = preferredUnsubscribeUri ?: return
+        // As far as the app can follow: the rest happens on the sender's page or in the message to them.
+        senderAddress()?.let { unsubscribeHistory.recordUnsubscribe(it, clock.now().toEpochMilliseconds()) }
+
+        val intent = when (unsubscribeUri) {
             is MailtoUnsubscribeUri -> {
                 Intent(requireContext(), MessageCompose::class.java).apply {
                     action = Intent.ACTION_VIEW

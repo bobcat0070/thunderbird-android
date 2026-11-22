@@ -93,6 +93,7 @@ import com.fsck.k9.activity.compose.PgpInlineDialog.OnOpenPgpInlineChangeListene
 import com.fsck.k9.activity.compose.PgpSignOnlyDialog.OnOpenPgpSignOnlyChangeListener;
 import com.fsck.k9.activity.compose.RecipientMvpView;
 import com.fsck.k9.activity.compose.RecipientPresenter;
+import com.fsck.k9.activity.compose.ReplyToConfirmation;
 import com.fsck.k9.activity.compose.ReplyToPresenter;
 import com.fsck.k9.activity.compose.ReplyToView;
 import com.fsck.k9.activity.compose.SaveMessageTask;
@@ -1630,6 +1631,7 @@ public class MessageCompose extends BaseActivity implements OnClickListener,
          */
         boolean isReplyAll = action == Action.REPLY_ALL;
         recipientPresenter.initFromReplyToMessage(message, isReplyAll);
+        ReplyToConfirmation.check(this, message, account, recipientPresenter::replyToSenderInstead);
 
         if (message.getMessageId() != null && message.getMessageId().length() > 0) {
             repliedToMessageId = message.getMessageId();

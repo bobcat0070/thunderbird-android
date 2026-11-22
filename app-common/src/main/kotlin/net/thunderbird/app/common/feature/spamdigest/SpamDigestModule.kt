@@ -3,12 +3,14 @@ package net.thunderbird.app.common.feature.spamdigest
 import androidx.work.WorkerParameters
 import com.fsck.k9.preferences.ExternalGlobalSettings
 import net.thunderbird.app.common.feature.impersonation.LegacyKnownSendersSource
+import net.thunderbird.app.common.feature.impersonation.LegacyStoredMailCounter
 import net.thunderbird.app.common.feature.impersonation.SharedPreferencesVerifiedSenderDomainStore
 import net.thunderbird.app.common.feature.impersonation.VerifiedSenderDomainScanner
 import net.thunderbird.app.common.feature.impersonation.VerifiedSenderDomainStore
 import net.thunderbird.app.common.feature.impersonation.VerifiedSenderDomainsScheduler
 import net.thunderbird.app.common.feature.impersonation.VerifiedSenderDomainsWorker
 import net.thunderbird.feature.impersonation.KnownSendersSource
+import net.thunderbird.feature.impersonation.StoredMailCounter
 import net.thunderbird.feature.impersonation.internal.featureImpersonationModule
 import net.thunderbird.feature.spamdigest.SpamAlertNotifier
 import net.thunderbird.feature.spamdigest.SpamDigestAccounts
@@ -32,6 +34,9 @@ internal val appCommonFeatureSpamDigestModule = module {
             recipientIndex = get(),
             verifiedSenderDomainStore = get(),
         )
+    }
+    factory<StoredMailCounter> {
+        LegacyStoredMailCounter(accountManager = get(), messageStoreManager = get())
     }
     single<VerifiedSenderDomainStore> { SharedPreferencesVerifiedSenderDomainStore(context = androidContext()) }
     factory { VerifiedSenderDomainScanner(accountManager = get(), messageStoreManager = get()) }

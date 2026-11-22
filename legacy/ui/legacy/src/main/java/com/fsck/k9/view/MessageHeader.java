@@ -88,6 +88,13 @@ import net.thunderbird.feature.plusaddress.PlusAddressDecisions;
 import net.thunderbird.feature.plusaddress.PlusAddressLeak;
 import net.thunderbird.feature.plusaddress.PlusAddressLeakChecker;
 import com.fsck.k9.ui.messageview.PlusAddressLeakNote;
+import com.fsck.k9.ui.messageview.SenderNotes;
+import net.thunderbird.feature.impersonation.FirstTimeSenderChecker;
+import net.thunderbird.feature.impersonation.ReplyToChecker;
+import net.thunderbird.feature.impersonation.ReplyToMismatch;
+import net.thunderbird.feature.newsletter.StillMailing;
+import net.thunderbird.feature.newsletter.UnsubscribeFollowUp;
+import net.thunderbird.feature.newsletter.UnsubscribeHistory;
 import com.fsck.k9.ui.servercategories.MessageLabels;
 
 
@@ -127,6 +134,10 @@ public class MessageHeader extends LinearLayout implements OnClickListener, OnLo
     private MaterialTextView impersonationWarningView;
     private MaterialTextView blocklistNoteView;
     private MaterialTextView plusAddressLeakView;
+    private MaterialTextView replyToWarningView;
+    private MaterialTextView stillMailingView;
+    private MaterialTextView firstTimeSenderView;
+    private String currentSenderNotesCheck;
     /** The sender and recipients last checked for a plus address leak, so a late answer for another is dropped. */
     private String currentPlusAddressCheck;
     private MaterialTextView verificationCodeView;
@@ -176,6 +187,9 @@ public class MessageHeader extends LinearLayout implements OnClickListener, OnLo
         impersonationWarningView = findViewById(R.id.impersonation_warning);
         blocklistNoteView = findViewById(R.id.blocklist_note);
         plusAddressLeakView = findViewById(R.id.plus_address_leak);
+        replyToWarningView = findViewById(R.id.reply_to_warning);
+        stillMailingView = findViewById(R.id.still_mailing);
+        firstTimeSenderView = findViewById(R.id.first_time_sender);
         verificationCodeView = findViewById(R.id.verification_code);
         signInLinkView = findViewById(R.id.sign_in_link);
         trackingNumberView = findViewById(R.id.tracking_number);
@@ -354,6 +368,82 @@ public class MessageHeader extends LinearLayout implements OnClickListener, OnLo
                 plusAddressLeakView.setVisibility(View.VISIBLE);
             });
         });
+    }
+
+    /**
+     * Says what the sender's history and the message's Reply-To tell: that replies would go to another domain, that
+     * the sender kept mailing after the reader unsubscribed, or that this is the first mail from the address.
+     *
+     * Mailing lists get neither the Reply-To nor the first-mail note: lists set their own Reply-To and newsletters
+     * come from new addresses all the time. The first-mail note is left out when the unsubscribe one is shown, which
+     * says more. Worked out off the main thread, because each may read stored mail, and only shown if the header still
+     * shows the same message by the time the answer arrives.
+     */
+    private void showSenderNotes(Message message, LegacyAccount account, Address fromAddress) {
+        replyToWarningView.setVisibility(View.GONE);
+        stillMailingView.setVisibility(View.GONE);
+        stillMailingView.setOnClickListener(null);
+        firstTimeSenderView.setVisibility(View.GONE);
+        currentSenderNotesCheck = null;
+
+        if (fromAddress == null || fromAddress.getAddress() == null || account.isAnIdentity(fromAddress)) {
+            return;
+        }
+
+        String senderAddress = fromAddress.getAddress();
+        boolean isMailingList = SenderNotes.isMailingList(message);
+        List<String> replyTo = SenderNotes.replyToAddresses(message);
+        Long receivedAt = SenderNotes.receivedAt(message);
+        Long spamFolderId = account.getSpamFolderId();
+        boolean canMarkSpam = spamFolderId != null && !(message instanceof LocalMessage &&
+                ((LocalMessage) message).getFolder().getDatabaseId() == spamFolderId);
+        String check = message.getUid() + "\n" + senderAddress + "\n" + replyTo;
+        currentSenderNotesCheck = check;
+
+        markVerificationExecutor.execute(() -> {
+            ReplyToMismatch mismatch = isMailingList ? null :
+                    DI.get(ReplyToChecker.class).check(senderAddress, replyTo);
+            StillMailing stillMailing = receivedAt == null ? null :
+                    DI.get(UnsubscribeFollowUp.class).check(senderAddress, receivedAt);
+            boolean isFirstMail = !isMailingList && stillMailing == null &&
+                    DI.get(FirstTimeSenderChecker.class).isFirstMail(senderAddress);
+            if (mismatch == null && stillMailing == null && !isFirstMail) {
+                return;
+            }
+
+            post(() -> {
+                if (!check.equals(currentSenderNotesCheck)) {
+                    return;
+                }
+                if (mismatch != null) {
+                    replyToWarningView.setText(SenderNotes.replyToText(getContext(), mismatch));
+                    replyToWarningView.setVisibility(View.VISIBLE);
+                }
+                if (stillMailing != null) {
+                    showStillMailing(stillMailing, canMarkSpam);
+                }
+                firstTimeSenderView.setVisibility(isFirstMail ? View.VISIBLE : View.GONE);
+            });
+        });
+    }
+
+    private void showStillMailing(StillMailing stillMailing, boolean canMarkSpam) {
+        stillMailingView.setText(SenderNotes.stillMailingText(getContext(), stillMailing, System.currentTimeMillis()));
+        stillMailingView.setOnClickListener(view -> SenderNotes.showStillMailingDialog(
+            getContext(),
+            stillMailing,
+            DI.get(UnsubscribeHistory.class),
+            canMarkSpam ? () -> onHeaderAction(R.id.spam) : null,
+            () -> onHeaderAction(R.id.all_mail_from_sender),
+            () -> stillMailingView.setVisibility(View.GONE)
+        ));
+        stillMailingView.setVisibility(View.VISIBLE);
+    }
+
+    private void onHeaderAction(int itemId) {
+        if (messageHeaderClickListener != null) {
+            messageHeaderClickListener.onMenuItemClick(itemId);
+        }
     }
 
     /**
@@ -865,6 +955,7 @@ public class MessageHeader extends LinearLayout implements OnClickListener, OnLo
         boolean isThreatListed = showBlocklistNote(message, fromAddress);
         isSenderThreatListed = isThreatListed;
         showPlusAddressLeak(message, account, fromAddress);
+        showSenderNotes(message, account, fromAddress);
         showImpersonationWarning(fromAddress, isThreatListed ? null : findVerificationCode(message));
 
         importance = MessageImportanceKt.getImportance(message);

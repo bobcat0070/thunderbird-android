@@ -241,6 +241,22 @@ class RecipientMvpView(private val activity: MessageCompose) : View.OnFocusChang
         }
     }
 
+    /**
+     * Removes the To recipients with any of [addresses], compared without regard to case.
+     */
+    fun silentlyRemoveToAddresses(addresses: Collection<String>) {
+        if (addresses.isEmpty()) return
+
+        val addressesToRemove = addresses.mapTo(mutableSetOf()) { it.lowercase() }
+        removeAllTextChangedListeners(toView)
+        for (recipient in toRecipients.toList()) {
+            if (recipient.address.address?.lowercase() in addressesToRemove) {
+                toView.removeObjectSync(recipient)
+            }
+        }
+        addAllTextChangedListeners(toView)
+    }
+
     fun setCcVisibility(visible: Boolean) {
         ccWrapper.isVisible = visible
         ccDivider.isVisible = visible

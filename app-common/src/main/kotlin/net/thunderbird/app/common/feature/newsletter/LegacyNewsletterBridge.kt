@@ -13,6 +13,7 @@ import com.fsck.k9.mailstore.MessageRepository
 import com.fsck.k9.search.specialFolderId
 import com.fsck.k9.ui.unsubscribe.OneClickUnsubscriber
 import com.fsck.k9.view.LinkConfirmationActivity
+import kotlin.time.Clock
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import net.thunderbird.core.android.account.LegacyAccount
@@ -21,6 +22,7 @@ import net.thunderbird.feature.mail.message.classification.api.MessageClass
 import net.thunderbird.feature.newsletter.NewsletterActions
 import net.thunderbird.feature.newsletter.NewsletterSender
 import net.thunderbird.feature.newsletter.NewsletterSenderRepository
+import net.thunderbird.feature.newsletter.UnsubscribeHistory
 import net.thunderbird.feature.newsletter.UnsubscribeOutcome
 import net.thunderbird.feature.search.legacy.UnifiedFolderKind
 import net.thunderbird.feature.search.legacy.createSenderSearch
@@ -134,6 +136,8 @@ internal class LegacyNewsletterActions(
     private val messageRepository: MessageRepository,
     private val messagingController: MessagingControllerWrapper,
     private val oneClickUnsubscriber: OneClickUnsubscriber,
+    private val unsubscribeHistory: UnsubscribeHistory,
+    private val clock: Clock,
 ) : NewsletterActions {
 
     override fun showAllMail(address: String) {
@@ -157,7 +161,11 @@ internal class LegacyNewsletterActions(
         }
         val isSent = oneClickUri != null && oneClickUnsubscriber.unsubscribe(oneClickUri)
 
-        return if (isSent) UnsubscribeOutcome.SENT else openUnsubscribe(newest)
+        val outcome = if (isSent) UnsubscribeOutcome.SENT else openUnsubscribe(newest)
+        if (outcome != UnsubscribeOutcome.UNAVAILABLE) {
+            unsubscribeHistory.recordUnsubscribe(address, clock.now().toEpochMilliseconds())
+        }
+        return outcome
     }
 
     override suspend fun archiveAll(address: String): Int = withContext(Dispatchers.IO) {

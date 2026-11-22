@@ -756,6 +756,21 @@
     <string name="message_view_plus_address_sender_is_fine">Sender is fine</string>
     <string name="message_view_plus_address_stop_checking">Stop checking address</string>
     <string name="message_view_plus_address_show_all">All plus addresses</string>
+    <string name="message_view_reply_to_elsewhere">Replies go to <xliff:g id="reply_to" example="billing@freemail.example">%1$s</xliff:g>, not <xliff:g id="sender_domain" example="supplier.example">%2$s</xliff:g></string>
+    <string name="message_view_first_time_sender">First mail from this address</string>
+    <plurals name="message_view_still_mailing">
+        <item quantity="one">You unsubscribed on <xliff:g id="date" example="Nov 3">%1$s</xliff:g>, <xliff:g id="days" example="1">%2$d</xliff:g> day ago</item>
+        <item quantity="other">You unsubscribed on <xliff:g id="date" example="Nov 3">%1$s</xliff:g>, <xliff:g id="days" example="18">%2$d</xliff:g> days ago</item>
+    </plurals>
+    <string name="message_view_still_mailing_dialog_title">Still mailing you</string>
+    <string name="message_view_still_mailing_dialog_message">You unsubscribed from <xliff:g id="sender" example="news@shop.example">%1$s</xliff:g> on <xliff:g id="date" example="Nov 3">%2$s</xliff:g>, and they are still sending. Senders are expected to stop within a couple of days.</string>
+    <string name="message_view_still_mailing_mark_spam">Mark as spam</string>
+    <string name="message_view_still_mailing_all_mail">All their mail</string>
+    <string name="message_view_still_mailing_forget">I signed up again</string>
+    <string name="compose_reply_to_elsewhere_title">Replies go somewhere else</string>
+    <string name="compose_reply_to_elsewhere_message">This message is from <xliff:g id="sender" example="billing@supplier.example">%1$s</xliff:g>, but asks for replies to go to <xliff:g id="reply_to" example="billing@freemail.example">%2$s</xliff:g>. Forged invoices and payment requests do this to get the answer.</string>
+    <string name="compose_reply_to_elsewhere_keep">Keep reply address</string>
+    <string name="compose_reply_to_elsewhere_sender">Reply to sender</string>
     <string name="notification_possible_impersonation">Possible impersonation</string>
     <string name="notification_sender_on_threat_list">Sender is on a threat blocklist</string>
     <string name="account_settings_spam_digest_exact_alarm_label">Allow exact alarms</string>

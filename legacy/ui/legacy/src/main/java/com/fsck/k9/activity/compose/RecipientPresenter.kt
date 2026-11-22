@@ -177,6 +177,17 @@ class RecipientPresenter(
         isReplyToEncryptedMessage = composePgpEnableByDefaultDecider.shouldEncryptByDefault(message)
     }
 
+    /**
+     * Addresses the reply to the sender rather than to the addresses the message asked replies to go to.
+     */
+    fun replyToSenderInstead(replyToAddresses: List<String>, senderAddresses: Array<Address>) {
+        recipientMvpView.silentlyRemoveToAddresses(replyToAddresses)
+
+        val present = recipientMvpView.toAddresses.mapNotNullTo(mutableSetOf()) { it.address?.lowercase() }
+        val missing = senderAddresses.filter { it.address?.lowercase() !in present }
+        if (missing.isNotEmpty()) addToAddresses(*missing.toTypedArray())
+    }
+
     fun initFromTrustIdAction(trustId: String?) {
         addToAddresses(*Address.parse(trustId))
         currentCryptoMode = CryptoMode.CHOICE_ENABLED
