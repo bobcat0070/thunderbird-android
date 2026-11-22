@@ -49,6 +49,9 @@ import com.fsck.k9.ui.BuildConfig
 import com.fsck.k9.ui.R
 import com.fsck.k9.ui.base.BaseActivity
 import com.fsck.k9.ui.messagelist.DefaultFolderProvider
+import com.fsck.k9.ui.messagelist.LegacyMessageListFragment
+import com.fsck.k9.ui.messagelist.SavedSearch
+import com.fsck.k9.ui.messagelist.manualSearchFor
 import com.fsck.k9.ui.messagelist.MessageListFragmentBridgeContract
 import com.fsck.k9.ui.messagelist.MessageListFragmentBridgeContract.MessageListFragmentListener
 import com.fsck.k9.ui.messageview.MessageViewContainerFragment
@@ -174,6 +177,12 @@ open class MessageHomeActivity :
      * filtered views, e.g. when only displaying the unread messages in a folder.
      */
     private var noThreading = false
+
+    /**
+     * The chips a search opened from the drawer starts with, and which saved search it is; see [SavedSearch].
+     */
+    private var searchFilters: String? = null
+    private var savedSearchId: String? = null
     private var displayMode: DisplayMode = DisplayMode.MESSAGE_LIST
     private var messageReference: MessageReference? = null
 
@@ -446,6 +455,7 @@ open class MessageHomeActivity :
                     .isThreadedViewEnabled &&
                     !noThreading,
             )
+            LegacyMessageListFragment.applySavedSearch(messageListFragment, searchFilters, savedSearchId)
             fragmentTransaction.add(R.id.message_list_container, messageListFragment as Fragment)
             fragmentTransaction.commitNow()
 
@@ -580,6 +590,8 @@ open class MessageHomeActivity :
         this.search = search
         singleFolderMode = search.folderIds.size == 1
         noThreading = launchData.noThreading
+        searchFilters = launchData.searchFilters
+        savedSearchId = launchData.savedSearchId
         messageReference = launchData.messageReference
         threadRoot = launchData.threadRoot
         messageViewOnly = launchData.messageViewOnly
@@ -623,51 +635,7 @@ open class MessageHomeActivity :
             // Query was received from Search Dialog
             val query = queryString.trim()
 
-            val search = LocalMessageSearch().apply {
-                isManualSearch = true
-                or(
-                    SearchCondition(
-                        MessageSearchField.SENDER,
-                        SearchAttribute.CONTAINS,
-                        query,
-                    ),
-                )
-                or(
-                    SearchCondition(
-                        MessageSearchField.TO,
-                        SearchAttribute.CONTAINS,
-                        query,
-                    ),
-                )
-                or(
-                    SearchCondition(
-                        MessageSearchField.CC,
-                        SearchAttribute.CONTAINS,
-                        query,
-                    ),
-                )
-                or(
-                    SearchCondition(
-                        MessageSearchField.BCC,
-                        SearchAttribute.CONTAINS,
-                        query,
-                    ),
-                )
-                or(
-                    SearchCondition(
-                        MessageSearchField.SUBJECT,
-                        SearchAttribute.CONTAINS,
-                        query,
-                    ),
-                )
-                or(
-                    SearchCondition(
-                        MessageSearchField.MESSAGE_CONTENTS,
-                        SearchAttribute.CONTAINS,
-                        query,
-                    ),
-                )
-            }
+            val search = manualSearchFor(query)
 
             val appData = intent.getBundleExtra(SearchManager.APP_DATA)
             if (appData != null) {
@@ -687,6 +655,8 @@ open class MessageHomeActivity :
             return LaunchData(
                 search = search,
                 noThreading = true,
+                searchFilters = intent.getStringExtra(EXTRA_SEARCH_FILTERS),
+                savedSearchId = intent.getStringExtra(EXTRA_SAVED_SEARCH_ID),
             )
         } else if (intent.hasExtra(EXTRA_MESSAGE_REFERENCE)) {
             val messageReferenceString = intent.getStringExtra(EXTRA_MESSAGE_REFERENCE)
@@ -936,6 +906,7 @@ open class MessageHomeActivity :
             isThreadDisplay = false,
             threadedList = generalSettingsManager.getConfig().display.inboxSettings.isThreadedViewEnabled,
         )
+        LegacyMessageListFragment.applySavedSearch(messageListFragment, searchFilters, savedSearchId)
         openFolderTransaction.replace(R.id.message_list_container, messageListFragment as Fragment)
 
         this.messageListFragment = messageListFragment
@@ -1674,6 +1645,8 @@ open class MessageHomeActivity :
         val threadRoot: Long? = null,
         val noThreading: Boolean = false,
         val messageViewOnly: Boolean = false,
+        val searchFilters: String? = null,
+        val savedSearchId: String? = null,
     )
 
     companion object : KoinComponent {
@@ -1711,6 +1684,8 @@ open class MessageHomeActivity :
         // used for remote search
         const val EXTRA_SEARCH_ACCOUNT = "com.fsck.k9.search_account"
         private const val EXTRA_SEARCH_FOLDER = "com.fsck.k9.search_folder"
+        private const val EXTRA_SEARCH_FILTERS = "com.fsck.k9.search_filters"
+        private const val EXTRA_SAVED_SEARCH_ID = "com.fsck.k9.saved_search_id"
 
         private const val STATE_DISPLAY_MODE = "displayMode"
         private const val STATE_MESSAGE_VIEW_ONLY = "messageViewOnly"
@@ -1753,6 +1728,29 @@ open class MessageHomeActivity :
 
                 if (clearTop) addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
                 if (newTask) addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+        }
+
+        /**
+         * Opens [savedSearch] as the search it was saved from, with its chips set as they were.
+         */
+        fun intentDisplaySavedSearch(context: Context, savedSearch: SavedSearch): Intent {
+            // A search opens in the search activity, as one typed in the search bar does; the home screen closes
+            // itself on a search sent to it.
+            return Intent(context, MessageSearchActivity::class.java).apply {
+                action = Intent.ACTION_SEARCH
+                putExtra(SearchManager.QUERY, savedSearch.query)
+                savedSearch.accountId?.let { accountId ->
+                    putExtra(
+                        SearchManager.APP_DATA,
+                        Bundle().apply {
+                            putString(EXTRA_SEARCH_ACCOUNT, accountId)
+                            savedSearch.folderId?.let { putLong(EXTRA_SEARCH_FOLDER, it) }
+                        },
+                    )
+                }
+                putExtra(EXTRA_SEARCH_FILTERS, savedSearch.filters.encode())
+                putExtra(EXTRA_SAVED_SEARCH_ID, savedSearch.id)
             }
         }
 

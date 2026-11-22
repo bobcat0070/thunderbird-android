@@ -51,7 +51,7 @@ internal fun FolderSettingList(
         shortcuts.forEach { shortcut ->
             item(span = { if (hideText) GridItemSpan(1) else GridItemSpan(maxLineSpan) }) {
                 SettingListItem(
-                    label = stringResource(id = shortcut.labelResource()),
+                    label = shortcut.label(),
                     onClick = { onShortcutClick(shortcut) },
                     icon = shortcut.icon(),
                 )
@@ -86,16 +86,19 @@ internal fun FolderSettingList(
     }
 }
 
-private fun DrawerShortcut.labelResource(): Int = when (this) {
-    DrawerShortcut.PACKAGES -> R.string.navigation_drawer_dropdown_action_packages
-    DrawerShortcut.TRIPS -> R.string.navigation_drawer_dropdown_action_trips
-    DrawerShortcut.ATTACHMENTS -> R.string.navigation_drawer_dropdown_action_attachments
-    DrawerShortcut.EXPIRED_MAIL -> R.string.navigation_drawer_dropdown_action_expired_mail
+@Composable
+private fun DrawerShortcut.label(): String = when (this) {
+    DrawerShortcut.Packages -> stringResource(R.string.navigation_drawer_dropdown_action_packages)
+    DrawerShortcut.Trips -> stringResource(R.string.navigation_drawer_dropdown_action_trips)
+    DrawerShortcut.Attachments -> stringResource(R.string.navigation_drawer_dropdown_action_attachments)
+    DrawerShortcut.ExpiredMail -> stringResource(R.string.navigation_drawer_dropdown_action_expired_mail)
+    is DrawerShortcut.SavedSearch -> name
 }
 
 private fun DrawerShortcut.icon() = when (this) {
-    DrawerShortcut.PACKAGES -> Icons.Outlined.LocalShipping
-    DrawerShortcut.TRIPS -> Icons.Outlined.Flight
-    DrawerShortcut.ATTACHMENTS -> Icons.Outlined.Attachment
-    DrawerShortcut.EXPIRED_MAIL -> Icons.Outlined.Archive
+    DrawerShortcut.Packages -> Icons.Outlined.LocalShipping
+    DrawerShortcut.Trips -> Icons.Outlined.Flight
+    DrawerShortcut.Attachments -> Icons.Outlined.Attachment
+    DrawerShortcut.ExpiredMail -> Icons.Outlined.Archive
+    is DrawerShortcut.SavedSearch -> Icons.Outlined.Search
 }

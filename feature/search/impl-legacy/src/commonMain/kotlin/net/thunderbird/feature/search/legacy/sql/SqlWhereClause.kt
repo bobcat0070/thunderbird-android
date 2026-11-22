@@ -151,6 +151,11 @@ class SqlWhereClause private constructor(
                         value
                     }
                 }
+
+                SearchAttribute.AT_LEAST -> {
+                    query.append(">= ?")
+                    value
+                }
             }
 
             selectionArgs.add(selectionArg)

@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="utf-8"?>
+<HorizontalScrollView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="?attr/colorSurface"
+    android:scrollbars="none"
+    >
+
+    <com.google.android.material.chip.ChipGroup
+        android:id="@+id/search_filters"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:paddingStart="16dp"
+        android:paddingTop="4dp"
+        android:paddingEnd="16dp"
+        android:paddingBottom="4dp"
+        app:singleLine="true"
+        >
+
+        <com.google.android.material.chip.Chip
+            android:id="@+id/search_filter_unread"
+            style="@style/Widget.Material3.Chip.Filter"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/search_filter_unread"
+            />
+
+        <com.google.android.material.chip.Chip
+            android:id="@+id/search_filter_starred"
+            style="@style/Widget.Material3.Chip.Filter"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/search_filter_starred"
+            />
+
+        <com.google.android.material.chip.Chip
+            android:id="@+id/search_filter_attachment"
+            style="@style/Widget.Material3.Chip.Filter"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/search_filter_attachment"
+            />
+
+        <com.google.android.material.chip.Chip
+            android:id="@+id/search_filter_people"
+            style="@style/Widget.Material3.Chip.Filter"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/search_filter_people"
+            />
+
+        <com.google.android.material.chip.Chip
+            android:id="@+id/search_filter_period"
+            style="@style/Widget.Material3.Chip.Filter"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:checkable="false"
+            app:closeIcon="@drawable/ic_expand_more"
+            app:closeIconVisible="true"
+            />
+
+        <com.google.android.material.chip.Chip
+            android:id="@+id/search_filter_save"
+            style="@style/Widget.Material3.Chip.Assist"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/search_save"
+            />
+
+    </com.google.android.material.chip.ChipGroup>
+
+</HorizontalScrollView>

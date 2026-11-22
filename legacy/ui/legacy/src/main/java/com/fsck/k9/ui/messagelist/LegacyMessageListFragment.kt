@@ -18,6 +18,9 @@ import android.view.MenuInflater
 import android.view.MenuItem
 import android.view.View
 import android.view.ViewGroup
+import android.text.InputType
+import android.widget.EditText
+import android.widget.FrameLayout
 import android.widget.Toast
 import androidx.activity.result.ActivityResultLauncher
 import androidx.annotation.Discouraged
@@ -161,6 +164,9 @@ const val RECENT_CHANGES_SNACKBAR_DURATION = 10 * 1000
 
 private const val TAG = "BaseMessageListFragment"
 
+/** Space beside the name field of the save search dialog, as the dialog leaves beside its title. */
+private const val DIALOG_SIDE_PADDING_DP = 24
+
 @Suppress(
     "LargeClass",
     "TooManyFunctions",
@@ -210,6 +216,24 @@ class LegacyMessageListFragment :
     private val oneClickUnsubscriber: OneClickUnsubscriber by inject()
     private val unsubscribeHistory: UnsubscribeHistory by inject()
     private val clock: Clock by inject()
+    private val savedSearchStore: SavedSearchStore by inject()
+
+    /**
+     * The search as asked, before the chips narrow it; [localSearch] is this with [searchFilters] applied.
+     */
+    private lateinit var baseSearch: LocalMessageSearch
+    private var searchFilters = SearchFilters()
+
+    /**
+     * The saved search this list is, when it was opened from the drawer.
+     */
+    private var savedSearchId: String? = null
+
+    /**
+     * Whether the list is the answer to a typed search, which the chips at its top narrow.
+     */
+    private val isFilterableSearch: Boolean
+        get() = baseSearch.isManualSearch && baseSearch.senderSearchAddress == null && !isThreadDisplay
     private val accountManager: LegacyAccountManager by inject()
     private val lastSelectedFolderStore: LastSelectedFolderStore by inject()
     private val connectivityManager: ConnectivityManager by inject()
@@ -439,6 +463,12 @@ class LegacyMessageListFragment :
         localSearch = arguments.getByteArray(ARG_SEARCH)?.let {
             LocalMessageSearchSerializer.deserialize(it)
         }!!
+        baseSearch = localSearch
+        searchFilters = SearchFilters.decode(arguments.getString(ARG_SEARCH_FILTERS))
+        savedSearchId = arguments.getString(ARG_SAVED_SEARCH_ID)
+        if (isFilterableSearch) {
+            localSearch = baseSearch.withFilters(searchFilters, clock.now().toEpochMilliseconds())
+        }
 
         allAccounts = localSearch.searchAllAccounts()
         val searchAccounts = localSearch.getLegacyAccounts(accountManager).also {
@@ -876,8 +906,10 @@ class LegacyMessageListFragment :
     /**
      * The class this list is already filtered to, when it is a bundle that was opened.
      */
+    // Read from the search before its filter chips: "From people" narrows a search to personal mail, which does not
+    // make the results a category list.
     private val displayedClassification: MessageClass?
-        get() = localSearch.leafSet
+        get() = baseSearch.leafSet
             .mapNotNull { it.condition }
             .firstOrNull { it.field == MessageSearchField.CLASSIFICATION }
             ?.let { condition -> MessageClass.entries.firstOrNull { it.name == condition.value } }
@@ -933,6 +965,10 @@ class LegacyMessageListFragment :
                 add(MessageListViewItem.InAppNotificationBannerList)
             }
 
+            if (isFilterableSearch) {
+                add(MessageListViewItem.SearchFilters(searchFilters, isSaved = savedSearchId != null))
+            }
+
             if (isCategoryListEligible) {
                 addAll(
                     messageListItems.toViewItems(
@@ -944,6 +980,67 @@ class LegacyMessageListFragment :
                 addAll(messageListItems.map { MessageListViewItem.Message(it) })
             }
         }
+    }
+
+    /**
+     * Narrows the search by the chips as they are now. Kept in the arguments, so the list comes back the same after
+     * the screen is rebuilt.
+     */
+    override fun onSearchFiltersChanged(filters: SearchFilters) {
+        if (filters == searchFilters) return
+        searchFilters = filters
+        requireArguments().putString(ARG_SEARCH_FILTERS, filters.encode())
+        localSearch = baseSearch.withFilters(filters, clock.now().toEpochMilliseconds())
+
+        currentMessageListItems?.let { updateViewItems(it) }
+        loadMessageList(forceUpdate = true)
+    }
+
+    /**
+     * Saves the search, as typed and narrowed, to the drawer, under a name the reader picks.
+     */
+    override fun onSaveSearchClicked() {
+        val query = baseSearch.remoteSearchArguments ?: return
+        val context = requireContext()
+        val nameInput = EditText(context).apply {
+            setText(query)
+            setSelection(query.length)
+            inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_CAP_SENTENCES
+        }
+        // Lined up with the dialog's title rather than running to its edges.
+        val sidePadding = (DIALOG_SIDE_PADDING_DP * context.resources.displayMetrics.density).toInt()
+        val nameField = FrameLayout(context).apply {
+            setPadding(sidePadding, 0, sidePadding, 0)
+            addView(nameInput)
+        }
+
+        MaterialAlertDialogBuilder(context)
+            .setTitle(R.string.search_save_title)
+            .setView(nameField)
+            .setPositiveButton(R.string.search_save_action) { _, _ ->
+                val saved = savedSearchStore.add(
+                    name = nameInput.text.toString().ifBlank { query },
+                    query = query,
+                    accountId = baseSearch.accountIds.singleOrNull()?.toString(),
+                    folderId = baseSearch.folderIds.singleOrNull(),
+                    filters = searchFilters,
+                )
+                savedSearchId = saved.id
+                requireArguments().putString(ARG_SAVED_SEARCH_ID, saved.id)
+                currentMessageListItems?.let { updateViewItems(it) }
+                Toast.makeText(context, R.string.search_saved, Toast.LENGTH_SHORT).show()
+            }
+            .setNegativeButton(BaseR.string.cancel_action, null)
+            .show()
+    }
+
+    override fun onRemoveSavedSearchClicked() {
+        val id = savedSearchId ?: return
+        savedSearchStore.remove(id)
+        savedSearchId = null
+        requireArguments().remove(ARG_SAVED_SEARCH_ID)
+        currentMessageListItems?.let { updateViewItems(it) }
+        Toast.makeText(requireContext(), R.string.search_removed, Toast.LENGTH_SHORT).show()
     }
 
     override fun onGroupingToggled(isEnabled: Boolean) {
@@ -3303,6 +3400,24 @@ class LegacyMessageListFragment :
     }
 
     companion object {
+        /**
+         * Starts the list as [savedSearchId]'s saved search with its chips set to [searchFilters], or as a search
+         * with those chips; see [SavedSearch].
+         */
+        fun applySavedSearch(
+            fragment: MessageListFragmentBridgeContract,
+            searchFilters: String?,
+            savedSearchId: String?,
+        ) {
+            if (searchFilters == null && savedSearchId == null) return
+            (fragment as? Fragment)?.arguments?.apply {
+                putString(ARG_SEARCH_FILTERS, searchFilters)
+                putString(ARG_SAVED_SEARCH_ID, savedSearchId)
+            }
+        }
+
+        protected const val ARG_SEARCH_FILTERS = "searchFilters"
+        protected const val ARG_SAVED_SEARCH_ID = "savedSearchId"
         protected const val ARG_SEARCH = "searchObject"
         protected const val ARG_THREADED_LIST = "showingThreadedList"
         protected const val ARG_IS_THREAD_DISPLAY = "isThreadedDisplay"

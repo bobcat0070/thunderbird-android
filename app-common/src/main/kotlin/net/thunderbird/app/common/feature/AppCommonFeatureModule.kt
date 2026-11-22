@@ -59,7 +59,7 @@ internal val appCommonFeatureModule = module {
     }
 
     single<NavigationDrawerExternalContract.DrawerShortcuts> {
-        DefaultDrawerShortcuts(generalSettingsManager = get())
+        DefaultDrawerShortcuts(generalSettingsManager = get(), savedSearchStore = get())
     }
 
     // Settings this fork keeps outside the main storage, so that settings export carries them too. Named, because

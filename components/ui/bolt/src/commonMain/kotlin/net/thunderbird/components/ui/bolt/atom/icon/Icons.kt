@@ -38,6 +38,7 @@ import androidx.compose.material.icons.outlined.Menu
 import androidx.compose.material.icons.outlined.MoreVert
 import androidx.compose.material.icons.outlined.Report
 import androidx.compose.material.icons.outlined.Restaurant
+import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.Security
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.Sync
@@ -194,6 +195,8 @@ object Icons {
         val Rocket: ImageVector = OutlinedRocketIcon
 
         val School: ImageVector = OutlinedSchoolIcon
+
+        val Search: ImageVector = Icons.Outlined.Search
         val Security: ImageVector = Icons.Outlined.Security
         val Send: ImageVector = Icons.AutoMirrored.Outlined.Send
         val Settings: ImageVector = Icons.Outlined.Settings

@@ -2,6 +2,7 @@ package com.fsck.k9.ui.messagelist
 
 import com.fsck.k9.ui.messagelist.debug.AuthDebugActions
 import net.thunderbird.feature.navigation.drawer.dropdown.navigationDropDownDrawerModule
+import org.koin.android.ext.koin.androidContext
 import org.koin.core.module.dsl.viewModel
 import org.koin.dsl.module
 
@@ -46,4 +47,5 @@ val messageListUiModule = module {
         )
     }
     single { SortTypeToastProvider() }
+    single<SavedSearchStore> { SharedPreferencesSavedSearchStore(context = androidContext()) }
 }

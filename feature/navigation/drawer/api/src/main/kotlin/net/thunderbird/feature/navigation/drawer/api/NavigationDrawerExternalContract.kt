@@ -20,13 +20,18 @@ interface NavigationDrawerExternalContract {
     }
 
     /**
-     * Screens of their own the drawer offers a way to, beside the folders.
+     * Screens of their own the drawer offers a way to, beside the folders, and the searches the reader saved there.
      */
-    enum class DrawerShortcut {
-        PACKAGES,
-        TRIPS,
-        ATTACHMENTS,
-        EXPIRED_MAIL,
+    sealed interface DrawerShortcut {
+        data object Packages : DrawerShortcut
+        data object Trips : DrawerShortcut
+        data object Attachments : DrawerShortcut
+        data object ExpiredMail : DrawerShortcut
+
+        /**
+         * A search saved from its results, listed under the name the reader gave it.
+         */
+        data class SavedSearch(val id: String, val name: String) : DrawerShortcut
     }
 
     /**

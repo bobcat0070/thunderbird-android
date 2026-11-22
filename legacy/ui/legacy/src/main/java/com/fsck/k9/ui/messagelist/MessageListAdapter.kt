@@ -19,6 +19,7 @@ import com.fsck.k9.ui.messagelist.item.BannerInlineListInAppNotificationViewHold
 import com.fsck.k9.ui.messagelist.item.BundleViewHolder
 import com.fsck.k9.ui.messagelist.item.DayHeaderViewHolder
 import com.fsck.k9.ui.messagelist.item.GroupingToggleViewHolder
+import com.fsck.k9.ui.messagelist.item.SearchFiltersViewHolder
 import com.fsck.k9.ui.messagelist.item.ComposableMessageViewHolder
 import com.fsck.k9.ui.messagelist.item.FooterViewHolder
 import com.fsck.k9.ui.messagelist.item.MessageListViewHolder
@@ -35,6 +36,7 @@ import net.thunderbird.feature.notification.api.ui.action.NotificationAction
 
 private const val FOOTER_ID = 1L
 private const val GROUPING_TOGGLE_ID = -2L
+private const val SEARCH_FILTERS_ID = -3L
 
 /**
  * Day header ids start well clear of the handful of fixed rows.
@@ -53,6 +55,7 @@ private const val TYPE_IN_APP_NOTIFICATION_BANNER_INLINE_LIST = 2
 private const val TYPE_BUNDLE = 3
 private const val TYPE_DAY_HEADER = 4
 private const val TYPE_GROUPING_TOGGLE = 5
+private const val TYPE_SEARCH_FILTERS = 6
 
 @Suppress("LongParameterList")
 class MessageListAdapter internal constructor(
@@ -256,6 +259,14 @@ class MessageListAdapter internal constructor(
             TYPE_GROUPING_TOGGLE ->
                 GroupingToggleViewHolder.create(layoutInflater, parent, listItemListener::onGroupingToggled)
 
+            TYPE_SEARCH_FILTERS -> SearchFiltersViewHolder.create(
+                layoutInflater = layoutInflater,
+                parent = parent,
+                onFiltersChanged = listItemListener::onSearchFiltersChanged,
+                onSaveClicked = listItemListener::onSaveSearchClicked,
+                onRemoveClicked = listItemListener::onRemoveSavedSearchClicked,
+            )
+
             TYPE_IN_APP_NOTIFICATION_BANNER_INLINE_LIST if isInAppNotificationEnabled ->
                 BannerInlineListInAppNotificationViewHolder(
                     view = ComposeView(context = parent.context),
@@ -339,6 +350,10 @@ class MessageListAdapter internal constructor(
             TYPE_GROUPING_TOGGLE -> {
                 val toggle = viewItems[position] as MessageListViewItem.GroupingToggle
                 (holder as GroupingToggleViewHolder).bind(toggle)
+            }
+
+            TYPE_SEARCH_FILTERS -> {
+                (holder as SearchFiltersViewHolder).bind(viewItems[position] as MessageListViewItem.SearchFilters)
             }
 
             else -> {
@@ -468,6 +483,21 @@ interface MessageListItemActionListener {
     fun onGroupingToggled(isEnabled: Boolean)
     fun filterInAppNotificationEvents(notification: InAppNotification): Boolean
     fun onNotificationActionClicked(action: NotificationAction)
+
+    /**
+     * The reader changed the chips that narrow a search.
+     */
+    fun onSearchFiltersChanged(filters: SearchFilters) = Unit
+
+    /**
+     * The reader asked to keep the search in the drawer.
+     */
+    fun onSaveSearchClicked() = Unit
+
+    /**
+     * The reader asked to take the saved search shown out of the drawer.
+     */
+    fun onRemoveSavedSearchClicked() = Unit
 }
 
 sealed interface MessageListViewItem {
@@ -495,6 +525,19 @@ sealed interface MessageListViewItem {
     data class GroupingToggle(val isEnabled: Boolean) : MessageListViewItem {
         override val viewId: Long = GROUPING_TOGGLE_ID
         override val viewType: Int = TYPE_GROUPING_TOGGLE
+    }
+
+    /**
+     * The chips at the top of a search's results.
+     *
+     * @param isSaved whether the search is one saved to the drawer, which the last chip then takes out again.
+     */
+    data class SearchFilters(
+        val filters: com.fsck.k9.ui.messagelist.SearchFilters,
+        val isSaved: Boolean,
+    ) : MessageListViewItem {
+        override val viewId: Long = SEARCH_FILTERS_ID
+        override val viewType: Int = TYPE_SEARCH_FILTERS
     }
 
     /**

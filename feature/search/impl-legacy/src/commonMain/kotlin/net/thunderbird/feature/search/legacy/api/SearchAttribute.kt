@@ -21,4 +21,9 @@ enum class SearchAttribute {
      * The value must not be equal with the field.
      */
     NOT_EQUALS,
+
+    /**
+     * The field, a number, must be at least the value: a date on or after it, say.
+     */
+    AT_LEAST,
 }

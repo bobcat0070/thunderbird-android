@@ -90,6 +90,23 @@ class SqlWhereClauseTest {
     }
 
     @Test
+    fun `should build correct SQL query for AT_LEAST`() {
+        // Arrange
+        val condition = SearchCondition(MessageSearchField.DATE, SearchAttribute.AT_LEAST, "1790000000000")
+        val node = SearchConditionTreeNode.Builder(condition).build()
+
+        // Act
+        val result = SqlWhereClause.Builder()
+            .withConditions(node)
+            .build()
+
+        // Assert
+        assertThat(result.selection).isEqualTo("date >= ?")
+        assertThat(result.selectionArgs).hasSize(1)
+        assertThat(result.selectionArgs[0]).isEqualTo("1790000000000")
+    }
+
+    @Test
     fun `should build correct SQL query for NOT operator combined with OR`() {
         // Arrange
         val condition1 = SearchCondition(MessageSearchField.SUBJECT, SearchAttribute.CONTAINS, "test")
