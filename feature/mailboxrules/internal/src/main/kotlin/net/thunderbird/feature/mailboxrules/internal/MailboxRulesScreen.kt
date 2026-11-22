@@ -17,6 +17,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import kotlinx.collections.immutable.toPersistentList
 import net.thunderbird.components.ui.bolt.atom.DividerHorizontal
@@ -45,6 +46,7 @@ internal fun MailboxRulesScreen(
     viewModel: ViewModel = koinViewModel<MailboxRulesViewModel>(),
 ) {
     val context = LocalContext.current
+    val resources = context.resources
     val signInLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         viewModel.event(Event.SignInFinished(result.data))
     }
@@ -57,7 +59,7 @@ internal fun MailboxRulesScreen(
 
             Effect.SignInUnavailable -> Toast.makeText(
                 context,
-                context.getString(R.string.mailboxrules_sign_in_unavailable),
+                resources.getString(R.string.mailboxrules_sign_in_unavailable),
                 Toast.LENGTH_LONG,
             ).show()
         }
@@ -154,14 +156,8 @@ private fun LazyListScope.resultItems(phase: Phase, mailboxAddress: String) {
                 Message(
                     when {
                         phase.rules.isEmpty() -> stringResource(R.string.mailboxrules_none)
-
                         needLook == 0 -> stringResource(R.string.mailboxrules_all_fine)
-
-                        else -> LocalContext.current.resources.getQuantityString(
-                            R.plurals.mailboxrules_need_look,
-                            needLook,
-                            needLook,
-                        )
+                        else -> pluralStringResource(R.plurals.mailboxrules_need_look, needLook, needLook)
                     },
                 )
             }
