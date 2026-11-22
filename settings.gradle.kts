@@ -236,6 +236,11 @@ include(
 )
 
 include(
+    ":feature:conversation:api",
+    ":feature:conversation:internal",
+)
+
+include(
     ":feature:spamdigest:api",
     ":feature:spamdigest:internal",
 )

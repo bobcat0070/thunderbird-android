@@ -65,6 +65,8 @@ dependencies {
     implementation(projects.feature.expiredmail.internal)
     implementation(projects.feature.mailboxrules.api)
     implementation(projects.feature.mailboxrules.internal)
+    implementation(projects.feature.conversation.api)
+    implementation(projects.feature.conversation.internal)
     implementation(libs.appauth)
     implementation(libs.okhttp)
     implementation(projects.feature.packages.api)

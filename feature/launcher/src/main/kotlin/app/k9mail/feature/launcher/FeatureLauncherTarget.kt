@@ -10,6 +10,7 @@ import net.thunderbird.core.featureflag.navigation.RemoteFeatureFlagRoute
 import net.thunderbird.feature.account.AccountId
 import net.thunderbird.feature.account.settings.api.AccountSettingsRoute
 import net.thunderbird.feature.attachments.AttachmentsRoute
+import net.thunderbird.feature.conversation.ConversationRoute
 import net.thunderbird.feature.debug.settings.navigation.SecretDebugSettingsRoute
 import net.thunderbird.feature.expiredmail.ExpiredMailRoute
 import net.thunderbird.feature.funding.api.FundingRoute
@@ -95,6 +96,10 @@ sealed class FeatureLauncherTarget(
 
     data object MailboxRules : FeatureLauncherTarget(
         deepLinkUri = MailboxRulesRoute.Rules.route().toUri(),
+    )
+
+    data class Conversation(val accountId: String, val threadRoot: Long) : FeatureLauncherTarget(
+        deepLinkUri = ConversationRoute.Thread(accountId, threadRoot).route().toUri(),
     )
 
     data object Packages : FeatureLauncherTarget(

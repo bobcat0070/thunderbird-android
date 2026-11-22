@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Title of the screen showing a thread as one conversation -->
+    <string name="conversation_title">Conversation</string>
+    <!-- Button that shows the thread as a list of its messages instead -->
+    <string name="conversation_show_as_list">List</string>
+    <string name="conversation_reply">Reply</string>
+    <string name="conversation_reply_all">Reply all</string>
+    <string name="conversation_forward">Forward</string>
+    <!-- Button that opens one message of the conversation on its own -->
+    <string name="conversation_open">Open</string>
+    <string name="conversation_warning">The message view has a warning about this sender. Open the message to see it.</string>
+    <string name="conversation_body_failed">This message could not be shown. Open it to try again.</string>
+</resources>

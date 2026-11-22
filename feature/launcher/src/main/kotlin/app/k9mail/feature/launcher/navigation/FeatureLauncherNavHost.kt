@@ -21,6 +21,7 @@ import net.thunderbird.core.featureflag.navigation.RemoteFeatureFlagNavigation
 import net.thunderbird.feature.account.settings.api.AccountSettingsNavigation
 import net.thunderbird.feature.account.settings.api.AccountSettingsRoute
 import net.thunderbird.feature.attachments.AttachmentsNavigation
+import net.thunderbird.feature.conversation.ConversationNavigation
 import net.thunderbird.feature.debug.settings.navigation.SecretDebugSettingsNavigation
 import net.thunderbird.feature.debug.settings.navigation.SecretDebugSettingsRoute
 import net.thunderbird.feature.expiredmail.ExpiredMailNavigation
@@ -55,6 +56,7 @@ fun FeatureLauncherNavHost(
     attachmentsNavigation: AttachmentsNavigation = koinInject(),
     expiredMailNavigation: ExpiredMailNavigation = koinInject(),
     mailboxRulesNavigation: MailboxRulesNavigation = koinInject(),
+    conversationNavigation: ConversationNavigation = koinInject(),
     packagesNavigation: PackagesNavigation = koinInject(),
     tripsNavigation: TripsNavigation = koinInject(),
     plusAddressNavigation: PlusAddressNavigation = koinInject(),
@@ -173,6 +175,12 @@ fun FeatureLauncherNavHost(
         )
 
         mailboxRulesNavigation.registerRoutes(
+            navGraphBuilder = this,
+            onBack = onBack,
+            onFinish = { onBack() },
+        )
+
+        conversationNavigation.registerRoutes(
             navGraphBuilder = this,
             onBack = onBack,
             onFinish = { onBack() },

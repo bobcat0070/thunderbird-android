@@ -1107,7 +1107,13 @@ class LegacyMessageListFragment :
         } else {
             lastMessageClick = clickTime
             if (showingThreadedList && messageListItem.threadCount > 1) {
-                fragmentListener.showThread(messageListItem.account.id, messageListItem.threadRoot)
+                FeatureLauncherActivity.launch(
+                    context = requireContext(),
+                    target = FeatureLauncherTarget.Conversation(
+                        accountId = messageListItem.account.id.toString(),
+                        threadRoot = messageListItem.threadRoot,
+                    ),
+                )
             } else {
                 openMessage(messageListItem.messageReference)
             }

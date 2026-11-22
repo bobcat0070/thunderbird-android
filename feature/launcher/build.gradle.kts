@@ -25,6 +25,7 @@ dependencies {
     implementation(projects.feature.newsletter.api)
     implementation(projects.feature.expiredmail.api)
     implementation(projects.feature.mailboxrules.api)
+    implementation(projects.feature.conversation.api)
     implementation(projects.feature.attachments.api)
     implementation(projects.feature.packages.api)
     implementation(projects.feature.trips.api)
