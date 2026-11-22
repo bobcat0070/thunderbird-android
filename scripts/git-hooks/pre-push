@@ -1,0 +1,23 @@
+#!/usr/bin/env bash
+#
+# Refuses to push a commit that scripts/check-before-push.sh has not passed on, so what GitHub's checks would catch
+# is caught here first. Installed by scripts/install-git-hooks.sh.
+#
+# The checks take a while, so they are not run here: run scripts/check-before-push.sh, then push.
+
+STAMP="$(git rev-parse --git-common-dir)/ci-local-passed"
+PASSED="$(cat "$STAMP" 2>/dev/null)"
+ZERO="0000000000000000000000000000000000000000"
+
+while read -r local_ref local_sha remote_ref remote_sha; do
+    # Deleting a branch pushes no commit.
+    [ "$local_sha" = "$ZERO" ] && continue
+
+    if [ "$local_sha" != "$PASSED" ]; then
+        echo "pre-push: $local_ref ($local_sha) has not passed the local CI checks." >&2
+        echo "pre-push: run scripts/check-before-push.sh, then push again." >&2
+        exit 1
+    fi
+done
+
+exit 0

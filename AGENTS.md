@@ -179,6 +179,14 @@ Before proposing changes, agents MUST run the narrowest relevant Gradle tasks an
 - `./gradlew spotlessCheck`
 - `./gradlew spotlessApply` (to fix formatting issues)
 
+### Before Pushing
+
+Run `scripts/check-before-push.sh` on the commit to be pushed, with a clean working tree. It runs, one step at a
+time, every Gradle check the GitHub workflows run on a push (spotless, detekt, dependency guard, Konsist, assembling
+every app variant, badging, the catalog app, `testsOnCi` and `lint`), prints what failed, and records the commit when
+all pass. The pre-push hook (install with `scripts/install-git-hooks.sh`) refuses to push a commit that has not
+passed. Do not bypass the hook.
+
 ### Bug Fix Requirements
 
 When fixing bugs, agents MUST:

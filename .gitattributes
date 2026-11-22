@@ -3,6 +3,10 @@
 *.bat eol=crlf
 *.eml eol=crlf
 *.jar binary
+# Run by bash, which a CRLF line ending breaks.
+scripts/check-before-push.sh eol=lf
+scripts/install-git-hooks.sh eol=lf
+scripts/git-hooks/* eol=lf
 
 app-k9mail/build.gradle.kts merge=merge_gradle
 app-thunderbird/build.gradle.kts merge=merge_gradle
