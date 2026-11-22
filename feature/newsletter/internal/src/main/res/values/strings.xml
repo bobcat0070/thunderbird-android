@@ -2,6 +2,16 @@
 <resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
     <string name="newsletter_senders_title">Newsletters</string>
     <string name="newsletter_senders_empty">No newsletters waiting in your inbox.</string>
+    <string name="newsletter_order_most_mail">Most mail</string>
+    <string name="newsletter_order_least_opened">Least opened</string>
+    <plurals name="newsletter_never_opened">
+        <item quantity="one">Never opened: <xliff:g id="count">%d</xliff:g> in 3 months</item>
+        <item quantity="other">Never opened: <xliff:g id="count">%d</xliff:g> in 3 months</item>
+    </plurals>
+    <plurals name="newsletter_opened">
+        <item quantity="one">Opened <xliff:g id="opened">%1$d</xliff:g> of <xliff:g id="count">%2$d</xliff:g> in 3 months</item>
+        <item quantity="other">Opened <xliff:g id="opened">%1$d</xliff:g> of <xliff:g id="count">%2$d</xliff:g> in 3 months</item>
+    </plurals>
     <plurals name="newsletter_message_count">
         <item quantity="one"><xliff:g id="count">%d</xliff:g> newsletter</item>
         <item quantity="other"><xliff:g id="count">%d</xliff:g> newsletters</item>

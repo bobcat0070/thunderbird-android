@@ -14,6 +14,7 @@ import com.fsck.k9.search.specialFolderId
 import com.fsck.k9.ui.unsubscribe.OneClickUnsubscriber
 import com.fsck.k9.view.LinkConfirmationActivity
 import kotlin.time.Clock
+import kotlin.time.Duration.Companion.days
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import net.thunderbird.core.android.account.LegacyAccount
@@ -22,6 +23,7 @@ import net.thunderbird.feature.mail.message.classification.api.MessageClass
 import net.thunderbird.feature.newsletter.NewsletterActions
 import net.thunderbird.feature.newsletter.NewsletterSender
 import net.thunderbird.feature.newsletter.NewsletterSenderRepository
+import net.thunderbird.feature.newsletter.OPEN_RATE_DAYS
 import net.thunderbird.feature.newsletter.UnsubscribeHistory
 import net.thunderbird.feature.newsletter.UnsubscribeOutcome
 import net.thunderbird.feature.search.legacy.UnifiedFolderKind
@@ -42,6 +44,7 @@ private class StoredMessage(
     val address: String,
     val name: String?,
     val date: Long,
+    val isRead: Boolean,
 )
 
 /**
@@ -72,6 +75,7 @@ private fun MessageStoreManager.messagesOutside(
                         address = from.address.lowercase(),
                         name = from.personal?.takeIf { it.isNotBlank() },
                         date = message.messageDate,
+                        isRead = message.isRead,
                     )
                 }
             },
@@ -89,6 +93,7 @@ internal class LegacyNewsletterSenderRepository(
     private val accountManager: LegacyAccountManager,
     private val messageStoreManager: MessageStoreManager,
     private val messageRepository: MessageRepository,
+    private val clock: Clock,
 ) : NewsletterSenderRepository {
 
     override suspend fun senders(): List<NewsletterSender> = withContext(Dispatchers.IO) {
@@ -99,9 +104,20 @@ internal class LegacyNewsletterSenderRepository(
             conditionArgs = listOf(MessageClass.NEWSLETTER.name),
         )
 
+        // Whether newsletters get opened is read from wherever they went, archive and trash included: reading one and
+        // archiving it is still reading it.
+        val since = clock.now().toEpochMilliseconds() - OPEN_RATE_DAYS.days.inWholeMilliseconds
+        val recent = messageStoreManager.messagesOutside(
+            accounts = accountManager.findAll(),
+            excludedFolders = NOT_NEWSLETTER_HOMES,
+            condition = "messages.classification = ? AND messages.date >= ?",
+            conditionArgs = listOf(MessageClass.NEWSLETTER.name, since.toString()),
+        ).groupBy { it.address }
+
         newsletters.groupBy { it.address }
             .map { (address, messages) ->
                 val newest = messages.maxBy { it.date }
+                val recentMessages = recent[address].orEmpty()
                 NewsletterSender(
                     address = address,
                     name = messages.sortedByDescending { it.date }.firstNotNullOfOrNull { it.name },
@@ -109,6 +125,8 @@ internal class LegacyNewsletterSenderRepository(
                     latestAt = newest.date,
                     canUnsubscribe = runCatching { messageRepository.getUnsubscribeUri(newest.reference) != null }
                         .getOrDefault(false),
+                    recentCount = recentMessages.size,
+                    recentOpenedCount = recentMessages.count { it.isRead },
                 )
             }
             .sortedWith(compareByDescending<NewsletterSender> { it.messageCount }.thenByDescending { it.latestAt })
@@ -122,6 +140,11 @@ internal class LegacyNewsletterSenderRepository(
             UnifiedFolderKind.SENT,
             UnifiedFolderKind.DRAFTS,
         )
+
+        /**
+         * Folders where a newsletter says nothing about whether the reader wanted it.
+         */
+        val NOT_NEWSLETTER_HOMES = listOf(UnifiedFolderKind.SPAM, UnifiedFolderKind.SENT, UnifiedFolderKind.DRAFTS)
     }
 }
 

@@ -28,10 +28,19 @@ internal class NewsletterSendersViewModel(
     override fun event(event: Event) {
         when (event) {
             Event.LoadSenders -> handleOneTimeEvent(event) { loadSenders() }
+
+            is Event.OrderClicked -> updateState {
+                it.copy(order = event.order, senders = it.senders.sortedFor(event.order))
+            }
+
             is Event.SenderClicked -> actions.showAllMail(event.sender.address)
+
             is Event.ActionClicked -> updateState { it.copy(confirmation = Confirmation(event.sender, event.action)) }
+
             Event.ConfirmClicked -> confirm()
+
             Event.DismissClicked -> updateState { it.copy(confirmation = null) }
+
             Event.BackClicked -> emitEffect(Effect.NavigateBack)
         }
     }
@@ -39,7 +48,7 @@ internal class NewsletterSendersViewModel(
     private fun loadSenders() {
         viewModelScope.launch {
             val senders = repository.senders()
-            updateState { it.copy(isLoading = false, senders = senders) }
+            updateState { it.copy(isLoading = false, senders = senders.sortedFor(it.order)) }
         }
     }
 
@@ -57,7 +66,7 @@ internal class NewsletterSendersViewModel(
             notice?.let { emitEffect(Effect.ShowNotice(it)) }
 
             val senders = repository.senders()
-            updateState { it.copy(senders = senders, busyAddress = null) }
+            updateState { it.copy(senders = senders.sortedFor(it.order), busyAddress = null) }
         }
     }
 

@@ -10,10 +10,12 @@ internal interface NewsletterSendersContract {
     /**
      * @param busyAddress the sender an action is running for, whose buttons are disabled meanwhile.
      * @param confirmation an action waiting for the reader to confirm it.
+     * @param senders the senders, in [order].
      */
     data class State(
         val isLoading: Boolean = true,
         val senders: List<NewsletterSender> = emptyList(),
+        val order: SenderOrder = SenderOrder.MOST_MAIL,
         val busyAddress: String? = null,
         val confirmation: Confirmation? = null,
     )
@@ -27,6 +29,7 @@ internal interface NewsletterSendersContract {
 
     sealed interface Event {
         data object LoadSenders : Event
+        data class OrderClicked(val order: SenderOrder) : Event
         data class SenderClicked(val sender: NewsletterSender) : Event
         data class ActionClicked(val sender: NewsletterSender, val action: Action) : Event
         data object ConfirmClicked : Event

@@ -20,8 +20,10 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
+import kotlinx.collections.immutable.persistentListOf
 import net.thunderbird.components.ui.bolt.atom.DividerHorizontal
 import net.thunderbird.components.ui.bolt.atom.button.ButtonIcon
+import net.thunderbird.components.ui.bolt.atom.button.ButtonSegmentedSingleChoice
 import net.thunderbird.components.ui.bolt.atom.button.ButtonText
 import net.thunderbird.components.ui.bolt.atom.icon.Icons
 import net.thunderbird.components.ui.bolt.atom.text.TextBodyLarge
@@ -133,6 +135,9 @@ private fun NewsletterSendersContent(
             modifier = Modifier.fillMaxSize(),
             contentPadding = contentPadding,
         ) {
+            item(key = "order") {
+                OrderChoice(order = state.order, onEvent = onEvent)
+            }
             items(state.senders, key = { it.address }) { sender ->
                 SenderRow(
                     sender = sender,
@@ -142,6 +147,46 @@ private fun NewsletterSendersContent(
                 DividerHorizontal()
             }
         }
+    }
+}
+
+@Composable
+private fun OrderChoice(order: SenderOrder, onEvent: (Event) -> Unit) {
+    val mostMail = stringResource(R.string.newsletter_order_most_mail)
+    val leastOpened = stringResource(R.string.newsletter_order_least_opened)
+
+    ButtonSegmentedSingleChoice(
+        onClick = { onEvent(Event.OrderClicked(it)) },
+        options = SENDER_ORDERS,
+        optionTitle = { if (it == SenderOrder.MOST_MAIL) mostMail else leastOpened },
+        selectedOption = order,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = BoltTheme.spacings.double, vertical = BoltTheme.spacings.default),
+    )
+}
+
+private val SENDER_ORDERS = persistentListOf(SenderOrder.MOST_MAIL, SenderOrder.LEAST_OPENED)
+
+/**
+ * How much of the sender's recent mail the reader opened; nothing when nothing arrived lately.
+ */
+@Composable
+private fun OpenedLine(sender: NewsletterSender) {
+    when {
+        sender.isNeverOpened -> TextBodyMedium(
+            text = pluralStringResource(R.plurals.newsletter_never_opened, sender.recentCount, sender.recentCount),
+            color = BoltTheme.colors.error,
+        )
+
+        sender.recentCount > 0 -> TextBodyMedium(
+            text = pluralStringResource(
+                R.plurals.newsletter_opened,
+                sender.recentCount,
+                sender.recentOpenedCount,
+                sender.recentCount,
+            ),
+        )
     }
 }
 
@@ -175,6 +220,7 @@ private fun SenderRow(
                     sender.messageCount,
                 ),
             )
+            OpenedLine(sender)
         }
 
         if (sender.canUnsubscribe) {

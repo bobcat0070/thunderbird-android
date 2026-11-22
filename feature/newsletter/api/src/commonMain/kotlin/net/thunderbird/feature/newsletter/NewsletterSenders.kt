@@ -6,6 +6,9 @@ package net.thunderbird.feature.newsletter
  * @param messageCount how many of their newsletters are still where the reader would see them: not archived, in
  *   the trash or in spam.
  * @param canUnsubscribe whether their newest newsletter says how to leave the list.
+ * @param recentCount how many of their newsletters arrived in the last [OPEN_RATE_DAYS] days, wherever they are now:
+ *   reading one and archiving it still counts as having read it.
+ * @param recentOpenedCount how many of those the reader opened.
  */
 data class NewsletterSender(
     val address: String,
@@ -13,7 +16,14 @@ data class NewsletterSender(
     val messageCount: Int,
     val latestAt: Long,
     val canUnsubscribe: Boolean,
+    val recentCount: Int = 0,
+    val recentOpenedCount: Int = 0,
 )
+
+/**
+ * How far back opening a sender's newsletters is looked at.
+ */
+const val OPEN_RATE_DAYS = 90
 
 /**
  * Reads who sends the reader newsletters, across every account.

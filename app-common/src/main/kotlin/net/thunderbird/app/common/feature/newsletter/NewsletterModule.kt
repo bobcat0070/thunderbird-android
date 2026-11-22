@@ -18,6 +18,7 @@ internal val appCommonFeatureNewsletterModule = module {
             accountManager = get(),
             messageStoreManager = get(),
             messageRepository = get(),
+            clock = get(),
         )
     }
 
