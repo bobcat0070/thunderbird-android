@@ -758,6 +758,8 @@
     <string name="message_view_plus_address_show_all">All plus addresses</string>
     <string name="message_view_reply_to_elsewhere">Replies go to <xliff:g id="reply_to" example="billing@freemail.example">%1$s</xliff:g>, not <xliff:g id="sender_domain" example="supplier.example">%2$s</xliff:g></string>
     <string name="message_view_first_time_sender">First mail from this address</string>
+    <string name="message_view_qr_code_link">QR code in this message opens <xliff:g id="site" example="example.com">%1$s</xliff:g></string>
+    <string name="message_view_claims_from_you">Claims to be from you, but your mail server found it was not sent by <xliff:g id="domain" example="example.com">%1$s</xliff:g></string>
     <plurals name="message_view_still_mailing">
         <item quantity="one">You unsubscribed on <xliff:g id="date" example="Nov 3">%1$s</xliff:g>, <xliff:g id="days" example="1">%2$d</xliff:g> day ago</item>
         <item quantity="other">You unsubscribed on <xliff:g id="date" example="Nov 3">%1$s</xliff:g>, <xliff:g id="days" example="18">%2$d</xliff:g> days ago</item>

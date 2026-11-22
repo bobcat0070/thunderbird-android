@@ -33,6 +33,7 @@ dependencies {
     implementation(projects.feature.spamdigest.api)
     implementation(projects.feature.impersonation.api)
     implementation(projects.feature.newsletter.api)
+    implementation(libs.zxing)
     implementation(projects.feature.plusaddress.api)
     implementation(projects.feature.blocklist.api)
     // TODO: Remove AccountOauth dependency

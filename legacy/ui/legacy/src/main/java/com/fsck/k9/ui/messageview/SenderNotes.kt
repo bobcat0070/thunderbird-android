@@ -4,6 +4,8 @@ import android.content.Context
 import android.text.format.DateUtils
 import com.fsck.k9.mail.Message
 import com.fsck.k9.mailstore.LocalMessage
+import com.fsck.k9.mailstore.hasDmarcFail
+import com.fsck.k9.mailstore.senderDomainOf
 import com.fsck.k9.ui.R
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import net.thunderbird.feature.impersonation.ReplyToMismatch
@@ -40,6 +42,23 @@ internal object SenderNotes {
 
     @JvmStatic
     fun replyToAddresses(message: Message): List<String> = message.replyTo.mapNotNull { it.address }
+
+    /**
+     * Whether a message that shows one of the reader's own addresses as its sender failed the sender check of the
+     * account's own server - mail forged to look like it came from the reader, as "your account was hacked" scams are.
+     * Without a verdict from that server nothing is said: it is the only one whose word is taken.
+     *
+     * @param isOwnAddress whether the sender address is one of the reader's identities, in any account.
+     */
+    @JvmStatic
+    fun claimsToBeFromReader(
+        isOwnAddress: Boolean,
+        senderAddress: String?,
+        authenticationResults: List<String>,
+        trustedServerId: String?,
+    ): Boolean {
+        return isOwnAddress && hasDmarcFail(authenticationResults, senderDomainOf(senderAddress), trustedServerId)
+    }
 
     @JvmStatic
     fun replyToText(context: Context, mismatch: ReplyToMismatch): String {

@@ -43,6 +43,55 @@ class SenderNotesTest {
             .containsExactly("billing@freemail.example", "other@elsewhere.example")
     }
 
+    @Test
+    fun `mail from the reader's own address that failed the server's check should be pointed out`() {
+        val result = SenderNotes.claimsToBeFromReader(
+            isOwnAddress = true,
+            senderAddress = "sam@reader.example",
+            authenticationResults = listOf("mx.reader.example; spf=fail; dmarc=fail header.from=reader.example"),
+            trustedServerId = "mx.reader.example",
+        )
+
+        assertThat(result).isTrue()
+    }
+
+    @Test
+    fun `mail from the reader's own address that passed should not be pointed out`() {
+        val result = SenderNotes.claimsToBeFromReader(
+            isOwnAddress = true,
+            senderAddress = "sam@reader.example",
+            authenticationResults = listOf("mx.reader.example; dmarc=pass header.from=reader.example"),
+            trustedServerId = "mx.reader.example",
+        )
+
+        assertThat(result).isFalse()
+    }
+
+    @Test
+    fun `a failure reported by another server should not be believed`() {
+        // Anyone can add an Authentication-Results header on the way; only the account's own server is believed.
+        val result = SenderNotes.claimsToBeFromReader(
+            isOwnAddress = true,
+            senderAddress = "sam@reader.example",
+            authenticationResults = listOf("relay.other.example; dmarc=fail header.from=reader.example"),
+            trustedServerId = "mx.reader.example",
+        )
+
+        assertThat(result).isFalse()
+    }
+
+    @Test
+    fun `a failed check for someone else's address is not this warning`() {
+        val result = SenderNotes.claimsToBeFromReader(
+            isOwnAddress = false,
+            senderAddress = "news@shop.example",
+            authenticationResults = listOf("mx.reader.example; dmarc=fail header.from=shop.example"),
+            trustedServerId = "mx.reader.example",
+        )
+
+        assertThat(result).isFalse()
+    }
+
     private fun message(vararg headers: Pair<String, String>) = MimeMessage().apply {
         for ((name, value) in headers) addHeader(name, value)
     }

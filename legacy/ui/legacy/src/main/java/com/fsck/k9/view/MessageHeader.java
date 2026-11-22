@@ -64,6 +64,7 @@ import com.fsck.k9.ui.messageview.RecipientNamesView;
 import com.google.android.material.chip.Chip;
 import com.google.android.material.textview.MaterialTextView;
 import net.thunderbird.core.android.account.LegacyAccount;
+import net.thunderbird.core.android.account.LegacyAccountManager;
 import net.thunderbird.core.common.mail.Flag;
 import net.thunderbird.core.preference.GeneralSettingsManager;
 import net.thunderbird.core.preference.display.visualSettings.message.list.MessageListDateTimeFormat;
@@ -88,6 +89,7 @@ import net.thunderbird.feature.plusaddress.PlusAddressDecisions;
 import net.thunderbird.feature.plusaddress.PlusAddressLeak;
 import net.thunderbird.feature.plusaddress.PlusAddressLeakChecker;
 import com.fsck.k9.ui.messageview.PlusAddressLeakNote;
+import com.fsck.k9.ui.messageview.MessageQrCodes;
 import com.fsck.k9.ui.messageview.SenderNotes;
 import net.thunderbird.feature.impersonation.FirstTimeSenderChecker;
 import net.thunderbird.feature.impersonation.ReplyToChecker;
@@ -134,6 +136,8 @@ public class MessageHeader extends LinearLayout implements OnClickListener, OnLo
     private MaterialTextView impersonationWarningView;
     private MaterialTextView blocklistNoteView;
     private MaterialTextView plusAddressLeakView;
+    private MaterialTextView claimsFromYouView;
+    private MaterialTextView qrCodeLinkView;
     private MaterialTextView replyToWarningView;
     private MaterialTextView stillMailingView;
     private MaterialTextView firstTimeSenderView;
@@ -187,6 +191,8 @@ public class MessageHeader extends LinearLayout implements OnClickListener, OnLo
         impersonationWarningView = findViewById(R.id.impersonation_warning);
         blocklistNoteView = findViewById(R.id.blocklist_note);
         plusAddressLeakView = findViewById(R.id.plus_address_leak);
+        claimsFromYouView = findViewById(R.id.claims_from_you);
+        qrCodeLinkView = findViewById(R.id.qr_code_link);
         replyToWarningView = findViewById(R.id.reply_to_warning);
         stillMailingView = findViewById(R.id.still_mailing);
         firstTimeSenderView = findViewById(R.id.first_time_sender);
@@ -427,6 +433,33 @@ public class MessageHeader extends LinearLayout implements OnClickListener, OnLo
         });
     }
 
+    /**
+     * Warns when the message shows one of the reader's own addresses, in any account, as its sender, and the account's
+     * server found it was not sent from there.
+     */
+    private void showClaimsFromYou(Message message, Address fromAddress) {
+        claimsFromYouView.setVisibility(View.GONE);
+        if (fromAddress == null || fromAddress.getAddress() == null) {
+            return;
+        }
+
+        boolean isOwnAddress = false;
+        for (LegacyAccount ownAccount : DI.get(LegacyAccountManager.class).findAll()) {
+            if (ownAccount.isAnIdentity(fromAddress)) {
+                isOwnAddress = true;
+                break;
+            }
+        }
+
+        String senderAddress = fromAddress.getAddress();
+        if (SenderNotes.claimsToBeFromReader(isOwnAddress, senderAddress, authenticationResults(message),
+                trustedServerId())) {
+            claimsFromYouView.setText(getContext().getString(R.string.message_view_claims_from_you,
+                    SenderAuthenticationKt.senderDomainOf(senderAddress)));
+            claimsFromYouView.setVisibility(View.VISIBLE);
+        }
+    }
+
     private void showStillMailing(StillMailing stillMailing, boolean canMarkSpam) {
         stillMailingView.setText(SenderNotes.stillMailingText(getContext(), stillMailing, System.currentTimeMillis()));
         stillMailingView.setOnClickListener(view -> SenderNotes.showStillMailingDialog(
@@ -585,8 +618,10 @@ public class MessageHeader extends LinearLayout implements OnClickListener, OnLo
         signInLink = null;
         signInLinkView.setVisibility(View.GONE);
         trackingNumberView.setVisibility(View.GONE);
+        qrCodeLinkView.setVisibility(View.GONE);
 
         markVerificationExecutor.execute(() -> {
+            String qrLink = MessageQrCodes.findQrLink(message);
             String link = SignInLinksKt.findSignInLink(message, message.getSubject());
             TrackingNumber trackingNumber = TrackingNumbersKt.findTrackingNumber(message, message.getSubject());
             String linkHost = link != null ? DeceptiveLinksKt.hostOf(link) : null;
@@ -600,6 +635,7 @@ public class MessageHeader extends LinearLayout implements OnClickListener, OnLo
                 signInLink = offeredLink;
                 updateSignInLinkView();
                 showTrackingNumber(trackingNumber);
+                showQrCodeLink(qrLink);
             });
         });
     }
@@ -620,6 +656,23 @@ public class MessageHeader extends LinearLayout implements OnClickListener, OnLo
         signInLinkView.setText(R.string.message_view_open_sign_in_link);
         signInLinkView.setOnClickListener(view -> openThroughLinkCheck(link, senderAddress));
         signInLinkView.setVisibility(View.VISIBLE);
+    }
+
+    /**
+     * Offers the link a QR code in the message's pictures holds, through the link check: a link in a picture is
+     * otherwise opened by scanning it with a phone, past every check the app makes on links.
+     */
+    private void showQrCodeLink(String qrLink) {
+        String host = qrLink != null ? DeceptiveLinksKt.hostOf(qrLink) : null;
+        if (host == null) {
+            qrCodeLinkView.setVisibility(View.GONE);
+            return;
+        }
+
+        String senderAddress = currentSenderAddress;
+        qrCodeLinkView.setText(getContext().getString(R.string.message_view_qr_code_link, host));
+        qrCodeLinkView.setOnClickListener(view -> openThroughLinkCheck(qrLink, senderAddress));
+        qrCodeLinkView.setVisibility(View.VISIBLE);
     }
 
     private void showTrackingNumber(TrackingNumber trackingNumber) {
@@ -955,6 +1008,7 @@ public class MessageHeader extends LinearLayout implements OnClickListener, OnLo
         boolean isThreatListed = showBlocklistNote(message, fromAddress);
         isSenderThreatListed = isThreatListed;
         showPlusAddressLeak(message, account, fromAddress);
+        showClaimsFromYou(message, fromAddress);
         showSenderNotes(message, account, fromAddress);
         showImpersonationWarning(fromAddress, isThreatListed ? null : findVerificationCode(message));
 
