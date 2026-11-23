@@ -18,7 +18,7 @@ class ParcelSenderTest {
             mail(sender = "Example Shop", address = "orders@shop.example", text = "Your order has shipped"),
         )
 
-        val result = parcelSender(mails)
+        val result = parcelSender(mails, ups.number)
 
         assertThat(result).isEqualTo("Example Shop")
     }
@@ -39,7 +39,7 @@ class ParcelSenderTest {
             ),
         )
 
-        val result = listOf(parcelSender(mails), parcelSender(mails.asReversed()))
+        val result = listOf(parcelSender(mails, ups.number), parcelSender(mails.asReversed(), ups.number))
 
         assertThat(result).containsExactly("ACME GADGETS LIMITED", "EXAMPLE AUTO PARTS LLC")
     }
@@ -56,7 +56,7 @@ class ParcelSenderTest {
             ),
         )
 
-        val result = parcelSender(mails)
+        val result = parcelSender(mails, ups.number)
 
         assertThat(result).isEqualTo("EXAMPLE PHARMACY")
     }
@@ -65,7 +65,7 @@ class ParcelSenderTest {
     fun `when the carrier names no shipper, the carrier should be who the parcel is from`() {
         val mails = listOf(mail(sender = "UPS", address = "pkginfo@ups.com", text = "Your package is on its way"))
 
-        val result = parcelSender(mails)
+        val result = parcelSender(mails, ups.number)
 
         assertThat(result).isEqualTo("UPS")
     }

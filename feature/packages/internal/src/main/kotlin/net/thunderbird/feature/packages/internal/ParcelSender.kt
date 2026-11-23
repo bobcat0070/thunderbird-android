@@ -29,9 +29,12 @@ private val SHIPPER_PATTERNS = listOf(
  * Who a parcel is from, as the mail about it says, oldest mail first: the shop that sent a mail about it, or when only
  * the carrier wrote, the shipper the carrier's mail names, or else whoever sent the first mail.
  */
-internal fun parcelSender(mailsOldestFirst: List<ShippingMail>): String? {
+internal fun parcelSender(mailsOldestFirst: List<ShippingMail>, number: String): String? {
     return mailsOldestFirst.firstOrNull { !isFromCarrier(it.senderAddress) }?.senderName
-        ?: mailsOldestFirst.firstNotNullOfOrNull { shipperNamedIn(it.text) }
+        ?: mailsOldestFirst.firstNotNullOfOrNull { mail ->
+            // A digest names a shipper for each of its packages.
+            if (isInformedDeliveryDigest(mail)) digestShipper(mail.text, number) else shipperNamedIn(mail.text)
+        }
         ?: mailsOldestFirst.firstOrNull()?.senderName
 }
 
@@ -46,6 +49,13 @@ private fun isFromCarrier(senderAddress: String?): Boolean {
 internal fun shipperNamedIn(text: String): String? {
     return SHIPPER_PATTERNS.asSequence()
         .mapNotNull { pattern -> pattern.find(text)?.groupValues?.get(1) }
-        .map { name -> name.replace(Regex("""\p{Cf}"""), "").replace(Regex("""\s+"""), " ").trim(' ', '.', ',', ':') }
-        .firstOrNull { name -> name.isNotEmpty() && name.length <= MAX_SHIPPER_LENGTH && '@' !in name }
+        .firstNotNullOfOrNull(::plainShipperName)
+}
+
+/**
+ * [name] as one plain line, or `null` when it cannot be a shipper's name.
+ */
+internal fun plainShipperName(name: String): String? {
+    val plain = name.replace(Regex("""\p{Cf}"""), "").replace(Regex("""\s+"""), " ").trim(' ', '.', ',', ':')
+    return plain.takeIf { it.isNotEmpty() && it.length <= MAX_SHIPPER_LENGTH && '@' !in it }
 }

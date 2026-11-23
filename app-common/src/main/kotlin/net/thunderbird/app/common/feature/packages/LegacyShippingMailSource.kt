@@ -40,6 +40,8 @@ import net.thunderbird.feature.packages.ShippingMailSource
 private val SHIPPING_SUBJECT_WORDS = listOf(
     "ship", "track", "deliver", "package", "parcel", "order", "dispatch", "on its way", "on the way", "in transit",
     "arriving", "usps", "fedex", "dhl", "ups ",
+    // USPS Informed Delivery: "Your Daily Digest for Mon, 11/23 is ready to view".
+    "daily digest",
 )
 
 /**
@@ -55,6 +57,18 @@ private val SHIPPING_CONDITION =
  * How much of a mail's text is kept for reading its status: an update says where the parcel is near the top.
  */
 private const val MAX_TEXT_LENGTH = 4000
+
+/**
+ * Where a link in HTML mail goes, which the text gives after the link's words: " <https://...>". Tracking links run
+ * to hundreds of characters, and a digest with a dozen of them would push its packages past [MAX_TEXT_LENGTH].
+ */
+private val LINK_TARGET = Regex(""" ?<https?://[^>\s]*>""")
+
+/**
+ * What is kept of a shipping mail's [fullText] for reading where its parcels are: its words without link targets,
+ * up to [MAX_TEXT_LENGTH].
+ */
+internal fun keptShippingText(fullText: String): String = fullText.replace(LINK_TARGET, "").take(MAX_TEXT_LENGTH)
 
 /**
  * Reads shipping mail from the stores of every account for the Packages screen.
@@ -104,7 +118,7 @@ internal class LegacyShippingMailSource(
         }
         if (parcels.isEmpty()) return null
 
-        val text = fullText.take(MAX_TEXT_LENGTH)
+        val text = keptShippingText(fullText)
         return ShippingMail(
             key = key,
             date = header.date,

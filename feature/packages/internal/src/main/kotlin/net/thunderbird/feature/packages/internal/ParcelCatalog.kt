@@ -78,13 +78,13 @@ fun catalogParcels(
             val parcelNumber = entries.first().first
             val mailsAbout = entries.map { it.second }.distinctBy { it.key }.sortedByDescending { it.date }
             val first = mailsAbout.last()
-            val status = mailsAbout.firstNotNullOfOrNull { mailStatus(it.subject, it.text) } ?: ParcelStatus.ON_ITS_WAY
+            val status = mailsAbout.firstNotNullOfOrNull { parcelStatusIn(it, number) } ?: ParcelStatus.ON_ITS_WAY
 
             Parcel(
                 number = number,
                 carrier = parcelNumber.carrier,
                 trackingUrl = parcelNumber.trackingUrl,
-                shop = parcelSender(mailsAbout.asReversed()),
+                shop = parcelSender(mailsAbout.asReversed(), number),
                 title = first.subject,
                 firstSeen = first.date,
                 lastSeen = mailsAbout.first().date,
@@ -96,6 +96,12 @@ fun catalogParcels(
         .filter { parcel -> isStillOfInterest(parcel, now) }
         .sortedByDescending { it.lastSeen }
 }
+
+/**
+ * What [mail] says about the parcel [number]: a digest of several parcels says something different of each.
+ */
+private fun parcelStatusIn(mail: ShippingMail, number: String): ParcelStatus? =
+    if (isInformedDeliveryDigest(mail)) digestStatus(mail.text, number) else mailStatus(mail.subject, mail.text)
 
 private fun isStillOfInterest(parcel: Parcel, now: Long): Boolean {
     val daysQuiet = (now - parcel.lastSeen) / DAY_MILLIS
