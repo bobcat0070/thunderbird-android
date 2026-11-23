@@ -39,13 +39,21 @@ private val SETTLED_FOLDERS = listOf(
     UnifiedFolderKind.DRAFTS,
 )
 
-private class Row(val sender: String?, val subject: String?, val preview: String?)
+private class Row(val sender: String?, val senderAddress: String?, val subject: String?, val preview: String?)
+
+/**
+ * Whether [senderAddress] is one of [ownAddresses] (lowercase): mail the reader sent themselves, from this account or
+ * another of theirs, which no one is waiting on.
+ */
+internal fun isFromReader(senderAddress: String?, ownAddresses: Set<String>): Boolean =
+    senderAddress != null && senderAddress.lowercase() in ownAddresses
 
 /**
  * Reads the summary of the day from every account's store and from Packages.
  *
- * People waiting are unread personal mail in an inbox from the last two weeks; codes are sign-in and verification
- * mail, found as the notifications that offer a code to copy find them, since the evening before.
+ * People waiting are unread personal mail in an inbox from the last two weeks, not sent by the reader; codes are
+ * sign-in and verification mail, found as the notifications that offer a code to copy find them, since the evening
+ * before.
  */
 internal class LegacyTodaySummarySource(
     private val accountManager: LegacyAccountManager,
@@ -64,8 +72,13 @@ internal class LegacyTodaySummarySource(
 
         return withContext(Dispatchers.IO) {
             val waitingSince = (clock.now() - WAITING_WINDOW).toEpochMilliseconds()
-            val waiting = accountManager.findAll().flatMap { account -> waitingRows(account, waitingSince) }
-            val codes = accountManager.findAll().flatMap { account -> recentRows(account, overnightSince) }
+            val accounts = accountManager.findAll()
+            val ownAddresses = accounts.flatMap { account -> account.identities }
+                .mapNotNull { identity -> identity.email?.lowercase() }
+                .toSet()
+            val waiting = accounts.flatMap { account -> waitingRows(account, waitingSince) }
+                .filterNot { isFromReader(it.senderAddress, ownAddresses) }
+            val codes = accounts.flatMap { account -> recentRows(account, overnightSince) }
                 .filter { looksLikeSignInMail(it.subject) || findVerificationCode(it.subject, it.preview) != null }
 
             TodaySummary(
@@ -112,6 +125,7 @@ internal class LegacyTodaySummarySource(
                 val from = message.fromAddresses.firstOrNull()
                 Row(
                     sender = from?.personal?.takeIf { it.isNotBlank() } ?: from?.address,
+                    senderAddress = from?.address,
                     subject = message.subject,
                     preview = message.preview.takeIf { it.isPreviewTextAvailable }?.previewText,
                 )
