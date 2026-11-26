@@ -13,7 +13,8 @@
 #
 # Steps, and the workflow each mirrors:
 #   spotless      quality-checks.yml, quality-markdown.yml (spotlessCheck covers the Markdown formatter too)
-#   detekt        quality-checks.yml (detekt; its multiplatform runs there may fail without failing the build)
+#   detekt        quality-checks.yml (detekt, which covers the multiplatform source sets too)
+#   detekttypes   quality-checks.yml (detektAll, the type-resolved rules in config/detekt/detekt-type-resolution.yml)
 #   dependencies  quality-checks.yml (dependencyGuard)
 #   konsist       quality-checks.yml (:quality:konsist:test, which testsOnCi leaves out)
 #   assemble      build-android.yml (app-common, both apps, all variants, unminified)
@@ -31,7 +32,7 @@ LOG_DIR="$ROOT/build/ci-local"
 STAMP="$(git rev-parse --git-common-dir)/ci-local-passed"
 mkdir -p "$LOG_DIR"
 
-ALL_STEPS=(spotless detekt dependencies konsist assemble badging catalog tests lint)
+ALL_STEPS=(spotless detekt detekttypes dependencies konsist assemble badging catalog tests lint)
 
 # The components build has no daemon JVM setting of its own, so Gradle starts it on JAVA_HOME, and its build plugin
 # needs Java 21, which CI sets up. Prints JAVA_HOME when it is Java 21 or newer, else the Java 21 that the main build's
@@ -53,6 +54,7 @@ run_step() {
     case "$1" in
         spotless) ./gradlew spotlessCheck ;;
         detekt) ./gradlew detekt ;;
+        detekttypes) ./gradlew detektAll --continue ;;
         dependencies) ./gradlew dependencyGuard ;;
         konsist) ./gradlew :quality:konsist:test ;;
         assemble) ./gradlew :app-common:assemble :app-k9mail:assemble :app-thunderbird:assemble -Pminify=false ;;
