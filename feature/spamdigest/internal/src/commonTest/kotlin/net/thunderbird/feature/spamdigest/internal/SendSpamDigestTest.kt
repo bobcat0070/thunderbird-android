@@ -5,6 +5,7 @@ import assertk.assertFailure
 import assertk.assertThat
 import assertk.assertions.contains
 import assertk.assertions.doesNotContain
+import assertk.assertions.hasMessage
 import assertk.assertions.hasSize
 import assertk.assertions.isEmpty
 import assertk.assertions.isEqualTo
@@ -205,7 +206,7 @@ class SendSpamDigestTest {
     fun `should not record the day as sent when sending fails`() = runTest {
         mailer.failure = IllegalStateException("offline")
 
-        assertFailure { testSubject() }
+        assertFailure { testSubject() }.hasMessage("offline")
 
         assertThat(digestLog.lastSentDay()).isNull()
         assertThat(mailer.sent).hasSize(0)
