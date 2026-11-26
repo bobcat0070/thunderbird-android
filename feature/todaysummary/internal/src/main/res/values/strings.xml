@@ -1,19 +1,33 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
-    <!-- Title of the morning notification that sums up the day -->
-    <string name="todaysummary_title">Today</string>
     <string name="todaysummary_channel">Summary of the day</string>
     <string name="todaysummary_channel_description">One notification each morning with parcels arriving, people waiting on you and sign-in codes that came overnight</string>
     <!-- Example: "Arriving today: Harbor Books, Northwind" -->
     <string name="todaysummary_parcels">Arriving today: <xliff:g id="names" example="Harbor Books, Northwind">%s</xliff:g></string>
-    <plurals name="todaysummary_waiting">
-        <item quantity="one"><xliff:g id="count" example="1">%1$d</xliff:g> message from people waiting: <xliff:g id="names" example="Dana">%2$s</xliff:g></item>
-        <item quantity="other"><xliff:g id="count" example="4">%1$d</xliff:g> messages from people waiting: <xliff:g id="names" example="Dana, Sam">%2$s</xliff:g></item>
-    </plurals>
     <plurals name="todaysummary_codes">
         <item quantity="one"><xliff:g id="count" example="1">%1$d</xliff:g> sign-in code overnight: <xliff:g id="names" example="Lumen">%2$s</xliff:g></item>
         <item quantity="other"><xliff:g id="count" example="2">%1$d</xliff:g> sign-in codes overnight: <xliff:g id="names" example="Lumen, Trailhead">%2$s</xliff:g></item>
     </plurals>
+    <!-- Title of the morning notification, one part for each kind of thing in it, joined with " · ". Example: "2 messages waiting on you · 1 parcel today" -->
+    <plurals name="todaysummary_headline_waiting">
+        <item quantity="one"><xliff:g id="count" example="1">%d</xliff:g> message waiting on you</item>
+        <item quantity="other"><xliff:g id="count" example="2">%d</xliff:g> messages waiting on you</item>
+    </plurals>
+    <plurals name="todaysummary_headline_parcels">
+        <item quantity="one"><xliff:g id="count" example="1">%d</xliff:g> parcel today</item>
+        <item quantity="other"><xliff:g id="count" example="2">%d</xliff:g> parcels today</item>
+    </plurals>
+    <plurals name="todaysummary_headline_codes">
+        <item quantity="one"><xliff:g id="count" example="1">%d</xliff:g> sign-in code overnight</item>
+        <item quantity="other"><xliff:g id="count" example="2">%d</xliff:g> sign-in codes overnight</item>
+    </plurals>
+    <!-- Under the list of messages waiting when not all of them fit -->
+    <plurals name="todaysummary_more_waiting">
+        <item quantity="one">and <xliff:g id="count" example="1">%d</xliff:g> more message waiting</item>
+        <item quantity="other">and <xliff:g id="count" example="3">%d</xliff:g> more messages waiting</item>
+    </plurals>
+    <!-- In place of the subject of a waiting message that has none -->
+    <string name="todaysummary_no_subject">(no subject)</string>
     <!-- After a short list of names. Example: "Dana, Sam, Alex and 2 more" -->
     <string name="todaysummary_and_more"><xliff:g id="names" example="Dana, Sam, Alex">%1$s</xliff:g> and <xliff:g id="count" example="2">%2$d</xliff:g> more</string>
     <!-- Button on the notification that opens Packages -->

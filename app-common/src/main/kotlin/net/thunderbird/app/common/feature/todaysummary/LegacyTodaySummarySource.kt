@@ -5,6 +5,7 @@ import android.content.Intent
 import app.k9mail.feature.launcher.FeatureLauncherActivity
 import app.k9mail.feature.launcher.FeatureLauncherTarget
 import app.k9mail.legacy.mailstore.MessageStoreManager
+import app.k9mail.legacy.message.controller.MessageReference
 import com.fsck.k9.activity.MessageHomeActivity
 import com.fsck.k9.message.extractors.findVerificationCode
 import com.fsck.k9.message.extractors.looksLikeSignInMail
@@ -16,12 +17,15 @@ import kotlinx.coroutines.withContext
 import net.thunderbird.core.android.account.LegacyAccount
 import net.thunderbird.core.android.account.LegacyAccountManager
 import net.thunderbird.core.preference.GeneralSettingsManager
+import net.thunderbird.feature.account.AccountIdFactory
+import net.thunderbird.feature.account.UnifiedAccountId
 import net.thunderbird.feature.mail.message.classification.api.MessageClass
 import net.thunderbird.feature.packages.ParcelsArrivingToday
 import net.thunderbird.feature.search.legacy.UnifiedFolderKind
 import net.thunderbird.feature.todaysummary.TodaySummary
 import net.thunderbird.feature.todaysummary.TodaySummaryDestinations
 import net.thunderbird.feature.todaysummary.TodaySummarySource
+import net.thunderbird.feature.todaysummary.WaitingMessage
 
 /**
  * How far back unread mail from people counts as waiting: older than this, it has been put off on purpose.
@@ -39,7 +43,15 @@ private val SETTLED_FOLDERS = listOf(
     UnifiedFolderKind.DRAFTS,
 )
 
-private class Row(val sender: String?, val senderAddress: String?, val subject: String?, val preview: String?)
+private class Row(
+    val accountId: String,
+    val folderId: Long,
+    val messageServerId: String,
+    val sender: String?,
+    val senderAddress: String?,
+    val subject: String?,
+    val preview: String?,
+)
 
 /**
  * Whether [senderAddress] is one of [ownAddresses] (lowercase): mail the reader sent themselves, from this account or
@@ -83,8 +95,15 @@ internal class LegacyTodaySummarySource(
 
             TodaySummary(
                 parcels = parcels,
-                waitingCount = waiting.size,
-                waitingSenders = waiting.mapNotNull { it.sender }.distinct(),
+                waiting = waiting.map { row ->
+                    WaitingMessage(
+                        sender = row.sender.orEmpty(),
+                        subject = row.subject?.takeIf { it.isNotBlank() },
+                        accountId = row.accountId,
+                        folderId = row.folderId,
+                        messageServerId = row.messageServerId,
+                    )
+                },
                 codeCount = codes.size,
                 codeSenders = codes.mapNotNull { it.sender }.distinct(),
             )
@@ -124,6 +143,9 @@ internal class LegacyTodaySummarySource(
             messageMapper = { message ->
                 val from = message.fromAddresses.firstOrNull()
                 Row(
+                    accountId = account.id.toString(),
+                    folderId = message.folderId,
+                    messageServerId = message.messageServerId,
                     sender = from?.personal?.takeIf { it.isNotBlank() } ?: from?.address,
                     senderAddress = from?.address,
                     subject = message.subject,
@@ -135,8 +157,16 @@ internal class LegacyTodaySummarySource(
 }
 
 internal class LegacyTodaySummaryDestinations(private val context: Context) : TodaySummaryDestinations {
-    override fun inbox(): Intent = Intent(context, MessageHomeActivity::class.java)
-        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+    override fun inbox(): Intent = MessageHomeActivity.createUnifiedInboxIntent(context, UnifiedAccountId)
+
+    override fun message(message: WaitingMessage): Intent = MessageHomeActivity.actionDisplayMessageIntent(
+        context = context,
+        messageReference = MessageReference(
+            accountId = AccountIdFactory.of(message.accountId),
+            folderId = message.folderId,
+            uid = message.messageServerId,
+        ),
+    ).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
 
     override fun packages(): Intent = FeatureLauncherActivity.getIntent(context, FeatureLauncherTarget.Packages)
         .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)

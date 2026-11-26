@@ -5,8 +5,13 @@ import android.annotation.SuppressLint
 import android.app.Notification
 import android.app.PendingIntent
 import android.content.Context
+import android.content.Intent
 import android.content.pm.PackageManager
+import android.graphics.Typeface
 import android.os.Build
+import android.text.SpannableStringBuilder
+import android.text.Spanned
+import android.text.style.StyleSpan
 import androidx.core.app.NotificationChannelCompat
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
@@ -22,11 +27,12 @@ import net.thunderbird.feature.todaysummary.TodaySummary
 import net.thunderbird.feature.todaysummary.TodaySummaryDestinations
 import net.thunderbird.feature.todaysummary.TodaySummaryJob
 import net.thunderbird.feature.todaysummary.TodaySummarySource
+import net.thunderbird.feature.todaysummary.WaitingMessage
 
 private const val LOG_TAG = "TodaySummary"
 private const val CHANNEL_ID = "today_summary"
 private const val NOTIFICATION_ID = 0x7D51
-private const val REQUEST_INBOX = 1
+private const val REQUEST_OPEN = 1
 private const val REQUEST_PACKAGES = 2
 
 /**
@@ -39,6 +45,11 @@ private val OVERNIGHT_STARTS = LocalTime.of(OVERNIGHT_STARTS_HOUR, 0)
  * The most names a line of the summary lists before saying how many more there are.
  */
 internal const val MAX_NAMES = 3
+
+/**
+ * The most lines the expanded notification shows; Android does not show more.
+ */
+internal const val MAX_LINES = 5
 
 internal class DefaultTodaySummaryJob(
     private val context: Context,
@@ -86,20 +97,26 @@ internal class DefaultTodaySummaryJob(
                 .build(),
         )
 
-        val lines = lines(summary)
+        val (shownWaiting, moreWaiting) = waitingToShow(summary)
+        val lines = shownWaiting.map { messageLine(it) } + otherLines(summary)
         val style = NotificationCompat.InboxStyle()
         lines.forEach { style.addLine(it) }
+        if (moreWaiting > 0) {
+            style.setSummaryText(
+                context.resources.getQuantityString(R.plurals.todaysummary_more_waiting, moreWaiting, moreWaiting),
+            )
+        }
 
         val builder = NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(R.drawable.todaysummary_ic_notification)
-            .setContentTitle(context.getString(R.string.todaysummary_title))
-            .setContentText(lines.joinToString(" · "))
+            .setContentTitle(headline(summary))
+            .setContentText(lines.first())
             .setStyle(style)
-            .setContentIntent(pendingIntent(REQUEST_INBOX, destinations.inbox()))
+            .setContentIntent(pendingIntent(REQUEST_OPEN, openIntent(summary)))
             .setAutoCancel(true)
             .setCategory(NotificationCompat.CATEGORY_REMINDER)
             .setVisibility(NotificationCompat.VISIBILITY_PRIVATE)
-        if (summary.parcels.isNotEmpty()) {
+        if (summary.parcels.isNotEmpty() && tapTarget(summary) != TapTarget.PACKAGES) {
             builder.addAction(
                 0,
                 context.getString(R.string.todaysummary_open_packages),
@@ -123,19 +140,40 @@ internal class DefaultTodaySummaryJob(
         }
     }
 
-    private fun lines(summary: TodaySummary): List<String> = buildList {
+    /**
+     * The title: how much of each kind there is, e.g. "2 messages waiting on you · 1 parcel today".
+     */
+    private fun headline(summary: TodaySummary): String {
+        fun quantity(id: Int, count: Int): String = context.resources.getQuantityString(id, count, count)
+
+        return buildList {
+            if (summary.waiting.isNotEmpty()) {
+                add(quantity(R.plurals.todaysummary_headline_waiting, summary.waiting.size))
+            }
+            if (summary.parcels.isNotEmpty()) {
+                add(quantity(R.plurals.todaysummary_headline_parcels, summary.parcels.size))
+            }
+            if (summary.codeCount > 0) {
+                add(quantity(R.plurals.todaysummary_headline_codes, summary.codeCount))
+            }
+        }.joinToString(" · ")
+    }
+
+    /**
+     * A waiting message as a mail app lists it in a notification: the sender in bold, then the subject.
+     */
+    private fun messageLine(message: WaitingMessage): CharSequence {
+        val subject = message.subject ?: context.getString(R.string.todaysummary_no_subject)
+        if (message.sender.isEmpty()) return subject
+        return SpannableStringBuilder()
+            .append(message.sender, StyleSpan(Typeface.BOLD), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+            .append("  ")
+            .append(subject)
+    }
+
+    private fun otherLines(summary: TodaySummary): List<CharSequence> = buildList {
         if (summary.parcels.isNotEmpty()) {
             add(context.getString(R.string.todaysummary_parcels, names(summary.parcels, summary.parcels.size)))
-        }
-        if (summary.waitingCount > 0) {
-            add(
-                context.resources.getQuantityString(
-                    R.plurals.todaysummary_waiting,
-                    summary.waitingCount,
-                    summary.waitingCount,
-                    names(summary.waitingSenders, summary.waitingSenders.size),
-                ),
-            )
         }
         if (summary.codeCount > 0) {
             add(
@@ -149,19 +187,47 @@ internal class DefaultTodaySummaryJob(
         }
     }
 
+    private fun openIntent(summary: TodaySummary): Intent = when (tapTarget(summary)) {
+        TapTarget.MESSAGE -> destinations.message(summary.waiting.single())
+        TapTarget.PACKAGES -> destinations.packages()
+        TapTarget.INBOX -> destinations.inbox()
+    }
+
     private fun names(names: List<String>, total: Int): String {
         val (shown, more) = shortList(names, total)
         val listed = shown.joinToString(", ")
         return if (more > 0) context.getString(R.string.todaysummary_and_more, listed, more) else listed
     }
 
-    private fun pendingIntent(requestCode: Int, intent: android.content.Intent): PendingIntent =
+    private fun pendingIntent(requestCode: Int, intent: Intent): PendingIntent =
         PendingIntent.getActivity(
             context,
             requestCode,
             intent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
+}
+
+/**
+ * The waiting messages that get a line of their own, most recent first, and how many are left over. They share the
+ * [MAX_LINES] with the lines for parcels and sign-in codes.
+ */
+internal fun waitingToShow(summary: TodaySummary): Pair<List<WaitingMessage>, Int> {
+    val otherLines = (if (summary.parcels.isNotEmpty()) 1 else 0) + (if (summary.codeCount > 0) 1 else 0)
+    val shown = summary.waiting.take(MAX_LINES - otherLines)
+    return shown to summary.waiting.size - shown.size
+}
+
+internal enum class TapTarget { MESSAGE, PACKAGES, INBOX }
+
+/**
+ * Where tapping the summary leads: the one message waiting, straight to it; parcels alone, to Packages; otherwise the
+ * inbox, where the messages waiting are.
+ */
+internal fun tapTarget(summary: TodaySummary): TapTarget = when {
+    summary.waiting.size == 1 -> TapTarget.MESSAGE
+    summary.waiting.isEmpty() && summary.parcels.isNotEmpty() && summary.codeCount == 0 -> TapTarget.PACKAGES
+    else -> TapTarget.INBOX
 }
 
 /**

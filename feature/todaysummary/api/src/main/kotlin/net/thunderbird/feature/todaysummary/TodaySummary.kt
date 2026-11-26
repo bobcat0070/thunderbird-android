@@ -6,21 +6,33 @@ import android.content.Intent
  * What the morning summary says.
  *
  * @param parcels who each parcel out for delivery today is from.
- * @param waitingCount how many unread messages from people are waiting.
- * @param waitingSenders who they are from, most recent first, each once.
+ * @param waiting the unread messages from people waiting on the reader, most recent first.
  * @param codeCount how many sign-in and verification mails came overnight.
  * @param codeSenders who they are from, each once.
  */
 data class TodaySummary(
     val parcels: List<String>,
-    val waitingCount: Int,
-    val waitingSenders: List<String>,
+    val waiting: List<WaitingMessage>,
     val codeCount: Int,
     val codeSenders: List<String>,
 ) {
     val isEmpty: Boolean
-        get() = parcels.isEmpty() && waitingCount == 0 && codeCount == 0
+        get() = parcels.isEmpty() && waiting.isEmpty() && codeCount == 0
 }
+
+/**
+ * An unread message from a person, and where it is stored so the summary can open it.
+ *
+ * @param sender the sender's name, or their address when the message gives no name.
+ * @param subject the subject, or `null` when the message has none.
+ */
+data class WaitingMessage(
+    val sender: String,
+    val subject: String?,
+    val accountId: String,
+    val folderId: Long,
+    val messageServerId: String,
+)
 
 /**
  * Gathers the summary from the reader's mail.
@@ -53,8 +65,11 @@ interface TodaySummaryJob {
  * Where the summary's notification leads. Bound by the app.
  */
 interface TodaySummaryDestinations {
-    /** The inbox, where the people waiting are. */
+    /** The inbox of every account, where the people waiting are. */
     fun inbox(): Intent
+
+    /** One waiting message, opened on its own. */
+    fun message(message: WaitingMessage): Intent
 
     /** Packages, where the parcels are. */
     fun packages(): Intent
