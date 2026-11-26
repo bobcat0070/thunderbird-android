@@ -45,6 +45,7 @@ class DefaultNotificationPreferenceManager(
         value = initialConfig,
     )
 
+    @Suppress("LongMethod")
     private fun getConfigFromStorage(storage: Storage): NotificationPreference {
         val notificationQuickDeleteBehaviour = storage.getEnumOrDefault(
             key = NotificationSettingKey.NotificationQuickDeleteBehaviour.value,

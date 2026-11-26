@@ -49,6 +49,7 @@ class DefaultInteractionSettingsPreferenceManager(
         configState.update { config }
     }
 
+    @Suppress("LongMethod")
     private fun loadConfig(): InteractionSettings = InteractionSettings(
         useVolumeKeysForNavigation = storage.getBoolean(
             InteractionSettingKey.UseVolumeKeysForNavigation.value,

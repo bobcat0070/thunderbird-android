@@ -42,6 +42,7 @@ internal class HashedDomainList private constructor(private val hashes: LongArra
          *   subdomains; `#` starts a comment.
          * @return the list, or `null` when it holds no domains or more than [MAX_LIST_ENTRIES].
          */
+        @Suppress("ReturnCount")
         fun fromLines(lines: Sequence<String>): HashedDomainList? {
             val hashes = LongArrayBuilder()
             for (line in lines) {

@@ -36,6 +36,7 @@ private val ALERTED_RETENTION = 7.days
  * Keeps the digest settings in their own preferences file, so clearing or importing the main settings does not
  * entangle them.
  */
+@Suppress("TooManyFunctions")
 internal class SharedPreferencesSpamDigestSettingsStore(
     context: Context,
     private val clock: Clock,

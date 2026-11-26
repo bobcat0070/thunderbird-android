@@ -47,6 +47,7 @@ private const val ALARM_REQUEST_CODE = 0
  * alarm or the work it starts guaranteed to run - a digest went missing every few days - so a digest that is overdue
  * is sent the next time the app starts or syncs mail, and each digest covers every day since the last one sent.
  */
+@Suppress("TooManyFunctions")
 internal class AlarmSpamDigestScheduler(
     private val context: Context,
     private val workManager: WorkManager,

@@ -14,6 +14,7 @@ import net.thunderbird.feature.spamdigest.LeakedPlusAddress
 
 private const val HALF_DAY_MILLIS = 12L * 60 * 60 * 1000
 
+@Suppress("TooManyFunctions")
 internal class AndroidSpamDigestStrings(
     context: Context,
 ) : SpamDigestStrings {

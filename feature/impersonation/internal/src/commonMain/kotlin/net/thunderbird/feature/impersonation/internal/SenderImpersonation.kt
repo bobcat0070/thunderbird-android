@@ -81,6 +81,7 @@ internal class KnownSenderIndex(knownSenders: KnownSenders) {
  * law firm, and one unfamiliar domain under the reader's name. Brands whose display name is their website, and
  * services that put a person's name on their own notifications, are deliberately left alone.
  */
+@Suppress("ReturnCount")
 internal fun findImpersonation(senderName: String?, senderAddress: String?, index: KnownSenderIndex): Impersonation? {
     val address = senderAddress?.trim()?.lowercase()?.takeIf { '@' in it } ?: return null
     val asciiDomain = domainOf(address) ?: return null
@@ -115,6 +116,7 @@ private fun domainInName(name: String, senderDomain: String, index: KnownSenderI
         ?.let { namedDomain -> Impersonation.DomainInName(namedDomain, senderDomain) }
 }
 
+@Suppress("ReturnCount")
 private fun lookalikeDomain(asciiDomain: String, senderDomain: String, index: KnownSenderIndex): Impersonation? {
     if (senderDomain in index.knownDomains) return null
 
@@ -135,6 +137,7 @@ private fun mixedScriptDomain(asciiDomain: String): Impersonation? {
  * is not free mail, or on the same organisation's domain as one of that person's known addresses - both are how
  * real people's names reach the inbox from somewhere other than their own mailbox.
  */
+@Suppress("ReturnCount")
 private fun knownName(name: String, address: String, senderDomain: String, index: KnownSenderIndex): Impersonation? {
     val key = nameKey(name) ?: return null
     val knownAddresses = index.addressesByNameKey[key] ?: return null

@@ -31,6 +31,7 @@ class OverridingMessageClassifier(
      * A sender rule beats a domain rule: it is the more specific thing the user said, and the usual reason
      * to have both is to except one address from a domain-wide correction.
      */
+    @Suppress("ReturnCount")
     private fun overrideFor(fromAddress: String): MessageClassification? {
         val address = fromAddress.trim().lowercase()
         if (address.isEmpty()) return null

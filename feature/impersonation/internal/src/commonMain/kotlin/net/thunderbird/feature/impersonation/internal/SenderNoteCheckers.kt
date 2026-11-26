@@ -64,6 +64,7 @@ internal class CorrespondentsReplyToChecker(
 /**
  * @param isCorrespondent whether an address is the reader's own or one they write to or have as a contact.
  */
+@Suppress("ReturnCount")
 internal fun findReplyToMismatch(
     senderAddress: String?,
     replyToAddresses: List<String>,

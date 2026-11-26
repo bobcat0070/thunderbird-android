@@ -78,6 +78,7 @@ class RuleBasedMessageClassifier : MessageClassifier {
      * Transactional mail increasingly carries `List-Unsubscribe` as well, because bulk sender requirements
      * ask for it, so testing the bulk headers first would file receipts and alerts as newsletters.
      */
+    @Suppress("ReturnCount")
     private fun automated(evidence: MessageEvidence): MessageClassification? {
         val autoSubmitted = evidence.firstHeader("auto-submitted")?.trim()?.lowercase()
         if (autoSubmitted != null && autoSubmitted != "no") {
@@ -130,6 +131,7 @@ class RuleBasedMessageClassifier : MessageClassifier {
      * The weakest signal, and the only one that reads the address rather than a header the sender set
      * deliberately. It runs last so anything better decides first.
      */
+    @Suppress("ReturnCount")
     private fun noReplySender(evidence: MessageEvidence): MessageClassification? {
         val localPart = evidence.fromAddress?.substringBefore('@')?.lowercase() ?: return null
         if (!localPart.hasNoReplyPart()) return null

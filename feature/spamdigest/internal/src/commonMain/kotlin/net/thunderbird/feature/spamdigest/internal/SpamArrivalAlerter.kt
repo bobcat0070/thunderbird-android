@@ -37,6 +37,7 @@ internal class SpamArrivalAlerter(
     private val logger: Logger,
 ) : SpamArrivalListener {
 
+    @Suppress("ReturnCount")
     override fun onSpamArrived(accountId: String, folderId: Long, messageServerId: String, message: SpamMessage) {
         if (!message.isFromKnownSender) return
 

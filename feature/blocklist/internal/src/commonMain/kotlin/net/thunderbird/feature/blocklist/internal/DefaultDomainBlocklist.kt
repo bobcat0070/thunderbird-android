@@ -30,6 +30,7 @@ class DefaultDomainBlocklist internal constructor(
 
     internal fun loadedLists(): Map<HagezeiList, HashedDomainList> = loaded
 
+    @Suppress("ReturnCount")
     override fun match(host: String): BlocklistMatch? {
         val lists = loaded
         if (lists.isEmpty()) return null
