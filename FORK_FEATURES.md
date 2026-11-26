@@ -8,7 +8,7 @@ commits and CI fixes are left out.
 Kept up to date as work lands: every change that adds or changes a user-visible feature updates this file in the same
 push. See "Fork features log" in [AGENTS.md](AGENTS.md).
 
-Last updated: 2026-11-23 · upstream merged up to its main branch of 2026-11-19 (`2d88129`, versionName 27.0)
+Last updated: 2026-11-26 · upstream merged up to its main branch of 2026-11-26 (`280ea68`, versionName 27.0)
 
 ## Contents
 
