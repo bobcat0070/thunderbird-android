@@ -22,6 +22,7 @@ enum class InteractionSettingKey(val value: String) {
     TripsEnabled("tripsEnabled"),
     TodaySummaryEnabled("todaySummaryEnabled"),
     TodaySummaryTime("todaySummaryTime"),
+    SecurityAlertsEnabled("securityAlertsEnabled"),
 }
 
 interface InteractionSettingsPreferenceManager : PreferenceManager<InteractionSettings>

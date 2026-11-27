@@ -28,6 +28,7 @@ import net.thunderbird.feature.blocklist.DomainBlocklist
 import net.thunderbird.feature.impersonation.Impersonation
 import net.thunderbird.feature.impersonation.ImpersonationChecker
 import org.junit.Test
+import org.mockito.kotlin.any
 import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.stubbing
@@ -77,6 +78,37 @@ class NotificationContentCreatorTest : RobolectricTest() {
         val content = contentCreator.createFromMessage(message, isFromSelf = false)
 
         assertThat(content.preview.toString()).isEqualTo("⚠ Possible impersonation\n$SUBJECT\n$PREVIEW")
+    }
+
+    @Test
+    fun createFromMessage_withSecurityAlertThatPassedItsSenderCheck_shouldSaySoFirst() {
+        val testSubject = createNotificationContentCreator()
+        val message = securityAlertMessage(isSenderAuthenticated = true)
+
+        val content = testSubject.createFromMessage(message, isFromSelf = false)
+
+        assertThat(content.preview.toString())
+            .isEqualTo("⚠ Security alert: PASSWORD_RESET\nReset your password\n$PREVIEW")
+    }
+
+    @Test
+    fun createFromMessage_withSecurityAlertThatFailedItsSenderCheck_shouldNotCallItOne() {
+        val testSubject = createNotificationContentCreator()
+        val message = securityAlertMessage(isSenderAuthenticated = false)
+
+        val content = testSubject.createFromMessage(message, isFromSelf = false)
+
+        assertThat(content.preview.toString()).isEqualTo("Reset your password\n$PREVIEW")
+    }
+
+    private fun securityAlertMessage(isSenderAuthenticated: Boolean) = mock<LocalMessage> {
+        on { makeMessageReference() } doReturn messageReference
+        on { previewType } doReturn PreviewType.TEXT
+        on { preview } doReturn PREVIEW
+        on { subject } doReturn "Reset your password"
+        on { from } doReturn arrayOf(Address(SENDER_ADDRESS, SENDER_NAME))
+        on { getHeader(any()) } doReturn emptyArray()
+        on { this.isSenderAuthenticated } doReturn isSenderAuthenticated
     }
 
     @Test

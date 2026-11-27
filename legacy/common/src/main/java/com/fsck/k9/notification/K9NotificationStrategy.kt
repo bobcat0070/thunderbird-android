@@ -76,6 +76,11 @@ class K9NotificationStrategy(
             return false
         }
 
+        // A security alert is let past the filters below: it matters whoever sends it, whatever its category.
+        if (isTrustedSecurityAlert(message)) {
+            return true
+        }
+
         if (account.isNotifyContactsMailOnly &&
             !contactRepository.hasAnyContactFor(message.from.asList().mapNotNull { it.address.toEmailAddressOrNull() })
         ) {
@@ -89,6 +94,13 @@ class K9NotificationStrategy(
         }
 
         return true
+    }
+
+    override fun isUrgent(message: LocalMessage): Boolean = isTrustedSecurityAlert(message)
+
+    private fun isTrustedSecurityAlert(message: LocalMessage): Boolean {
+        return generalSettingsManager.getConfig().interaction.isSecurityAlertsEnabled &&
+            trustedSecurityAlert(message, message.isSenderAuthenticated) != null
     }
 
 

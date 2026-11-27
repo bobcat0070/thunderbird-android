@@ -3356,7 +3356,7 @@ class MessagingController internal constructor(
             ) {
                 message = withSignInMailBody(folderServerId, messageServerId, message)
                 // Notify with the localMessage so that we don't have to recalculate the content preview.
-                val silent = notificationState.wasNotified
+                val silent = notificationState.wasNotified && !notificationStrategy.isUrgent(message)
                 notificationController.addNewMailNotification(accountId, message, silent)
                 notificationState.wasNotified = true
             }

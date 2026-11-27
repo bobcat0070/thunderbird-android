@@ -6,6 +6,7 @@ import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Instant
 import net.thunderbird.feature.plusaddress.PlusAddressLeak
 import net.thunderbird.feature.plusaddress.PlusAddressLeakChecker
+import net.thunderbird.feature.plusaddress.PlusAddressLookup
 import net.thunderbird.feature.plusaddress.PlusAddressMailSource
 
 /**
@@ -36,7 +37,7 @@ internal class CachingPlusAddressLeakChecker(
     private val decisionStore: PlusAddressDecisionStore,
     private val clock: Clock,
     private val domains: RegistrableDomains = PublicSuffixRegistrableDomains,
-) : PlusAddressLeakChecker, PlusAddressOverview {
+) : PlusAddressLeakChecker, PlusAddressOverview, PlusAddressLookup {
     /**
      * Swapped whole rather than locked: two threads that find it stale at once each read stored mail, and whichever
      * lands last is kept. That costs one extra reading, never a wrong answer.
@@ -70,6 +71,11 @@ internal class CachingPlusAddressLeakChecker(
                 }
             }
             .firstOrNull { leak -> leak.givenTo.isNotEmpty() && leak.senderDomain !in leak.givenTo }
+    }
+
+    override fun addressesGivenTo(senderAddress: String): List<String> {
+        val domain = domains.senderDomainOf(senderAddress) ?: return emptyList()
+        return records(refresh = false).filter { domain in it.givenTo }.map { it.address }
     }
 
     override fun records(refresh: Boolean): List<PlusAddressRecord> {

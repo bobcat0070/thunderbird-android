@@ -32,6 +32,19 @@ fun interface PlusAddressLeakChecker {
 }
 
 /**
+ * Says which of the reader's plus addresses a sender has, as when a breach notice says the sender lost its data.
+ *
+ * Calls may read stored mail, so they belong off the main thread.
+ */
+fun interface PlusAddressLookup {
+    /**
+     * @return the reader's plus addresses that were given to [senderAddress]'s registrable domain, or that the reader
+     *   said it may use; empty when there are none.
+     */
+    fun addressesGivenTo(senderAddress: String): List<String>
+}
+
+/**
  * A stored message sent to one of the reader's plus addresses, with what working out the address's owner needs.
  *
  * @property recipientAddresses the To and Cc addresses.

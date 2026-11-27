@@ -27,12 +27,18 @@ internal class NotificationContentCreator(
     fun createFromMessage(message: LocalMessage, isFromSelf: Boolean): NotificationContent {
         val sender = getMessageSender(message, isFromSelf)
         val senderWarning = message.from?.firstOrNull()?.let(::senderWarning)
+        // A warning about the sender says more, and a lookalike's mail is no security alert to trust.
+        val securityAlert = if (senderWarning == null) {
+            trustedSecurityAlert(message, message.isSenderAuthenticated)?.let(resourceProvider::securityAlert)
+        } else {
+            null
+        }
 
         return NotificationContent(
             messageReference = message.makeMessageReference(),
             sender = sender,
             subject = getMessageSubject(message),
-            preview = withSenderWarning(senderWarning, getMessagePreview(message)),
+            preview = withSenderWarning(senderWarning ?: securityAlert, getMessagePreview(message)),
             summary = buildMessageSummary(sender.personal, getMessageSubject(message)),
             isSenderAuthenticated = message.isSenderAuthenticated,
             verificationCode = if (senderWarning == null) getVerificationCode(message) else null,

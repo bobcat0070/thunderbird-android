@@ -570,6 +570,13 @@
             app:pref_summaryHasTime="%s"
             />
 
+        <SwitchPreference
+            android:defaultValue="true"
+            android:key="security_alerts_enabled"
+            android:summary="@string/general_settings_security_alerts_summary"
+            android:title="@string/general_settings_security_alerts_title"
+            />
+
         <MultiSelectListPreference
             android:dialogTitle="@string/global_settings_confirm_actions_title"
             android:entries="@array/confirm_action_entries"

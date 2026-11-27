@@ -46,6 +46,12 @@ const val INTERACTION_SETTINGS_DEFAULT_TRIPS_ENABLED = true
 const val INTERACTION_SETTINGS_DEFAULT_TODAY_SUMMARY_ENABLED = false
 const val INTERACTION_SETTINGS_DEFAULT_TODAY_SUMMARY_TIME = "07:30"
 
+/**
+ * Whether security mail that passed its sender check - a new sign-in, a password reset or change, two-factor
+ * turned off - is notified even when notifications are off for its category or its sender is not a contact.
+ */
+const val INTERACTION_SETTINGS_DEFAULT_SECURITY_ALERTS_ENABLED = true
+
 data class InteractionSettings(
     val useVolumeKeysForNavigation: Boolean = INTERACTION_SETTINGS_DEFAULT_USE_VOLUME_KEYS_NAVIGATION,
     val messageViewPostRemoveNavigation: String = INTERACTION_SETTINGS_DEFAULT_MESSAGE_VIEW_POST_REMOVE_NAVIGATION,
@@ -66,6 +72,7 @@ data class InteractionSettings(
     val isTodaySummaryEnabled: Boolean = INTERACTION_SETTINGS_DEFAULT_TODAY_SUMMARY_ENABLED,
     /** When the summary of the day is shown, as "HH:mm" in the phone's time zone. */
     val todaySummaryTime: String = INTERACTION_SETTINGS_DEFAULT_TODAY_SUMMARY_TIME,
+    val isSecurityAlertsEnabled: Boolean = INTERACTION_SETTINGS_DEFAULT_SECURITY_ALERTS_ENABLED,
 )
 
 /**

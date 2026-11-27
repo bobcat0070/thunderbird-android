@@ -5,6 +5,7 @@ import android.graphics.Bitmap
 import app.k9mail.core.ui.legacy.designsystem.atom.icon.Icons
 import com.fsck.k9.activity.misc.ContactPicture
 import com.fsck.k9.mail.Address
+import com.fsck.k9.message.extractors.SecurityAlert
 import com.fsck.k9.ui.R
 
 class K9NotificationResourceProvider(private val context: Context) : NotificationResourceProvider {
@@ -80,6 +81,16 @@ class K9NotificationResourceProvider(private val context: Context) : Notificatio
 
     override fun senderOnThreatList(): String =
         context.getString(R.string.notification_sender_on_threat_list)
+
+    override fun securityAlert(alert: SecurityAlert): String = context.getString(
+        when (alert) {
+            SecurityAlert.SIGN_IN -> R.string.notification_security_alert_sign_in
+            SecurityAlert.PASSWORD_RESET -> R.string.notification_security_alert_password_reset
+            SecurityAlert.PASSWORD_CHANGED -> R.string.notification_security_alert_password_changed
+            SecurityAlert.SECURITY_SETTINGS -> R.string.notification_security_alert_security_settings
+            SecurityAlert.OTHER -> R.string.notification_security_alert_other
+        },
+    )
 
     override fun recipientDisplayName(recipientDisplayName: String): String =
         context.getString(R.string.message_to_fmt, recipientDisplayName)

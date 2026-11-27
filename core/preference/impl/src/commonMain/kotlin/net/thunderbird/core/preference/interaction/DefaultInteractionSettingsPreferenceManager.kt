@@ -125,6 +125,10 @@ class DefaultInteractionSettingsPreferenceManager(
             InteractionSettingKey.TodaySummaryTime.value,
             INTERACTION_SETTINGS_DEFAULT_TODAY_SUMMARY_TIME,
         ),
+        isSecurityAlertsEnabled = storage.getBoolean(
+            InteractionSettingKey.SecurityAlertsEnabled.value,
+            INTERACTION_SETTINGS_DEFAULT_SECURITY_ALERTS_ENABLED,
+        ),
     )
 
     private fun writeConfig(config: InteractionSettings) {
@@ -174,6 +178,10 @@ class DefaultInteractionSettingsPreferenceManager(
                     config.isTodaySummaryEnabled,
                 )
                 storageEditor.putString(InteractionSettingKey.TodaySummaryTime.value, config.todaySummaryTime)
+                storageEditor.putBoolean(
+                    InteractionSettingKey.SecurityAlertsEnabled.value,
+                    config.isSecurityAlertsEnabled,
+                )
                 storageEditor.commit().also { commited ->
                     logger.verbose(TAG) { "writeConfig: storageEditor.commit() resulted in: $commited" }
                 }

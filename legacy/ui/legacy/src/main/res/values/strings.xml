@@ -468,6 +468,8 @@
     <string name="general_settings_today_summary_title">Summary of the day</string>
     <string name="general_settings_today_summary_summary">Each morning, one notification with parcels arriving today, people waiting on you and sign-in codes that came overnight</string>
     <string name="general_settings_today_summary_time">Show at</string>
+    <string name="general_settings_security_alerts_title">Security alerts</string>
+    <string name="general_settings_security_alerts_summary">Always notify about a new sign-in, a password reset or change, or two-factor turned off, even when notifications are off for that kind of mail. Only for mail that passed its sender check.</string>
     <string name="general_settings_trips_summary">Gather flights, stays, car rentals, restaurant bookings, tickets and cruises from your confirmations, in the drawer under Trips</string>
     <!-- %1$s is the listed domain, e.g. phish.example -->
     <string name="blocklist_link_threat">⚠ <xliff:g id="domain">%1$s</xliff:g> is on HaGeZi\'s threat list of malware, phishing and scam sites.</string>
@@ -781,6 +783,27 @@
     <string name="search_removed">Removed from the drawer</string>
     <string name="message_view_qr_code_link">QR code in this message opens <xliff:g id="site" example="example.com">%1$s</xliff:g></string>
     <string name="message_view_claims_from_you">Claims to be from you, but your mail server found it was not sent by <xliff:g id="domain" example="example.com">%1$s</xliff:g></string>
+    <string name="message_view_security_alert_sign_in">New sign-in at <xliff:g id="domain" example="lumen.example">%1$s</xliff:g>. If it wasn\'t you, go to <xliff:g id="domain" example="lumen.example">%1$s</xliff:g> yourself, not through this mail\'s links.</string>
+    <string name="message_view_security_alert_password_reset">Password reset at <xliff:g id="domain" example="lumen.example">%1$s</xliff:g>. If you didn\'t ask for it, go to <xliff:g id="domain" example="lumen.example">%1$s</xliff:g> yourself, not through this mail\'s links.</string>
+    <string name="message_view_security_alert_password_changed">Password changed at <xliff:g id="domain" example="lumen.example">%1$s</xliff:g>. If it wasn\'t you, go to <xliff:g id="domain" example="lumen.example">%1$s</xliff:g> yourself, not through this mail\'s links.</string>
+    <string name="message_view_security_alert_security_settings">Account protection changed at <xliff:g id="domain" example="lumen.example">%1$s</xliff:g>. If it wasn\'t you, go to <xliff:g id="domain" example="lumen.example">%1$s</xliff:g> yourself, not through this mail\'s links.</string>
+    <string name="message_view_security_alert_other">Security alert from <xliff:g id="domain" example="lumen.example">%1$s</xliff:g>. If anything in it needs doing, go to <xliff:g id="domain" example="lumen.example">%1$s</xliff:g> yourself, not through this mail\'s links.</string>
+    <string name="message_view_security_alert_failed">Looks like a security alert from <xliff:g id="domain" example="lumen.example">%1$s</xliff:g>, but it failed <xliff:g id="domain" example="lumen.example">%1$s</xliff:g>\'s sender check. Don\'t use its links or reply to it.</string>
+    <string name="message_view_breach_notice">Data breach notice from <xliff:g id="domain" example="lumen.example">%1$s</xliff:g>. Change your password there, and wherever you used the same one.</string>
+    <string name="message_view_breach_notice_plus_address">Data breach notice from <xliff:g id="domain" example="lumen.example">%1$s</xliff:g>, which has your address <xliff:g id="address" example="you+lumen@mail.example">%2$s</xliff:g>. Change your password there, and wherever you used the same one.</string>
+    <string name="attachment_risk_web_page"><xliff:g id="file" example="invoice.html">%1$s</xliff:g> opens as a web page, the way fake sign-in pages are sent.</string>
+    <string name="attachment_risk_program"><xliff:g id="file" example="invoice.html">%1$s</xliff:g> is a program or a shortcut to one, and runs when opened.</string>
+    <string name="attachment_risk_disk_image"><xliff:g id="file" example="invoice.html">%1$s</xliff:g> is a disk image, which can hide a program from virus checks.</string>
+    <string name="attachment_risk_macro_document"><xliff:g id="file" example="invoice.html">%1$s</xliff:g> can hold macros, which run programs when allowed.</string>
+    <string name="attachment_risk_locked_archive"><xliff:g id="file" example="invoice.html">%1$s</xliff:g> is locked with a password, so no virus check could look inside.</string>
+    <string name="message_view_risky_attachment">Risky attachment: <xliff:g id="reason" example="invoice.html opens as a web page.">%1$s</xliff:g></string>
+    <plurals name="message_view_risky_attachments">
+        <item quantity="one">Risky attachment: <xliff:g id="reason" example="invoice.html opens as a web page.">%1$s</xliff:g> And <xliff:g id="count" example="1">%2$d</xliff:g> more.</item>
+        <item quantity="other">Risky attachments: <xliff:g id="reason" example="invoice.html opens as a web page.">%1$s</xliff:g> And <xliff:g id="count" example="2">%2$d</xliff:g> more.</item>
+    </plurals>
+    <string name="attachment_risk_dialog_title">Open <xliff:g id="file" example="invoice.html">%1$s</xliff:g>?</string>
+    <string name="attachment_risk_dialog_advice">Only open it if you were expecting it from this sender.</string>
+    <string name="attachment_risk_dialog_open">Open anyway</string>
     <plurals name="message_view_still_mailing">
         <item quantity="one">You unsubscribed on <xliff:g id="date" example="Nov 3">%1$s</xliff:g>, <xliff:g id="days" example="1">%2$d</xliff:g> day ago</item>
         <item quantity="other">You unsubscribed on <xliff:g id="date" example="Nov 3">%1$s</xliff:g>, <xliff:g id="days" example="18">%2$d</xliff:g> days ago</item>
@@ -796,6 +819,11 @@
     <string name="compose_reply_to_elsewhere_sender">Reply to sender</string>
     <string name="notification_possible_impersonation">Possible impersonation</string>
     <string name="notification_sender_on_threat_list">Sender is on a threat blocklist</string>
+    <string name="notification_security_alert_sign_in">Security alert: sign-in to your account</string>
+    <string name="notification_security_alert_password_reset">Security alert: password reset</string>
+    <string name="notification_security_alert_password_changed">Security alert: password changed</string>
+    <string name="notification_security_alert_security_settings">Security alert: account protection changed</string>
+    <string name="notification_security_alert_other">Security alert</string>
     <string name="account_settings_spam_digest_exact_alarm_label">Allow exact alarms</string>
     <string name="account_settings_spam_digest_exact_alarm_summary">Without them Android may send the digest up to an hour late. Tap to allow.</string>
     <string name="account_settings_spam_digest_send_now_label">Send digest now</string>

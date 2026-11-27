@@ -1476,9 +1476,11 @@ class MessageViewFragment :
     }
 
     override fun onViewAttachment(attachment: AttachmentViewInfo) {
-        currentAttachmentViewInfo = attachment
+        SecurityNotes.openAttachment(requireContext(), attachment.displayName) {
+            currentAttachmentViewInfo = attachment
 
-        createAttachmentController(attachment).viewAttachment(lifecycleScope)
+            createAttachmentController(attachment).viewAttachment(lifecycleScope)
+        }
     }
 
     fun onSaveAllAttachments() {

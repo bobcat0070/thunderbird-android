@@ -12,4 +12,10 @@ interface NotificationStrategy {
         message: LocalMessage,
         isOldMessage: Boolean,
     ): Boolean
+
+    /**
+     * Whether a message's notification should sound even when another notification of the same check already did,
+     * as a security alert should.
+     */
+    fun isUrgent(message: LocalMessage): Boolean = false
 }

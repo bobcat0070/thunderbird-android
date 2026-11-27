@@ -1,7 +1,9 @@
 package net.thunderbird.feature.plusaddress.internal
 
 import assertk.assertThat
+import assertk.assertions.containsExactly
 import assertk.assertions.containsOnly
+import assertk.assertions.isEmpty
 import assertk.assertions.isEqualTo
 import assertk.assertions.isNull
 import kotlin.test.Test
@@ -60,6 +62,12 @@ class CachingPlusAddressLeakCheckerTest {
 
         assertThat(testSubject.check(listOf(SHOP_ADDRESS), "deals@broker.example")).isNull()
         assertThat(readings).isEqualTo(1)
+    }
+
+    @Test
+    fun `the plus addresses a sender was given should be found`() {
+        assertThat(testSubject.addressesGivenTo("security@mail.shop.example")).containsExactly(SHOP_ADDRESS)
+        assertThat(testSubject.addressesGivenTo("deals@broker.example")).isEmpty()
     }
 
     @Test

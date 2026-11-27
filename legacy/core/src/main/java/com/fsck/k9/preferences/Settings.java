@@ -43,8 +43,9 @@ public class Settings {
     // attachment reminder switches, 116 the domain blocklist tier and threat list, 117 the packages and trips
     // switches. Upstream's 113 (folders' "integrate" setting removed) runs here as 118. 119 added the parcels marked
     // in Packages and the travel sender changes in Trips, 120 the reader's decisions about their plus addresses, 121
-    // the senders the reader unsubscribed from, 122 the summary of the day's switch and time.
-    public static final int VERSION = 122;
+    // the senders the reader unsubscribed from, 122 the summary of the day's switch and time, 123 the security alerts
+    // switch.
+    public static final int VERSION = 123;
 
     static Map<String, Object> validate(int version, Map<String, TreeMap<Integer, SettingsDescription<?>>> settings,
             Map<String, String> importedSettings, boolean useDefaultValues) {

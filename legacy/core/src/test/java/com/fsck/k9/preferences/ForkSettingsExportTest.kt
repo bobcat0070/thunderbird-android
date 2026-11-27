@@ -204,6 +204,7 @@ class ForkSettingsExportTest : K9RobolectricTest() {
             "domainBlocklistThreatListEnabled" to "false",
             "packagesEnabled" to "false",
             "tripsEnabled" to "false",
+            "securityAlertsEnabled" to "false",
             VIEW_CATEGORY_GROUPING_KEY to "unified_sent=GROUPED",
             "notifyPersonal" to "false",
             "notifyNotifications" to "false",

@@ -3,6 +3,7 @@ package com.fsck.k9.notification
 import android.graphics.Bitmap
 import androidx.annotation.WorkerThread
 import com.fsck.k9.mail.Address
+import com.fsck.k9.message.extractors.SecurityAlert
 
 interface NotificationResourceProvider {
     val iconWarning: Int
@@ -56,6 +57,7 @@ interface NotificationResourceProvider {
     fun noSubject(): String
     fun possibleImpersonation(): String
     fun senderOnThreatList(): String
+    fun securityAlert(alert: SecurityAlert): String
     fun recipientDisplayName(recipientDisplayName: String): String
     fun noSender(): String
 

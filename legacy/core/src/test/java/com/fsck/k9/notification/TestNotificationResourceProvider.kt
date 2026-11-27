@@ -2,6 +2,7 @@ package com.fsck.k9.notification
 
 import android.graphics.Bitmap
 import com.fsck.k9.mail.Address
+import com.fsck.k9.message.extractors.SecurityAlert
 
 class TestNotificationResourceProvider : NotificationResourceProvider {
     override val iconWarning: Int = 1
@@ -67,6 +68,8 @@ class TestNotificationResourceProvider : NotificationResourceProvider {
     override fun possibleImpersonation(): String = "Possible impersonation"
 
     override fun senderOnThreatList(): String = "Sender is on a threat list"
+
+    override fun securityAlert(alert: SecurityAlert): String = "Security alert: $alert"
 
     override fun recipientDisplayName(recipientDisplayName: String): String = "To:$recipientDisplayName"
 

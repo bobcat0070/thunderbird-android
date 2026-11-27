@@ -93,6 +93,7 @@ class GeneralSettingsDataStore(
             "packages_enabled" -> interactionSettings.isPackagesEnabled
             "trips_enabled" -> interactionSettings.isTripsEnabled
             "today_summary_enabled" -> interactionSettings.isTodaySummaryEnabled
+            "security_alerts_enabled" -> interactionSettings.isSecurityAlertsEnabled
             "domain_blocklist_threats" -> config.domainBlocklist.isThreatListEnabled
             "enable_telemetry" -> K9.isTelemetryEnabled
             else -> defValue
@@ -161,6 +162,7 @@ class GeneralSettingsDataStore(
             "packages_enabled" -> updateInteractionSettings { it.copy(isPackagesEnabled = value) }
             "trips_enabled" -> updateInteractionSettings { it.copy(isTripsEnabled = value) }
             "today_summary_enabled" -> updateInteractionSettings { it.copy(isTodaySummaryEnabled = value) }
+            "security_alerts_enabled" -> updateInteractionSettings { it.copy(isSecurityAlertsEnabled = value) }
             "domain_blocklist_threats" -> updateDomainBlocklistSettings { it.copy(isThreatListEnabled = value) }
             "enable_telemetry" -> setTelemetryEnabled(value)
             else -> return

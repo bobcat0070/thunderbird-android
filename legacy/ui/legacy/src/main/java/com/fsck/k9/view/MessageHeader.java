@@ -75,6 +75,8 @@ import net.thunderbird.feature.mail.message.reader.api.strategy.ReplyActionStrat
 import com.fsck.k9.mail.MessageImportance;
 import com.fsck.k9.mail.MessageImportanceKt;
 import com.fsck.k9.mailstore.LocalMessage;
+import com.fsck.k9.message.extractors.RiskyAttachmentsKt;
+import com.fsck.k9.message.extractors.SecurityAlertKt;
 import com.fsck.k9.message.extractors.SignInLinksKt;
 import com.fsck.k9.message.extractors.TrackingNumber;
 import com.fsck.k9.message.extractors.TrackingNumbersKt;
@@ -88,6 +90,9 @@ import net.thunderbird.feature.impersonation.ImpersonationChecker;
 import net.thunderbird.feature.plusaddress.PlusAddressDecisions;
 import net.thunderbird.feature.plusaddress.PlusAddressLeak;
 import net.thunderbird.feature.plusaddress.PlusAddressLeakChecker;
+import net.thunderbird.feature.plusaddress.PlusAddressLookup;
+import net.thunderbird.feature.mail.message.classification.api.MessageClass;
+import com.fsck.k9.ui.messageview.SecurityNotes;
 import com.fsck.k9.ui.messageview.PlusAddressLeakNote;
 import com.fsck.k9.ui.messageview.MessageQrCodes;
 import com.fsck.k9.ui.messageview.SenderNotes;
@@ -137,6 +142,9 @@ public class MessageHeader extends LinearLayout implements OnClickListener, OnLo
     private MaterialTextView blocklistNoteView;
     private MaterialTextView plusAddressLeakView;
     private MaterialTextView claimsFromYouView;
+    private MaterialTextView securityAlertView;
+    private MaterialTextView riskyAttachmentView;
+    private MaterialTextView breachNoticeView;
     private MaterialTextView qrCodeLinkView;
     private MaterialTextView replyToWarningView;
     private MaterialTextView stillMailingView;
@@ -192,6 +200,9 @@ public class MessageHeader extends LinearLayout implements OnClickListener, OnLo
         blocklistNoteView = findViewById(R.id.blocklist_note);
         plusAddressLeakView = findViewById(R.id.plus_address_leak);
         claimsFromYouView = findViewById(R.id.claims_from_you);
+        securityAlertView = findViewById(R.id.security_alert_note);
+        riskyAttachmentView = findViewById(R.id.risky_attachment_note);
+        breachNoticeView = findViewById(R.id.breach_notice);
         qrCodeLinkView = findViewById(R.id.qr_code_link);
         replyToWarningView = findViewById(R.id.reply_to_warning);
         stillMailingView = findViewById(R.id.still_mailing);
@@ -460,6 +471,29 @@ public class MessageHeader extends LinearLayout implements OnClickListener, OnLo
         }
     }
 
+    /**
+     * Says what a service's security alert is about and that the site is safer reached directly than through the
+     * mail; warns instead when the alert failed its sender's check.
+     */
+    private void showSecurityAlert(Message message, Address fromAddress) {
+        SecurityNotes.Note note = SecurityNotes.securityAlertNote(getContext(), message,
+                fromAddress != null ? fromAddress.getAddress() : null, authenticationResults(message),
+                trustedServerId());
+        if (note == null) {
+            securityAlertView.setVisibility(View.GONE);
+            return;
+        }
+
+        int color = MaterialColors.getColor(securityAlertView, note.isWarning
+                ? androidx.appcompat.R.attr.colorError : com.google.android.material.R.attr.colorOnSurfaceVariant);
+        securityAlertView.setTextColor(color);
+        securityAlertView.setCompoundDrawablesRelativeWithIntrinsicBounds(
+                note.isWarning ? Icons.Outlined.INSTANCE.getWarning() : Icons.Outlined.INSTANCE.getSecurity(), 0, 0, 0);
+        TextViewCompat.setCompoundDrawableTintList(securityAlertView, ColorStateList.valueOf(color));
+        securityAlertView.setText(note.text);
+        securityAlertView.setVisibility(View.VISIBLE);
+    }
+
     private void showStillMailing(StillMailing stillMailing, boolean canMarkSpam) {
         stillMailingView.setText(SenderNotes.stillMailingText(getContext(), stillMailing, System.currentTimeMillis()));
         stillMailingView.setOnClickListener(view -> SenderNotes.showStillMailingDialog(
@@ -619,8 +653,26 @@ public class MessageHeader extends LinearLayout implements OnClickListener, OnLo
         signInLinkView.setVisibility(View.GONE);
         trackingNumberView.setVisibility(View.GONE);
         qrCodeLinkView.setVisibility(View.GONE);
+        riskyAttachmentView.setVisibility(View.GONE);
+        breachNoticeView.setVisibility(View.GONE);
+
+        Address[] from = message.getFrom();
+        String senderAddress = from != null && from.length > 0 ? from[0].getAddress() : null;
+        boolean isNewsletter = message instanceof LocalMessage &&
+                ((LocalMessage) message).getClassification() == MessageClass.NEWSLETTER;
+        boolean mayShowBreachNotice = senderAddress != null && SecurityNotes.mayShowBreachNotice(senderAddress,
+                authenticationResults(message), trustedServerId());
 
         markVerificationExecutor.execute(() -> {
+            String riskyAttachments = SecurityNotes.riskyAttachmentsText(getContext(),
+                    RiskyAttachmentsKt.findRiskyAttachments(message));
+            String breachNotice = null;
+            if (mayShowBreachNotice &&
+                    SecurityAlertKt.findBreachNotice(message, message.getSubject(), isNewsletter)) {
+                breachNotice = SecurityNotes.breachNoticeText(getContext(), senderAddress,
+                        DI.get(PlusAddressLookup.class).addressesGivenTo(senderAddress));
+            }
+            String breachNoticeText = breachNotice;
             String qrLink = MessageQrCodes.findQrLink(message);
             String link = SignInLinksKt.findSignInLink(message, message.getSubject());
             TrackingNumber trackingNumber = TrackingNumbersKt.findTrackingNumber(message, message.getSubject());
@@ -636,8 +688,19 @@ public class MessageHeader extends LinearLayout implements OnClickListener, OnLo
                 updateSignInLinkView();
                 showTrackingNumber(trackingNumber);
                 showQrCodeLink(qrLink);
+                showIfAny(riskyAttachmentView, riskyAttachments);
+                showIfAny(breachNoticeView, breachNoticeText);
+                if (breachNoticeText != null) {
+                    // A notice titled as a security alert says more as a breach notice than as both.
+                    securityAlertView.setVisibility(View.GONE);
+                }
             });
         });
+    }
+
+    private static void showIfAny(MaterialTextView view, String text) {
+        view.setText(text);
+        view.setVisibility(text != null ? View.VISIBLE : View.GONE);
     }
 
     private static boolean isThreatListed(String host) {
@@ -1009,6 +1072,7 @@ public class MessageHeader extends LinearLayout implements OnClickListener, OnLo
         isSenderThreatListed = isThreatListed;
         showPlusAddressLeak(message, account, fromAddress);
         showClaimsFromYou(message, fromAddress);
+        showSecurityAlert(message, fromAddress);
         showSenderNotes(message, account, fromAddress);
         showImpersonationWarning(fromAddress, isThreatListed ? null : findVerificationCode(message));
 

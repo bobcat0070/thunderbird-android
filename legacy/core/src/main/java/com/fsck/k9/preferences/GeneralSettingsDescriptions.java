@@ -59,6 +59,7 @@ import static net.thunderbird.core.preference.interaction.InteractionSettingsKt.
 import static net.thunderbird.core.preference.interaction.InteractionSettingsKt.INTERACTION_SETTINGS_DEFAULT_TRIPS_ENABLED;
 import static net.thunderbird.core.preference.interaction.InteractionSettingsKt.INTERACTION_SETTINGS_DEFAULT_TODAY_SUMMARY_ENABLED;
 import static net.thunderbird.core.preference.interaction.InteractionSettingsKt.INTERACTION_SETTINGS_DEFAULT_TODAY_SUMMARY_TIME;
+import static net.thunderbird.core.preference.interaction.InteractionSettingsKt.INTERACTION_SETTINGS_DEFAULT_SECURITY_ALERTS_ENABLED;
 import static net.thunderbird.core.preference.interaction.InteractionSettingsKt.INTERACTION_SETTINGS_DEFAULT_LINK_CHECK_ENABLED;
 import static net.thunderbird.core.preference.interaction.InteractionSettingsKt.INTERACTION_SETTINGS_DEFAULT_UNDO_SEND_DELAY_SECONDS;
 import static net.thunderbird.core.preference.bimi.BimiSettingsKt.BIMI_SETTINGS_DEFAULT_IS_ENABLED;
@@ -483,6 +484,9 @@ class GeneralSettingsDescriptions {
         ));
         s.put("todaySummaryTime", Settings.versions(
             new V(122, new TimeSetting(INTERACTION_SETTINGS_DEFAULT_TODAY_SUMMARY_TIME))
+        ));
+        s.put("securityAlertsEnabled", Settings.versions(
+            new V(123, new BooleanSetting(INTERACTION_SETTINGS_DEFAULT_SECURITY_ALERTS_ENABLED))
         ));
         // Kept in the Packages and Trips stores; see ExternalGlobalSettings.
         s.put(PARCELS_MARKED_DELIVERED_KEY, Settings.versions(
